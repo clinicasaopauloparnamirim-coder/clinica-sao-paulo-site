@@ -1,6 +1,7 @@
 import { Agent } from "agents";
 import { generateText, stepCountIs } from "ai";
 import { createWorkersAI } from "workers-ai-provider";
+import { specialistSnapshot } from "./agent-registry";
 
 type ControlEnv = Env & {
   AI: Ai;
@@ -115,6 +116,37 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
 
   async onRequest(request: Request) {
     const url = new URL(request.url);
+
+    if (url.pathname.endsWith("/orchestrate") && request.method === "POST") {
+      let body: { prompt?: string; mode?: "read" | "write" } = {};
+      try { body = await request.json(); } catch {
+        return Response.json({ ok: false, error: "invalid_json" }, { status: 400 });
+      }
+      const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+      if (!prompt || prompt.length > 4000) {
+        return Response.json({ ok: false, error: "prompt_required_or_too_long" }, { status: 400 });
+      }
+      const mode = body.mode === "write" ? "write" : "read";
+      const workersai = createWorkersAI({ binding: this.env.AI });
+      const result = await generateText({
+        model: workersai("@cf/zai-org/glm-4.7-flash"),
+        system:
+          "Você é o orquestrador do Control Tower da Clínica São Paulo. " +
+          "Selecione especialistas da arquitetura abaixo para atender a solicitação. " +
+          "Nunca permita ações financeiras, exposição de secrets ou ações destrutivas sem confirmação explícita. " +
+          "Se uma integração não estiver conectada, marque-a como blocker; não invente acesso. " +
+          "Responda em JSON válido com: specialists (array de IDs), mode, blockers (array), plan (array).\\n" +
+          JSON.stringify(specialistSnapshot()),
+        prompt: "Solicitação: " + prompt + "\\nModo solicitado: " + mode,
+        stopWhen: stepCountIs(3),
+      });
+      return Response.json({
+        ok: true,
+        agent: "ControlAgent",
+        model: "@cf/zai-org/glm-4.7-flash",
+        orchestration: result.text.slice(0, 12000),
+      });
+    }
 
     if (url.pathname.endsWith("/inspect") && request.method === "POST") {
       if (this.state.browser_mcp !== "connected") {
