@@ -291,11 +291,16 @@
 
   <script>
   (() => {
-    // Preserva o evento existente para a camada de mensuração configurada via Zaraz/GTM.
+    // Mede o clique no WhatsApp diretamente pelo Zaraz.
+    // O site usa Zaraz como camada de mensuração; não depende de gtag/GTM carregado no HTML.
     document.querySelectorAll('.whatsapp-track').forEach((link) => {
       link.addEventListener('click', () => {
-        if (typeof window.gtag === 'function') {
-          window.gtag('event', 'clique_whatsapp', {event_category:'Engajamento', event_label:'Clique WhatsApp'});
+        if (window.zaraz && typeof window.zaraz.track === 'function') {
+          window.zaraz.track('clique_whatsapp', {
+            event_category: 'Engajamento',
+            event_label: 'Clique WhatsApp',
+            link_location: link.className.includes('whatsapp-float') ? 'floating' : 'content',
+          });
         }
       }, {passive:true});
     });
