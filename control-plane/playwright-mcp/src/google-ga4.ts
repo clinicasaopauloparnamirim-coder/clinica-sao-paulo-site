@@ -123,6 +123,38 @@ export async function googleOAuthCallback(request: Request, env: GoogleEnv) {
   });
 }
 
+export async function googleGa4Cleanup(env: GoogleEnv) {
+  const token = await accessToken(env);
+  const listResponse = await fetch("https://analyticsadmin.googleapis.com/v1beta/properties/552216899/keyEvents", {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  if (!listResponse.ok) throw new Error(`GA4 Admin API list failed: ${listResponse.status}`);
+  const data = await listResponse.json() as { keyEvents?: Array<{ name?: string; eventName?: string }> };
+  const targets = new Set(["page_view", "session_start", "first_visit", "user_engagement"]);
+  const candidates = (data.keyEvents ?? []).filter((event) => targets.has(event.eventName ?? ""));
+  const deleted: string[] = [];
+  const failures: Array<{ event: string; status: number }> = [];
+
+  for (const event of candidates) {
+    if (!event.name) continue;
+    const response = await fetch(`https://analyticsadmin.googleapis.com/v1beta/${event.name}`, {
+      method: "DELETE",
+      headers: { authorization: `Bearer ${token}` },
+    });
+    if (response.ok || response.status === 204) deleted.push(event.eventName!);
+    else failures.push({ event: event.eventName!, status: response.status });
+  }
+
+  return Response.json({
+    property: "properties/552216899",
+    requested: [...targets],
+    found: candidates.map((event) => event.eventName),
+    deleted,
+    failures,
+    untouched: "generate_lead and clique_whatsapp were not modified.",
+  }, { headers: { "cache-control": "no-store" } });
+}
+
 export async function googleGa4Audit(env: GoogleEnv) {
   const token = await accessToken(env);
   const response = await fetch("https://analyticsadmin.googleapis.com/v1beta/properties/552216899/keyEvents", {
