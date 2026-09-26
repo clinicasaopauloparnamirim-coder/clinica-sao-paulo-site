@@ -12,7 +12,7 @@ export class GoogleOAuthStore extends DurableObject {
     if (request.method === "POST" && url.pathname === "/state") {
       const body = await request.json() as { state?: string };
       if (!body.state) return new Response("Bad Request", { status: 400 });
-      await this.ctx.storage.put("oauth_state", { value: body.state, expires: Date.now() + 10 * 60_000 });
+      await this.ctx.storage.put(`oauth_state:${body.state}`, { value: body.state, expires: Date.now() + 10 * 60_000 });
       return new Response("OK");
     }
     if (request.method === "POST" && url.pathname === "/token") {
@@ -22,8 +22,16 @@ export class GoogleOAuthStore extends DurableObject {
       return new Response("OK");
     }
     if (request.method === "GET" && url.pathname === "/state") {
-      const saved = await this.ctx.storage.get<{ value: string; expires: number }>("oauth_state");
+      const stateKey = url.searchParams.get("state");
+      if (!stateKey) return Response.json(null);
+      const saved = await this.ctx.storage.get<{ value: string; expires: number }>(`oauth_state:${stateKey}`);
       return Response.json(saved ?? null);
+    }
+    if (request.method === "DELETE" && url.pathname === "/state") {
+      const stateKey = url.searchParams.get("state");
+      if (!stateKey) return new Response("Bad Request", { status: 400 });
+      await this.ctx.storage.delete(`oauth_state:${stateKey}`);
+      return new Response("OK");
     }
     if (request.method === "GET" && url.pathname === "/token") {
       const token = await this.ctx.storage.get<string>("refresh_token");
@@ -131,11 +139,12 @@ export async function googleOAuthCallback(request: Request, env: GoogleEnv) {
   const code = url.searchParams.get("code");
   if (!state || !code) return new Response("Missing OAuth response.", { status: 400 });
 
-  const stateResponse = await store(env).fetch("https://store.internal/state");
+  const stateResponse = await store(env).fetch(`https://store.internal/state?state=${encodeURIComponent(state)}`);
   const saved = await stateResponse.json() as { value?: string; expires?: number } | null;
   if (!saved || saved.value !== state || !saved.expires || saved.expires < Date.now()) {
     return new Response("Invalid or expired OAuth state.", { status: 400 });
   }
+  await store(env).fetch(`https://store.internal/state?state=${encodeURIComponent(state)}`, { method: "DELETE" });
 
   const redirectUri = new URL("/google/oauth/callback", request.url).toString();
   const tokens = await exchangeCode(env, code, redirectUri);
