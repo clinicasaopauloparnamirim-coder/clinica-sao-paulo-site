@@ -41,14 +41,22 @@ export default {
       });
     }
 
-    const agentResponse = await routeAgentRequest(request, env);
-    if (agentResponse) return agentResponse;
+    const isAgentRoute = pathname.startsWith("/agents/");
+    const isMcpRoute = pathname === "/sse" || pathname === "/sse/message" || pathname === "/mcp";
 
-    if (pathname !== "/sse" && pathname !== "/sse/message" && pathname !== "/mcp") {
+    if (isAgentRoute || isMcpRoute) {
+      if (!authorized(request, env)) return unauthorized();
+    }
+
+    if (isAgentRoute) {
+      const agentResponse = await routeAgentRequest(request, env);
+      if (agentResponse) return agentResponse;
       return new Response("Not Found", { status: 404 });
     }
 
-    if (!authorized(request, env)) return unauthorized();
+    if (!isMcpRoute) {
+      return new Response("Not Found", { status: 404 });
+    }
 
     if (pathname === "/sse" || pathname === "/sse/message") {
       return PlaywrightMCP.serveSSE("/sse").fetch(request, env, ctx);
