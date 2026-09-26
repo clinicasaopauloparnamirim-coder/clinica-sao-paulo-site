@@ -39,4 +39,12 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy --config wrangler.toml
 
+      - name: Smoke test deployed Worker
+        run: |
+          set -euo pipefail
+          url="https://clinica-sao-paulo-site.clinicasaopauloparnamirim.workers.dev/health"
+          body="$(curl -sS --retry 5 --retry-delay 2 --connect-timeout 10 --max-time 30 "$url")"
+          echo "$body"
+          echo "$body" | grep -q '"ok":true'
+
 # Deploy trigger: 2026-09-26
