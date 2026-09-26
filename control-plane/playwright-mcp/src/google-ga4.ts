@@ -1,3 +1,5 @@
+import { DurableObject } from "cloudflare:workers";
+
 const GOOGLE_SCOPE = "https://www.googleapis.com/auth/analytics.edit";
 
 type GoogleEnv = {
