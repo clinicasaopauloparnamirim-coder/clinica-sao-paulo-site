@@ -135,6 +135,12 @@ export default {
       return asset;
     }
 
-    return env.ASSETS.fetch(request);
+    const asset = await env.ASSETS.fetch(request);
+    const pathname = url.pathname;
+    const staticAsset = /\\.(?:css|js|mjs|png|jpe?g|webp|avif|gif|svg|ico|woff2?)$/i.test(pathname);
+    if (!staticAsset) return asset;
+    const headers = new Headers(asset.headers);
+    headers.set("cache-control", "public, max-age=604800, s-maxage=2592000");
+    return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
   },
 };
