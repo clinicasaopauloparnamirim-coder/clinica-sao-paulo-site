@@ -21,6 +21,10 @@ new_sqlite_classes = ["ControlAgent"]
 tag = "v3"
 new_sqlite_classes = ["WhatsAppLedger"]
 
+[[migrations]]
+tag = "v4"
+new_sqlite_classes = ["GoogleOAuthStore"]
+
 [[durable_objects.bindings]]
 name = "WHATSAPP_LEDGER"
 class_name = "WhatsAppLedger"
@@ -32,3 +36,8 @@ class_name = "PlaywrightMCP"
 [[durable_objects.bindings]]
 name = "CONTROL_AGENT"
 class_name = "ControlAgent"
+
+
+[[durable_objects.bindings]]
+name = "GOOGLE_OAUTH_STORE"
+class_name = "GoogleOAuthStore"
