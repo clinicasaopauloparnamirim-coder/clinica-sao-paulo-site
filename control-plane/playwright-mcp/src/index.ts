@@ -3,6 +3,7 @@ import { env, DurableObject } from "cloudflare:workers";
 import { createMcpAgent } from "@cloudflare/playwright-mcp";
 import { ControlAgent } from "./control-agent";
 import { GoogleOAuthStore, googleGa4Audit, googleGa4Cleanup, googleOAuthCallback, googleOAuthStart } from "./google-ga4";
+import { googleAdsAuthCheck, googleAdsAudit } from "./google-ads";
 
 interface WhatsAppEnv {
   MCP_AUTH_TOKEN?: string;
@@ -12,6 +13,8 @@ interface WhatsAppEnv {
   GOOGLE_OAUTH_STORE: DurableObjectNamespace;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  GOOGLE_ADS_REFRESH_TOKEN?: string;
+  GOOGLE_ADS_CUSTOMER_ID?: string;
 }
 
 export class WhatsAppLedger extends DurableObject {
@@ -122,6 +125,7 @@ export default {
         browser_binding: true,
         auth_configured: Boolean(env.MCP_AUTH_TOKEN),
         google_oauth_configured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+        google_ads_configured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_ADS_REFRESH_TOKEN),
       }), {
         status: 200,
         headers: { "content-type": "application/json; charset=UTF-8", "cache-control": "no-store" },
@@ -136,7 +140,7 @@ export default {
       return googleOAuthCallback(request, env);
     }
 
-    if (pathname === "/google/ga4/cleanup" && request.method === "POST") {
+    if (pathname === "/google/ads/auth-check") {\n      if (!authorized(request, env)) return unauthorized();\n      try {\n        return await googleAdsAuthCheck(env);\n      } catch (error) {\n        return new Response(error instanceof Error ? error.message : "Google Ads auth check failed", {\n          status: 502,\n          headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },\n        });\n      }\n    }\n\n    if (pathname === "/google/ads/audit") {\n      if (!authorized(request, env)) return unauthorized();\n      try {\n        return await googleAdsAudit(env);\n      } catch (error) {\n        return new Response(error instanceof Error ? error.message : "Google Ads audit failed", {\n          status: 502,\n          headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },\n        });\n      }\n    }\n\n    if (pathname === "/google/ga4/cleanup" && request.method === "POST") {
       if (!authorized(request, env)) return unauthorized();
       let body: { confirm?: boolean } = {};
       try {
