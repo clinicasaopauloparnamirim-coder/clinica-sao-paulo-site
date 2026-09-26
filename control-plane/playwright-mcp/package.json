@@ -7,7 +7,7 @@
     "deploy": "wrangler deploy"
   },
   "dependencies": {
-    "@cloudflare/playwright-mcp": "1.1.1",
+    "@cloudflare/playwright-mcp": "0.0.5",
     "agents": "0.24.0",
     "ai": "7.0.114",
     "workers-ai-provider": "4.0.0"
