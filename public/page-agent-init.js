@@ -12,7 +12,7 @@
         model: "@cf/zai-org/glm-4.7-flash",
         baseURL: "/api/page-agent/v1",
         apiKey: "",
-        language: "pt-BR",
+        language: "en-US",
         maxSteps: 12,
         stepDelay: 0.5,
         experimentalScriptExecutionTool: false,
