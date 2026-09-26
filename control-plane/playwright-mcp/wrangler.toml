@@ -17,6 +17,14 @@ new_sqlite_classes = ["PlaywrightMCP"]
 tag = "v2"
 new_sqlite_classes = ["ControlAgent"]
 
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["WhatsAppLedger"]
+
+[[durable_objects.bindings]]
+name = "WHATSAPP_LEDGER"
+class_name = "WhatsAppLedger"
+
 [[durable_objects.bindings]]
 name = "MCP_OBJECT"
 class_name = "PlaywrightMCP"
