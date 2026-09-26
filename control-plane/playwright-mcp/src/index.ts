@@ -3,6 +3,7 @@ import { env, DurableObject } from "cloudflare:workers";
 import { createMcpAgent } from "@cloudflare/playwright-mcp";
 import { ControlAgent } from "./control-agent";
 import { GoogleOAuthStore, googleGa4Audit, googleGa4Cleanup, googleOAuthCallback, googleOAuthStart } from "./google-ga4";
+import { specialistSnapshot } from "./agent-registry";
 
 interface WhatsAppEnv {
   MCP_AUTH_TOKEN?: string;
@@ -125,6 +126,13 @@ export default {
       }), {
         status: 200,
         headers: { "content-type": "application/json; charset=UTF-8", "cache-control": "no-store" },
+      });
+    }
+
+    if (pathname === "/control/agents") {
+      if (!authorized(request, env)) return unauthorized();
+      return Response.json({ ok: true, ...specialistSnapshot() }, {
+        headers: { "cache-control": "no-store" },
       });
     }
 
