@@ -1,0 +1,6 @@
+[mcp_servers.clinica-playwright]
+url = "${CLINICA_PLAYWRIGHT_MCP_URL}"
+headers = { "Authorization" = "Bearer ${CLINICA_PLAYWRIGHT_MCP_TOKEN}" }
+enabled = true
+startup_timeout_sec = 30
+tool_timeout_sec = 6000
