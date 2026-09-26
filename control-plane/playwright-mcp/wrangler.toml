@@ -10,6 +10,14 @@ binding = "BROWSER"
 tag = "v1"
 new_sqlite_classes = ["PlaywrightMCP"]
 
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["ControlAgent"]
+
 [[durable_objects.bindings]]
 name = "MCP_OBJECT"
 class_name = "PlaywrightMCP"
+
+[[durable_objects.bindings]]
+name = "CONTROL_AGENT"
+class_name = "ControlAgent"
