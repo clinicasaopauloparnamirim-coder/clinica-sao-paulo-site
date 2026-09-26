@@ -146,7 +146,7 @@ export default {
         });
       }
       if (body.confirm !== true) {
-        return new Response("Explicit confirmation required: send {\\"confirm\\":true}.", {
+        return new Response("Explicit confirmation required: send {confirm:true}.", {
           status: 400,
           headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },
         });
