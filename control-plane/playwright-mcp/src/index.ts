@@ -13,7 +13,7 @@ function unauthorized() {
   });
 }
 
-function authorized(request: Request, env: Env) {
+function authorized(request: Request, env: { MCP_AUTH_TOKEN?: string }) {
   const configured = env.MCP_AUTH_TOKEN;
   if (!configured) return false;
   const header = request.headers.get("Authorization") || "";
@@ -21,7 +21,7 @@ function authorized(request: Request, env: Env) {
 }
 
 export default {
-  fetch(request: Request, env: Env, ctx: ExecutionContext) {
+  fetch(request: Request, env: { MCP_AUTH_TOKEN?: string }, ctx: ExecutionContext) {
     const { pathname } = new URL(request.url);
 
     if (pathname !== "/sse" && pathname !== "/sse/message" && pathname !== "/mcp") {
