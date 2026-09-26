@@ -20,6 +20,57 @@ function json(data, status = 200, origin = "") {
   return new Response(JSON.stringify(data), { status, headers });
 }
 
+function toOpenAIChatCompletion(result) {
+  if (result && Array.isArray(result.choices)) {
+    return result;
+  }
+
+  const nativeToolCalls = Array.isArray(result?.tool_calls)
+    ? result.tool_calls
+    : [];
+
+  const toolCalls = nativeToolCalls.map((call, index) => {
+    const fn = call?.function || {};
+    const name = fn.name || call?.name || "unknown";
+    const rawArguments = fn.arguments ?? call?.arguments ?? {};
+    const argumentsText =
+      typeof rawArguments === "string"
+        ? rawArguments
+        : JSON.stringify(rawArguments);
+
+    return {
+      id: call?.id || `call_${index + 1}_${crypto.randomUUID()}`,
+      type: "function",
+      function: {
+        name,
+        arguments: argumentsText,
+      },
+    };
+  });
+
+  const hasToolCalls = toolCalls.length > 0;
+  const message = {
+    role: "assistant",
+    content: result?.response ?? (hasToolCalls ? null : ""),
+    ...(hasToolCalls ? { tool_calls: toolCalls } : {}),
+  };
+
+  return {
+    id: `chatcmpl_${crypto.randomUUID()}`,
+    object: "chat.completion",
+    created: Math.floor(Date.now() / 1000),
+    model: MODEL,
+    choices: [
+      {
+        index: 0,
+        message,
+        finish_reason: hasToolCalls ? "tool_calls" : "stop",
+      },
+    ],
+    ...(result?.usage ? { usage: result.usage } : {}),
+  };
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -50,14 +101,12 @@ export default {
         return json({ error: { message: "Invalid JSON." } }, 400, origin);
       }
 
-      // Never allow the browser to select an arbitrary model or provider.
-      // Page Agent remains responsible for supplying messages/tools.
       body.model = MODEL;
       body.stream = false;
 
       try {
         const result = await env.AI.run(MODEL, body);
-        return json(result, 200, origin);
+        return json(toOpenAIChatCompletion(result), 200, origin);
       } catch (error) {
         console.error("Page Agent inference failed:", error?.message || error);
         return json(
@@ -68,7 +117,6 @@ export default {
       }
     }
 
-    // Transform only the document entry point. Static assets remain direct.
     if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
       const asset = await env.ASSETS.fetch(request);
       const type = asset.headers.get("content-type") || "";
