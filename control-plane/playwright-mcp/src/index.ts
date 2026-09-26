@@ -2,12 +2,16 @@ import { routeAgentRequest } from "agents";
 import { env, DurableObject } from "cloudflare:workers";
 import { createMcpAgent } from "@cloudflare/playwright-mcp";
 import { ControlAgent } from "./control-agent";
+import { GoogleOAuthStore, googleGa4Audit, googleOAuthCallback, googleOAuthStart } from "./google-ga4";
 
 interface WhatsAppEnv {
   MCP_AUTH_TOKEN?: string;
   WHATSAPP_VERIFY_TOKEN?: string;
   WHATSAPP_APP_SECRET?: string;
   WHATSAPP_LEDGER: DurableObjectNamespace;
+  GOOGLE_OAUTH_STORE: DurableObjectNamespace;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
 }
 
 export class WhatsAppLedger extends DurableObject {
@@ -65,7 +69,7 @@ export class WhatsAppLedger extends DurableObject {
   }
 }
 
-export { ControlAgent };
+export { ControlAgent, GoogleOAuthStore };
 
 export const PlaywrightMCP = createMcpAgent(env.BROWSER);
 
@@ -120,6 +124,26 @@ export default {
         status: 200,
         headers: { "content-type": "application/json; charset=UTF-8", "cache-control": "no-store" },
       });
+    }
+
+    if (pathname === "/google/oauth/start") {
+      return googleOAuthStart(request, env);
+    }
+
+    if (pathname === "/google/oauth/callback") {
+      return googleOAuthCallback(request, env);
+    }
+
+    if (pathname === "/google/ga4/audit") {
+      if (!authorized(request, env)) return unauthorized();
+      try {
+        return await googleGa4Audit(env);
+      } catch (error) {
+        return new Response(error instanceof Error ? error.message : "GA4 audit failed", {
+          status: 502,
+          headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },
+        });
+      }
     }
 
     if (pathname === "/webhooks/whatsapp") {
