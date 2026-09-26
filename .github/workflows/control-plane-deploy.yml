@@ -46,5 +46,6 @@ jobs:
           body="$(curl -sS --retry 5 --retry-delay 2 --connect-timeout 10 --max-time 30 "$url")"
           echo "$body"
           echo "$body" | grep -q '"ok":true'
+          echo "$body" | grep -q '"google_oauth_configured":true'
 
 # Deploy trigger: 2026-09-26
