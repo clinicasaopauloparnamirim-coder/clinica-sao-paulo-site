@@ -71,7 +71,8 @@ export class WhatsAppLedger extends DurableObject {
 
 export { ControlAgent, GoogleOAuthStore };
 
-export const PlaywrightMCP = createMcpAgent(env.BROWSER);
+const browserBinding = (env as unknown as { BROWSER: Parameters<typeof createMcpAgent>[0] }).BROWSER;
+export const PlaywrightMCP = createMcpAgent(browserBinding);
 
 function unauthorized() {
   return new Response("Unauthorized", {
