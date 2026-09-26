@@ -23,21 +23,70 @@ const READ_ONLY_BROWSER_TOOLS = new Set([
   "browser_network_requests",
 ]);
 
-function getReadOnlyTools(tools: Record<string, unknown>) {
+const ALLOWED_NAVIGATION_HOSTS = new Set([
+  "clinicasaopauloparnamirim.com.br",
+  "www.clinicasaopauloparnamirim.com.br",
+]);
+
+function getReadOnlyTools(tools: Record<string, any>) {
   return Object.fromEntries(
-    Object.entries(tools).filter(([name]) =>
-      [...READ_ONLY_BROWSER_TOOLS].some(
-        (toolName) => name === toolName || name.endsWith("_" + toolName),
-      ),
-    ),
+    Object.entries(tools)
+      .filter(([name]) =>
+        [...READ_ONLY_BROWSER_TOOLS].some(
+          (toolName) => name === toolName || name.endsWith("_" + toolName),
+        ),
+      )
+      .map(([name, tool]) => {
+        if (!name.endsWith("_browser_navigate") && name !== "browser_navigate") {
+          return [name, tool];
+        }
+
+        return [
+          name,
+          {
+            ...tool,
+            execute: async (args: any, ...rest: any[]) => {
+              const target = typeof args?.url === "string" ? args.url : "";
+              let hostname = "";
+
+              try {
+                hostname = new URL(target).hostname.toLowerCase();
+              } catch {
+                return {
+                  error: "navigation_blocked",
+                  reason: "invalid_url",
+                  allowed_hosts: [...ALLOWED_NAVIGATION_HOSTS],
+                };
+              }
+
+              if (!ALLOWED_NAVIGATION_HOSTS.has(hostname)) {
+                return {
+                  error: "navigation_blocked",
+                  reason: "hostname_not_allowed",
+                  hostname,
+                  allowed_hosts: [...ALLOWED_NAVIGATION_HOSTS],
+                };
+              }
+
+              return tool.execute(args, ...rest);
+            },
+          },
+        ];
+      }),
   );
 }
 
 export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
   initialState: ControlAgentState = {
     status: "ready",
-    version: 2,
-    capabilities: ["mcp", "browser-readonly", "workers-ai", "persistent-state"],
+    version: 3,
+    capabilities: [
+      "mcp",
+      "browser-readonly",
+      "browser-domain-allowlist",
+      "workers-ai",
+      "persistent-state",
+    ],
     browser_mcp: "disconnected",
     ai: "ready",
   };
@@ -102,6 +151,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
             "Faça somente inspeção e leitura de páginas. " +
             "Você não pode clicar, digitar, enviar formulários, comprar, excluir, publicar, " +
             "alterar configurações ou executar ações com efeitos externos. " +
+            "Navegue somente em clinicasaopauloparnamirim.com.br ou www.clinicasaopauloparnamirim.com.br. " +
             "Não solicite senhas, tokens ou dados pessoais. " +
             "Responda em português do Brasil. " +
             "Use as ferramentas disponíveis somente quando forem necessárias.",
