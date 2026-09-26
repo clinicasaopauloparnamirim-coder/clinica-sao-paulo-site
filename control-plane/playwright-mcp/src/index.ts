@@ -13,10 +13,55 @@ interface WhatsAppEnv {
 export class WhatsAppLedger extends DurableObject {
   async fetch(request: Request) {
     if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
-    const payload = await request.json();
+
+    const payload: any = await request.json();
+    const receivedAt = new Date().toISOString();
+    const messages = Array.isArray(payload?.entry)
+      ? payload.entry.flatMap((entry: any) =>
+          Array.isArray(entry?.changes)
+            ? entry.changes.flatMap((change: any) =>
+                Array.isArray(change?.value?.messages) ? change.value.messages : [],
+              )
+            : [],
+        )
+      : [];
+
+    for (const message of messages) {
+      const referral = message?.referral ?? message?.context?.referral ?? null;
+      const record = {
+        received_at: receivedAt,
+        message_id: message?.id ?? null,
+        from: message?.from ?? null,
+        type: message?.type ?? null,
+        text: message?.text?.body ?? null,
+        source_type: referral?.source_type ?? referral?.sourceType ?? null,
+        source_id: referral?.source_id ?? referral?.sourceId ?? null,
+        source_url: referral?.source_url ?? referral?.sourceUrl ?? null,
+        headline: referral?.headline ?? null,
+        ctwa_clid: referral?.ctwa_clid ?? referral?.ctwaClid ?? null,
+        raw: message,
+      };
+      await this.ctx.storage.put(
+        `message:${message?.id ?? crypto.randomUUID()}`,
+        record,
+      );
+    }
+
     const id = crypto.randomUUID();
-    await this.ctx.storage.put(`event:${Date.now()}:${id}`, payload);
-    return Response.json({ ok: true, id });
+    await this.ctx.storage.put(`event:${Date.now()}:${id}`, {
+      received_at: receivedAt,
+      message_count: messages.length,
+      raw: payload,
+    });
+
+    return Response.json({
+      ok: true,
+      id,
+      message_count: messages.length,
+      attributed_messages: messages.filter((message: any) =>
+        Boolean(message?.referral ?? message?.context?.referral),
+      ).length,
+    });
   }
 }
 
