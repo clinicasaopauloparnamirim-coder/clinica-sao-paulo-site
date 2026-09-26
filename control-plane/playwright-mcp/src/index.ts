@@ -2,7 +2,7 @@ import { routeAgentRequest } from "agents";
 import { env, DurableObject } from "cloudflare:workers";
 import { createMcpAgent } from "@cloudflare/playwright-mcp";
 import { ControlAgent } from "./control-agent";
-import { GoogleOAuthStore, googleGa4Audit, googleOAuthCallback, googleOAuthStart } from "./google-ga4";
+import { GoogleOAuthStore, googleGa4Audit, googleGa4Cleanup, googleOAuthCallback, googleOAuthStart } from "./google-ga4";
 
 interface WhatsAppEnv {
   MCP_AUTH_TOKEN?: string;
@@ -132,6 +132,18 @@ export default {
 
     if (pathname === "/google/oauth/callback") {
       return googleOAuthCallback(request, env);
+    }
+
+    if (pathname === "/google/ga4/cleanup" && request.method === "POST") {
+      if (!authorized(request, env)) return unauthorized();
+      try {
+        return await googleGa4Cleanup(env);
+      } catch (error) {
+        return new Response(error instanceof Error ? error.message : "GA4 cleanup failed", {
+          status: 502,
+          headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },
+        });
+      }
     }
 
     if (pathname === "/google/ga4/audit") {
