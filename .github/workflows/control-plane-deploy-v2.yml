@@ -8,6 +8,7 @@ on:
       - "control-plane/playwright-mcp/**"
       - ".github/workflows/control-plane-deploy-v2.yml"
       - "wrangler.jsonc"
+      - "public/**"
 
 jobs:
   deploy:
