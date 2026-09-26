@@ -117,7 +117,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
           agent: "ControlAgent",
           model: "@cf/zai-org/glm-4.7-flash",
           tools_available: Object.keys(readOnlyTools),
-          text: result.text,
+          text: result.text.slice(0, 12000),
         });
       } catch (error) {
         console.error("[ControlAgent] AI inspection failed:", error);
