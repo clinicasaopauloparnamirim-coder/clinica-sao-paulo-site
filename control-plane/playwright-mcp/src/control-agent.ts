@@ -44,9 +44,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
 
   async onStart() {
     try {
-      await this.addMcpServer("Playwright Browser", this.env.MCP_OBJECT, {
-        id: "playwright-browser",
-      });
+      await this.addMcpServer("Playwright Browser", this.env.MCP_OBJECT);
 
       this.setState({
         ...this.state,
