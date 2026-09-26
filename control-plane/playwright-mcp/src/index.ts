@@ -86,6 +86,25 @@ function authorized(request: Request, env: { MCP_AUTH_TOKEN?: string }) {
   return header === "Bearer " + configured;
 }
 
+async function validMetaSignature(body: string, signature: string, secret: string) {
+  if (!signature.startsWith("sha256=")) return false;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const digest = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body));
+  const expected = "sha256=" + [...new Uint8Array(digest)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  if (signature.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= signature.charCodeAt(i) ^ expected.charCodeAt(i);
+  return diff === 0;
+}
+
 export default {
   async fetch(request: Request, env: WhatsAppEnv, ctx: ExecutionContext) {
     const { pathname } = new URL(request.url);
@@ -117,21 +136,20 @@ export default {
 
       if (request.method === "POST") {
         const body = await request.text();
-        const signature = request.headers.get("x-hub-signature-256") || "";
-        if (env.WHATSAPP_APP_SECRET && signature) {
-          const key = await crypto.subtle.importKey(
-            "raw",
-            new TextEncoder().encode(env.WHATSAPP_APP_SECRET),
-            { name: "HMAC", hash: "SHA-256" },
-            false,
-            ["sign"],
-          );
-          const digest = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body));
-          const expected = "sha256=" + [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
-          if (signature !== expected) return new Response("Forbidden", { status: 403 });
+        if (env.WHATSAPP_APP_SECRET) {
+          const signature = request.headers.get("x-hub-signature-256") || "";
+          if (!signature || !(await validMetaSignature(body, signature, env.WHATSAPP_APP_SECRET))) {
+            return new Response("Forbidden", { status: 403 });
+          }
         }
 
-        const payload = JSON.parse(body);
+        let payload: any;
+        try {
+          payload = JSON.parse(body);
+        } catch {
+          return new Response("Bad Request", { status: 400 });
+        }
+
         const ledger = env.WHATSAPP_LEDGER.get(env.WHATSAPP_LEDGER.idFromName("whatsapp"));
         const stored = await ledger.fetch("https://ledger.internal/", {
           method: "POST",
