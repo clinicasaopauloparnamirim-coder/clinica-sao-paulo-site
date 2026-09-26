@@ -1,128 +1,26 @@
-const ALLOWED_ORIGINS = new Set([
-  "https://clinicasaopauloparnamirim.com.br",
-  "https://www.clinicasaopauloparnamirim.com.br",
-]);
+const STATIC_ASSET_RE = /\.(?:css|js|mjs|png|jpe?g|webp|avif|gif|svg|ico|woff2?)$/i;
 
-const MODEL = "@cf/zai-org/glm-4.7-flash";
-
-function json(data, status = 200, origin = "") {
-  const headers = {
-    "content-type": "application/json; charset=UTF-8",
-    "cache-control": "no-store",
-    "x-content-type-options": "nosniff",
-  };
-  if (origin) {
-    headers["access-control-allow-origin"] = origin;
-    headers["access-control-allow-methods"] = "POST, OPTIONS";
-    headers["access-control-allow-headers"] = "content-type";
-    headers["vary"] = "Origin";
+function withSecurityHeaders(response) {
+  const headers = new Headers(response.headers);
+  headers.set("x-content-type-options", "nosniff");
+  headers.set("x-frame-options", "SAMEORIGIN");
+  headers.set("referrer-policy", "strict-origin-when-cross-origin");
+  headers.set("permissions-policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
+  if (new URL(response.url).protocol === "https:") {
+    headers.set("strict-transport-security", "max-age=31536000; includeSubDomains");
   }
-  return new Response(JSON.stringify(data), { status, headers });
-}
-
-function toOpenAIChatCompletion(result) {
-  if (result && Array.isArray(result.choices)) {
-    return result;
-  }
-
-  const nativeToolCalls = Array.isArray(result?.tool_calls)
-    ? result.tool_calls
-    : [];
-
-  const toolCalls = nativeToolCalls.map((call, index) => {
-    const fn = call?.function || {};
-    const name = fn.name || call?.name || "unknown";
-    const rawArguments = fn.arguments ?? call?.arguments ?? {};
-    const argumentsText =
-      typeof rawArguments === "string"
-        ? rawArguments
-        : JSON.stringify(rawArguments);
-
-    return {
-      id: call?.id || `call_${index + 1}_${crypto.randomUUID()}`,
-      type: "function",
-      function: {
-        name,
-        arguments: argumentsText,
-      },
-    };
-  });
-
-  const hasToolCalls = toolCalls.length > 0;
-  const message = {
-    role: "assistant",
-    content: result?.response ?? (hasToolCalls ? null : ""),
-    ...(hasToolCalls ? { tool_calls: toolCalls } : {}),
-  };
-
-  return {
-    id: `chatcmpl_${crypto.randomUUID()}`,
-    object: "chat.completion",
-    created: Math.floor(Date.now() / 1000),
-    model: MODEL,
-    choices: [
-      {
-        index: 0,
-        message,
-        finish_reason: hasToolCalls ? "tool_calls" : "stop",
-      },
-    ],
-    ...(result?.usage ? { usage: result.usage } : {}),
-  };
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
 export default {
   async fetch(request, env) {
+    const response = await env.ASSETS.fetch(request);
     const url = new URL(request.url);
-    const origin = request.headers.get("Origin") || "";
-
-    if (url.pathname === "/api/page-agent/v1/chat/completions") {
-      if (!ALLOWED_ORIGINS.has(origin)) {
-        return json({ error: { message: "Origin not allowed." } }, 403);
-      }
-
-      if (request.method === "OPTIONS") {
-        return json({}, 204, origin);
-      }
-
-      if (request.method !== "POST") {
-        return json({ error: { message: "Method not allowed." } }, 405, origin);
-      }
-
-      const contentLength = Number(request.headers.get("Content-Length") || 0);
-      if (contentLength > 350000) {
-        return json({ error: { message: "Request too large." } }, 413, origin);
-      }
-
-      let body;
-      try {
-        body = await request.json();
-      } catch {
-        return json({ error: { message: "Invalid JSON." } }, 400, origin);
-      }
-
-      body.model = MODEL;
-      body.stream = false;
-
-      try {
-        const result = await env.AI.run(MODEL, body);
-        return json(toOpenAIChatCompletion(result), 200, origin);
-      } catch (error) {
-        console.error("Page Agent inference failed:", error?.message || error);
-        return json(
-          { error: { message: "AI service temporarily unavailable." } },
-          503,
-          origin,
-        );
-      }
+    if (STATIC_ASSET_RE.test(url.pathname)) {
+      const headers = new Headers(response.headers);
+      headers.set("cache-control", "public, max-age=604800, s-maxage=2592000");
+      return withSecurityHeaders(new Response(response.body, { status: response.status, statusText: response.statusText, headers }));
     }
-
-    const asset = await env.ASSETS.fetch(request);
-    const pathname = url.pathname;
-    const staticAsset = /\\.(?:css|js|mjs|png|jpe?g|webp|avif|gif|svg|ico|woff2?)$/i.test(pathname);
-    if (!staticAsset) return asset;
-    const headers = new Headers(asset.headers);
-    headers.set("cache-control", "public, max-age=604800, s-maxage=2592000");
-    return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
+    return withSecurityHeaders(response);
   },
 };
