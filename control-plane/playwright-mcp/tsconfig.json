@@ -6,11 +6,11 @@
     "noEmit": true,
     "skipLibCheck": true,
     "types": [
-      "./worker-configuration.d.ts",
       "node"
     ]
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "worker-configuration.d.ts"
   ]
 }
