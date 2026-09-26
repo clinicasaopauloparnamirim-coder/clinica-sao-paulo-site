@@ -121,6 +121,7 @@ export default {
         control_agent: true,
         browser_binding: true,
         auth_configured: Boolean(env.MCP_AUTH_TOKEN),
+        google_oauth_configured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
       }), {
         status: 200,
         headers: { "content-type": "application/json; charset=UTF-8", "cache-control": "no-store" },
