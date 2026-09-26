@@ -45,7 +45,11 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       ok: this.state.status === "ready" && this.state.browser_mcp === "connected",
       agent: "ControlAgent",
       state: this.state,
-      mcp: this.getMcpServers(),
+      mcp: {
+        servers: this.getMcpServers().servers,
+        tool_count: this.getMcpServers().tools.length,
+        tools: this.getMcpServers().tools.map((tool) => tool.name),
+      },
     });
   }
 }
