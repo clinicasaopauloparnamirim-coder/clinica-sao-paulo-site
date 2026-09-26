@@ -6,7 +6,7 @@
     started = true;
 
     try {
-      const { PageAgent } = await import("https://esm.sh/page-agent@1.12.2");
+      const { PageAgent } = await import("https://esm.sh/page-agent@1.12.4");
 
       const agent = new PageAgent({
         model: "@cf/zai-org/glm-4.7-flash",
@@ -37,7 +37,6 @@
     }
   }
 
-  // Carrega depois da página ficar interativa para não disputar o caminho crítico.
   if ("requestIdleCallback" in window) {
     window.requestIdleCallback(startPageAgent, { timeout: 2500 });
   } else {
