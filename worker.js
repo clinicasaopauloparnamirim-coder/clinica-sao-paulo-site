@@ -117,24 +117,6 @@ export default {
       }
     }
 
-    if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
-      const asset = await env.ASSETS.fetch(request);
-      const type = asset.headers.get("content-type") || "";
-      if (type.includes("text/html")) {
-        return new HTMLRewriter()
-          .on("body", {
-            element(element) {
-              element.append(
-                '<script type="module" src="/page-agent-init.js" defer></script>',
-                { html: true },
-              );
-            },
-          })
-          .transform(asset);
-      }
-      return asset;
-    }
-
     const asset = await env.ASSETS.fetch(request);
     const pathname = url.pathname;
     const staticAsset = /\\.(?:css|js|mjs|png|jpe?g|webp|avif|gif|svg|ico|woff2?)$/i.test(pathname);
