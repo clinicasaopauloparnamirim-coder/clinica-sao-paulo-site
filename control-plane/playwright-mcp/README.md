@@ -35,3 +35,4 @@ Do not connect Google Ads or Sheets accounts until browser authentication and pe
 This browser agent can navigate, click and type on external sites. Keep the endpoint private, use the bearer token, least-privilege account permissions, and never paste credentials into prompts.
 
 Prefer official APIs/connectors for Google Ads/Sheets where available; use browser automation only where the UI is actually required.
+\n\n<!-- control-plane sync: 2026-09-26 -->\n
