@@ -292,18 +292,26 @@
 
   <script>
   (() => {
-    // Mede o clique no WhatsApp diretamente pelo Zaraz.
-    // O site usa Zaraz como camada de mensuração; não depende de gtag/GTM carregado no HTML.
+    // Mede o clique no WhatsApp pelo Zaraz.
+    // O envio é disparado no pointerdown e novamente no click apenas como fallback,
+    // evitando perder o evento quando o navegador abre o WhatsApp imediatamente.
+    const sent = new WeakSet();
+    const trackWhatsApp = (link) => {
+      if (sent.has(link)) return;
+      sent.add(link);
+      const props = {
+        event_category: 'Engajamento',
+        event_label: 'Clique WhatsApp',
+        link_location: link.classList.contains('whatsapp-float') ? 'floating' : 'content',
+        destination: link.href,
+      };
+      if (window.zaraz && typeof window.zaraz.track === 'function') {
+        window.zaraz.track('clique_whatsapp', props);
+      }
+    };
     document.querySelectorAll('.whatsapp-track').forEach((link) => {
-      link.addEventListener('click', () => {
-        if (window.zaraz && typeof window.zaraz.track === 'function') {
-          window.zaraz.track('clique_whatsapp', {
-            event_category: 'Engajamento',
-            event_label: 'Clique WhatsApp',
-            link_location: link.className.includes('whatsapp-float') ? 'floating' : 'content',
-          });
-        }
-      }, {passive:true});
+      link.addEventListener('pointerdown', () => trackWhatsApp(link), {passive:true});
+      link.addEventListener('click', () => trackWhatsApp(link), {passive:true});
     });
 
     // O Google Maps não entra no carregamento inicial. Só cria o iframe quando o usuário pedir.
