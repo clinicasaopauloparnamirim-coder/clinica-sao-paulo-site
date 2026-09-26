@@ -25,7 +25,11 @@ const READ_ONLY_BROWSER_TOOLS = new Set([
 
 function getReadOnlyTools(tools: Record<string, unknown>) {
   return Object.fromEntries(
-    Object.entries(tools).filter(([name]) => READ_ONLY_BROWSER_TOOLS.has(name)),
+    Object.entries(tools).filter(([name]) =>
+      [...READ_ONLY_BROWSER_TOOLS].some(
+        (toolName) => name === toolName || name.endsWith("_" + toolName),
+      ),
+    ),
   );
 }
 
