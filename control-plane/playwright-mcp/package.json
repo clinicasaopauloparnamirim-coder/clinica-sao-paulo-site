@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {"build": "tsc", "deploy": "wrangler deploy"},
-  "dependencies": {"@cloudflare/playwright-mcp": "^0.0.5"},
+  "dependencies": {"@cloudflare/playwright-mcp": "^1.1.1"},
   "devDependencies": {"@types/node": "^22.14.1", "typescript": "^5.8.2", "wrangler": "^4.26.0"}
 }
