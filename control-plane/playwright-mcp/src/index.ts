@@ -1,5 +1,9 @@
+import { routeAgentRequest } from "agents";
 import { env } from "cloudflare:workers";
 import { createMcpAgent } from "@cloudflare/playwright-mcp";
+import { ControlAgent } from "./control-agent";
+
+export { ControlAgent };
 
 export const PlaywrightMCP = createMcpAgent(env.BROWSER);
 
@@ -21,13 +25,14 @@ function authorized(request: Request, env: { MCP_AUTH_TOKEN?: string }) {
 }
 
 export default {
-  fetch(request: Request, env: { MCP_AUTH_TOKEN?: string }, ctx: ExecutionContext) {
+  async fetch(request: Request, env: { MCP_AUTH_TOKEN?: string }, ctx: ExecutionContext) {
     const { pathname } = new URL(request.url);
 
     if (pathname === "/health") {
       return new Response(JSON.stringify({
         ok: true,
         service: "clinica-sao-paulo-playwright-mcp",
+        control_agent: true,
         browser_binding: true,
         auth_configured: Boolean(env.MCP_AUTH_TOKEN),
       }), {
@@ -35,6 +40,9 @@ export default {
         headers: { "content-type": "application/json; charset=UTF-8", "cache-control": "no-store" },
       });
     }
+
+    const agentResponse = await routeAgentRequest(request, env);
+    if (agentResponse) return agentResponse;
 
     if (pathname !== "/sse" && pathname !== "/sse/message" && pathname !== "/mcp") {
       return new Response("Not Found", { status: 404 });
