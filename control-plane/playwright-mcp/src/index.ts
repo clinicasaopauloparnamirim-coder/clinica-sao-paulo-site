@@ -1,5 +1,5 @@
 import { routeAgentRequest } from "agents";
-import { env } from "cloudflare:workers";
+import { env, DurableObject } from "cloudflare:workers";
 import { createMcpAgent } from "@cloudflare/playwright-mcp";
 import { ControlAgent } from "./control-agent";
 
