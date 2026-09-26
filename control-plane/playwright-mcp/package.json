@@ -3,12 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node -e \"console.log('Cloudflare Worker: build handled by wrangler deploy')\"",
+    "build": "node -e \"console.log('Cloudflare Worker: build handled by wrangler deploy')\",
     "deploy": "wrangler deploy"
   },
   "dependencies": {
     "@cloudflare/playwright-mcp": "1.1.1",
-    "agents": "0.24.0"
+    "agents": "0.24.0",
+    "ai": "7.0.114",
+    "workers-ai-provider": "4.0.0"
   },
   "devDependencies": {
     "@types/node": "22.14.1",
