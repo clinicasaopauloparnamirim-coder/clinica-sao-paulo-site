@@ -2,14 +2,14 @@ import { Agent } from "agents";
 import { generateText, stepCountIs } from "ai";
 import { createWorkersAI } from "workers-ai-provider";
 
-type ControlEnv = {
+type ControlEnv = Env & {
   AI: Ai;
-  MCP_OBJECT: DurableObjectNamespace;
+  MCP_OBJECT: DurableObjectNamespace<any>;
 };
 
 export type ControlAgentState = {
   status: "ready" | "degraded";
-  version: 2;
+  version: 3;
   capabilities: string[];
   browser_mcp: "connected" | "disconnected";
   ai: "ready" | "error";
@@ -93,7 +93,10 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
 
   async onStart() {
     try {
-      await this.addMcpServer("Playwright Browser", this.env.MCP_OBJECT);
+      await this.addMcpServer(
+        "Playwright Browser",
+        this.env.MCP_OBJECT as unknown as DurableObjectNamespace<any>,
+      );
 
       this.setState({
         ...this.state,
