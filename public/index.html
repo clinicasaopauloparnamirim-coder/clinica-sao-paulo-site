@@ -295,7 +295,7 @@
     document.querySelectorAll('.whatsapp-track').forEach((link) => {
       link.addEventListener('click', () => {
         if (typeof window.gtag === 'function') {
-          window.gtag('event', 'generate_lead', {event_category:'Engajamento', event_label:'Clique WhatsApp'});
+          window.gtag('event', 'clique_whatsapp', {event_category:'Engajamento', event_label:'Clique WhatsApp'});
         }
       }, {passive:true});
     });
