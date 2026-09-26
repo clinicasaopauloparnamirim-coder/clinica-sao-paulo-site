@@ -26,10 +26,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: control-plane/playwright-mcp/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Typecheck
         run: npm run build
