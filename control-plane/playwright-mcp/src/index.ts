@@ -24,6 +24,18 @@ export default {
   fetch(request: Request, env: { MCP_AUTH_TOKEN?: string }, ctx: ExecutionContext) {
     const { pathname } = new URL(request.url);
 
+    if (pathname === "/health") {
+      return new Response(JSON.stringify({
+        ok: true,
+        service: "clinica-sao-paulo-playwright-mcp",
+        browser_binding: true,
+        auth_configured: Boolean(env.MCP_AUTH_TOKEN),
+      }), {
+        status: 200,
+        headers: { "content-type": "application/json; charset=UTF-8", "cache-control": "no-store" },
+      });
+    }
+
     if (pathname !== "/sse" && pathname !== "/sse/message" && pathname !== "/mcp") {
       return new Response("Not Found", { status: 404 });
     }
