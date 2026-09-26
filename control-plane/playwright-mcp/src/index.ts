@@ -136,6 +136,21 @@ export default {
 
     if (pathname === "/google/ga4/cleanup" && request.method === "POST") {
       if (!authorized(request, env)) return unauthorized();
+      let body: { confirm?: boolean } = {};
+      try {
+        body = await request.json();
+      } catch {
+        return new Response("Explicit confirmation required.", {
+          status: 400,
+          headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },
+        });
+      }
+      if (body.confirm !== true) {
+        return new Response("Explicit confirmation required: send {\\"confirm\\":true}.", {
+          status: 400,
+          headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },
+        });
+      }
       try {
         return await googleGa4Cleanup(env);
       } catch (error) {
