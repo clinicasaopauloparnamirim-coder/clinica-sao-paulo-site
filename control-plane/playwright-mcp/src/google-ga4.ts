@@ -27,7 +27,40 @@ export class GoogleOAuthStore extends DurableObject {
     }
     if (request.method === "GET" && url.pathname === "/token") {
       const token = await this.ctx.storage.get<string>("refresh_token");
-      return Response.json({ configured: Boolean(token), refresh_token: token ?? null });
+      return Response.json({ configured: Boolean(token) }, {
+        headers: { "cache-control": "no-store" },
+      });
+    }
+    if (request.method === "POST" && url.pathname === "/access-token") {
+      const body = await request.json() as { client_id?: string; client_secret?: string };
+      if (!body.client_id || !body.client_secret) {
+        return new Response("Bad Request", { status: 400 });
+      }
+      const refreshToken = await this.ctx.storage.get<string>("refresh_token");
+      if (!refreshToken) {
+        return new Response("Google Analytics is not authorized yet.", { status: 401 });
+      }
+      const response = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: body.client_id,
+          client_secret: body.client_secret,
+          refresh_token: refreshToken,
+          grant_type: "refresh_token",
+        }),
+      });
+      if (!response.ok) {
+        return new Response("Google token refresh failed.", { status: 502 });
+      }
+      const token = await response.json() as { access_token?: string; expires_in?: number };
+      if (!token.access_token) {
+        return new Response("Google did not return an access token.", { status: 502 });
+      }
+      return Response.json(
+        { access_token: token.access_token, expires_in: token.expires_in ?? null },
+        { headers: { "cache-control": "no-store" } },
+      );
     }
     return new Response("Not Found", { status: 404 });
   }
@@ -54,21 +87,17 @@ async function exchangeCode(env: GoogleEnv, code: string, redirectUri: string) {
 }
 
 async function accessToken(env: GoogleEnv) {
-  const saved = await store(env).fetch("https://store.internal/token");
-  const data = await saved.json() as { configured?: boolean; refresh_token?: string };
-  if (!data.refresh_token) throw new Error("Google Analytics is not authorized yet.");
-
-  const response = await fetch("https://oauth2.googleapis.com/token", {
+  const response = await store(env).fetch("https://store.internal/access-token", {
     method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: env.GOOGLE_CLIENT_ID!,
-      client_secret: env.GOOGLE_CLIENT_SECRET!,
-      refresh_token: data.refresh_token,
-      grant_type: "refresh_token",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      client_id: env.GOOGLE_CLIENT_ID,
+      client_secret: env.GOOGLE_CLIENT_SECRET,
     }),
   });
-  if (!response.ok) throw new Error(`Google token refresh failed: ${response.status}`);
+  if (!response.ok) {
+    throw new Error(`Google token refresh failed: ${response.status}`);
+  }
   const token = await response.json() as { access_token?: string };
   if (!token.access_token) throw new Error("Google did not return an access token.");
   return token.access_token;
