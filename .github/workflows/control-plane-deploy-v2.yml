@@ -1,0 +1,37 @@
+name: Control Plane Deploy V2
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - "control-plane/playwright-mcp/**"
+      - ".github/workflows/control-plane-deploy-v2.yml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: control-plane/playwright-mcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npx wrangler types
+      - run: npm run build
+      - name: Deploy Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --config wrangler.toml --keep-vars
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+          body="$(curl -sS --retry 5 --retry-delay 2 --connect-timeout 10 --max-time 30 "https://clinica-sao-paulo-site.clinicasaopauloparnamirim.workers.dev/health")"
+          echo "$body"
+          echo "$body" | grep -q '"ok":true'
+          echo "$body" | grep -q '"google_oauth_configured":true'
