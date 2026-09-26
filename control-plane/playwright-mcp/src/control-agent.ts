@@ -2,11 +2,14 @@ import { Agent } from "agents";
 import { generateText, stepCountIs } from "ai";
 import { createWorkersAI } from "workers-ai-provider";
 
-type ControlEnv = Env;
+type ControlEnv = Env & {
+  AI: Ai;
+  MCP_OBJECT: DurableObjectNamespace<any>;
+};
 
 export type ControlAgentState = {
   status: "ready" | "degraded";
-  version: 2;
+  version: 3;
   capabilities: string[];
   browser_mcp: "connected" | "disconnected";
   ai: "ready" | "error";
