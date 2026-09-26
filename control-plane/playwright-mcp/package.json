@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc --noEmit",
+    "build": "wrangler types && tsc --noEmit",
     "deploy": "wrangler deploy"
   },
   "dependencies": {
