@@ -1,4 +1,4 @@
-name = "clinica-sao-paulo-playwright-mcp"
+name = "clinica-sao-paulo-site"
 main = "src/index.ts"
 compatibility_date = "2026-09-25"
 compatibility_flags = ["nodejs_compat"]
