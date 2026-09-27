@@ -164,9 +164,22 @@ export default {
       if (!authorized(request, env)) return unauthorized();
       try {
         const body = await request.json() as { operations?: unknown[]; validateOnly?: boolean; confirm?: boolean };
-        if (!Array.isArray(body.operations)) return new Response("Invalid batch mutation payload.", { status: 400 });
-        return Response.json(await googleAdsBatchMutate(env, body.operations, body.validateOnly !== false, body.confirm === true), { headers: { "cache-control": "no-store" } });
-      } catch (error) { return new Response(error instanceof Error ? error.message : "Google Ads batch mutation failed", { status: 400 }); }
+        if (!Array.isArray(body.operations)) {
+          return new Response("Invalid batch mutation payload.", { status: 400 });
+        }
+        const result = await googleAdsBatchMutate(
+          env,
+          body.operations,
+          body.validateOnly !== false,
+          body.confirm === true
+        );
+        return Response.json(result, { headers: { "cache-control": "no-store" } });
+      } catch (error) {
+        return new Response(
+          error instanceof Error ? error.message : "Google Ads batch mutation failed",
+          { status: 400 }
+        );
+      }
     }
 
     if (pathname === "/google/ads/mutate" && request.method === "POST") {
