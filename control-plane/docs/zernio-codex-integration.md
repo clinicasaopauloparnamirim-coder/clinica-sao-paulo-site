@@ -1,1 +1,41 @@
-# Zernio ↔ Codex integration for Control Tower\n\n## Architecture\n\nControl Tower packages the hosted Zernio MCP server as a Codex-compatible plugin:\n\nCodex → Control Tower Zernio plugin → https://mcp.zernio.com/mcp → Zernio connected accounts\n\nThe plugin contains no credentials.\n\n## Authentication\n\nUse the Zernio hosted MCP OAuth flow for interactive Codex use. The Zernio server supports OAuth 2.1 with PKCE and dynamic client registration.\n\nFallback for autonomous agents: use a dedicated Zernio API key supplied through a secret manager or environment variable. Never commit the key to this repository.\n\n## First connection\n\nFrom the Codex environment:\n\n    codex mcp add zernio --url https://mcp.zernio.com/mcp\n    codex mcp login zernio\n    codex mcp list\n\nFor a plugin-based setup, install/load the Control Tower plugin and then run the same connection/login flow if Codex requests authorization.\n\n## Verification\n\nAsk Codex:\n\n    Use the Zernio MCP and list my connected accounts.\n\nThe Zernio documentation identifies accounts_list as the connection test. A working connection returns the connected platform/account IDs or No accounts connected.\n\n## Google data\n\nAfter Zernio reports the expected connected Google accounts, use the Zernio tools to inspect Google Ads and Google Business Profile data. Do not infer that those accounts are connected from GitHub access alone.\n\n## Security\n\nNo OAuth tokens, refresh tokens, client secrets, Zernio API keys, or Google credentials belong in GitHub. Store secrets outside the repository.
+# Zernio ↔ Codex integration for Control Tower
+
+## Architecture
+
+Control Tower packages the hosted Zernio MCP server as a Codex-compatible plugin:
+
+Codex → Control Tower Zernio plugin → https://mcp.zernio.com/mcp → Zernio connected accounts
+
+The plugin contains no credentials.
+
+## Authentication
+
+Use the Zernio hosted MCP OAuth flow for interactive Codex use. The Zernio server supports OAuth 2.1 with PKCE and dynamic client registration.
+
+Fallback for autonomous agents: use a dedicated Zernio API key supplied through a secret manager or environment variable. Never commit the key to this repository.
+
+## First connection
+
+From the Codex environment:
+
+    codex mcp add zernio --url https://mcp.zernio.com/mcp
+    codex mcp login zernio
+    codex mcp list
+
+For a plugin-based setup, install/load the Control Tower plugin and then run the same connection/login flow if Codex requests authorization.
+
+## Verification
+
+Ask Codex:
+
+    Use the Zernio MCP and list my connected accounts.
+
+The Zernio documentation identifies `accounts_list` as the connection test. A working connection returns the connected platform/account IDs or `No accounts connected`.
+
+## Google data
+
+After Zernio reports the expected connected Google accounts, use the Zernio tools to inspect Google Ads and Google Business Profile data. Do not infer that those accounts are connected from GitHub access alone.
+
+## Security
+
+No OAuth tokens, refresh tokens, client secrets, Zernio API keys, or Google credentials belong in GitHub. Store secrets outside the repository.
