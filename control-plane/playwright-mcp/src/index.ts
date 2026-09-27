@@ -160,7 +160,8 @@ export default {
       catch (error) { return new Response(error instanceof Error ? error.message : "Google Ads audit failed", { status: 502 }); }
     }
 
-    // Google Ads batch mutation endpoint\n    if (pathname === "/google/ads/batch-mutate" && request.method === "POST") {
+    // Google Ads batch mutation endpoint
+    if (pathname === "/google/ads/batch-mutate" && request.method === "POST") {
       if (!authorized(request, env)) return unauthorized();
       try {
         const body = await request.json() as { operations?: unknown[]; validateOnly?: boolean; confirm?: boolean };
