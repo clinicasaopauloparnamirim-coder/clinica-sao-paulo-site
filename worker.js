@@ -14,6 +14,18 @@ function withSecurityHeaders(response) {
 
 export default {
   async fetch(request, env) {
+    const requestUrl = new URL(request.url);
+    if (requestUrl.hostname === "www.clinicasaopauloparnamirim.com.br") {
+      requestUrl.hostname = "clinicasaopauloparnamirim.com.br";
+      return new Response(null, {
+        status: 301,
+        headers: {
+          location: requestUrl.toString(),
+          "cache-control": "public, max-age=86400",
+        },
+      });
+    }
+
     const response = await env.ASSETS.fetch(request);
     const url = new URL(request.url);
     if (STATIC_ASSET_RE.test(url.pathname)) {
