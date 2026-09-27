@@ -2,13 +2,6 @@ name: Control Plane Deploy V2
 
 on:
   workflow_dispatch:
-  push:
-    branches: ["main"]
-    paths:
-      - "control-plane/playwright-mcp/**"
-      - ".github/workflows/control-plane-deploy-v2.yml"
-      - "wrangler.jsonc"
-      - "public/**"
 
 jobs:
   deploy:
@@ -37,3 +30,5 @@ jobs:
           echo "$body"
           echo "$body" | grep -q '"ok":true'
           echo "$body" | grep -q '"google_oauth_configured":true'
+
+# Manual-only by design: deployment must never happen from a push.

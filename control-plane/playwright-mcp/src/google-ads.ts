@@ -1,5 +1,3 @@
-import type { DurableObjectNamespace } from "cloudflare:workers";
-
 const GOOGLE_ADS_API = "https://googleads.googleapis.com/v25";
 const DEFAULT_CUSTOMER_ID = "4603647788";
 

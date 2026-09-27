@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "github": {
+      "serverUrl": "https://api.githubcopilot.com/mcp/"
+    },
+    "cloudflare": {
+      "serverUrl": "https://mcp.cloudflare.com/mcp"
+    },
+    "zernio": {
+      "serverUrl": "https://mcp.zernio.com/mcp"
+    },
+    "openaiDeveloperDocs": {
+      "serverUrl": "https://developers.openai.com/mcp"
+    }
+  }
+}
