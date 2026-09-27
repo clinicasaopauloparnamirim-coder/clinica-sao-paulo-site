@@ -167,7 +167,9 @@ export default {
         if (!Array.isArray(body.operations)) return new Response("Invalid batch mutation payload.", { status: 400 });
         return Response.json(await googleAdsBatchMutate(env, body.operations, body.validateOnly !== false, body.confirm === true), { headers: { "cache-control": "no-store" } });
       } catch (error) { return new Response(error instanceof Error ? error.message : "Google Ads batch mutation failed", { status: 400 }); }
-    }\n\n    if (pathname === "/google/ads/mutate" && request.method === "POST") {
+    }
+
+    if (pathname === "/google/ads/mutate" && request.method === "POST") {
       if (!authorized(request, env)) return unauthorized();
       try {
         const body = await request.json() as { resource?: "campaignBudgets"|"campaigns"|"adGroups"|"adGroupCriteria"|"adGroupAds"|"campaignCriteria"; operations?: unknown[]; validateOnly?: boolean; confirm?: boolean };
