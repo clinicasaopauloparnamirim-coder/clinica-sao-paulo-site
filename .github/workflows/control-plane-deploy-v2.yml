@@ -37,3 +37,4 @@ jobs:
           echo "$body"
           echo "$body" | grep -q '"ok":true'
           echo "$body" | grep -q '"google_oauth_configured":true'
+# Direct Google Ads Control Tower redeploy trigger 2026-09-27
