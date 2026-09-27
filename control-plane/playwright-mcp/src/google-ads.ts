@@ -93,7 +93,8 @@ export async function googleAdsAudit(env: GoogleAdsEnv) {
 export async function googleAdsBatchMutate(env: GoogleAdsEnv, operations: unknown[], validateOnly = true, confirm = false) {
   if (!operations.length || operations.length > 100) throw new Error("Batch mutation must contain 1-100 operations.");
   if (!validateOnly && confirm !== true) throw new Error("Explicit confirmation required for live mutation.");
-  return adsRequest(env, "googleAds:mutate", { operations, validateOnly });
+  // Google Ads API googleAds:mutate expects "mutateOperations", not "operations"
+  return adsRequest(env, "googleAds:mutate", { mutateOperations: operations, validateOnly });
 }
 
 export async function googleAdsMutate(
