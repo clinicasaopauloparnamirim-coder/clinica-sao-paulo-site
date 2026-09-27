@@ -54,10 +54,80 @@ export async function googleAdsAudit(env: GoogleAdsEnv) {
   return Response.json({ ok: true, mode: "read_only", result: await searchStream(env, query) }, { headers: { "cache-control": "no-store" } });
 }
 
-export async function googleAdsMutate(env: GoogleAdsEnv, resource: string, operations: unknown[], validateOnly = true, confirm = false) {
-  const allowed = new Set(["adGroups", "adGroupCriteria", "adGroupAds", "campaignCriteria"]);
-  if (!allowed.has(resource)) throw new Error("Blocked resource. Budget, billing, campaign creation and payment mutations are intentionally unavailable.");
-  if (!Array.isArray(operations) || operations.length === 0) throw new Error("At least one mutation operation is required.");
-  if (!validateOnly && confirm !== true) throw new Error("Explicit confirmation required for a live Google Ads mutation.");
-  return adsRequest(env, `${resource}:mutate`, { operations, validateOnly });
+type GuardedOperation = {
+  update?: { resourceName: string; status?: "ENABLED" | "PAUSED" | "REMOVED" };
+  updateMask?: { paths: ["status"] };
+};
+
+const GUARDED_RESOURCES = new Set(["adGroups", "adGroupCriteria", "adGroupAds", "campaignCriteria"]);
+
+function validateGuardedOperations(resource: string, operations: unknown[]): GuardedOperation[] {
+  if (!GUARDED_RESOURCES.has(resource)) {
+    throw new Error("Blocked resource. Budget, billing, payment and campaign-creation mutations are unavailable.");
+  }
+  if (!Array.isArray(operations) || operations.length === 0 || operations.length > 20) {
+    throw new Error("Provide 1-20 guarded operations.");
+  }
+
+  return operations.map((operation, index) => {
+    if (!operation || typeof operation !== "object" || Array.isArray(operation)) {
+      throw new Error("Operation " + (index + 1) + " is invalid.");
+    }
+    const value = operation as Record<string, unknown>;
+    if (Object.keys(value).some((key) => key !== "update" && key !== "updateMask")) {
+      throw new Error("Operation " + (index + 1) + " contains a blocked field.");
+    }
+
+    const update = value.update;
+    if (!update || typeof update !== "object" || Array.isArray(update)) {
+      throw new Error("Operation " + (index + 1) + " must contain an update.");
+    }
+    const updateValue = update as Record<string, unknown>;
+    if (Object.keys(updateValue).some((key) => key !== "resourceName" && key !== "status")) {
+      throw new Error("Operation " + (index + 1) + " contains a blocked update field.");
+    }
+    if (typeof updateValue.resourceName !== "string" || !updateValue.resourceName) {
+      throw new Error("Operation " + (index + 1) + " requires resourceName.");
+    }
+    if (updateValue.status !== undefined &&
+        updateValue.status !== "ENABLED" &&
+        updateValue.status !== "PAUSED" &&
+        updateValue.status !== "REMOVED") {
+      throw new Error("Operation " + (index + 1) + " has an invalid status.");
+    }
+
+    const mask = value.updateMask;
+    if (!mask || typeof mask !== "object" || Array.isArray(mask)) {
+      throw new Error("Operation " + (index + 1) + " requires updateMask.");
+    }
+    const maskValue = mask as Record<string, unknown>;
+    if (Object.keys(maskValue).length !== 1 ||
+        !Array.isArray(maskValue.paths) ||
+        maskValue.paths.length !== 1 ||
+        maskValue.paths[0] !== "status") {
+      throw new Error("Operation " + (index + 1) + " may update status only.");
+    }
+
+    return {
+      update: {
+        resourceName: updateValue.resourceName,
+        ...(updateValue.status !== undefined ? { status: updateValue.status } : {}),
+      },
+      updateMask: { paths: ["status"] },
+    };
+  });
+}
+
+export async function googleAdsMutate(
+  env: GoogleAdsEnv,
+  resource: string,
+  operations: unknown[],
+  validateOnly = true,
+  confirm = false,
+) {
+  const guarded = validateGuardedOperations(resource, operations);
+  if (!validateOnly && confirm !== true) {
+    throw new Error("Explicit confirmation required for a live Google Ads mutation.");
+  }
+  return adsRequest(env, resource + ":mutate", { operations: guarded, validateOnly });
 }
