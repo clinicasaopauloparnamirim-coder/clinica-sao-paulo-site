@@ -1,1 +1,14 @@
-name: Control Plane Deploy\n\non:\n  workflow_dispatch:\n  push:\n    branches: ["main"]\n    paths:\n      - "control-plane/playwright-mcp/**"\n      - ".github/workflows/control-plane-deploy.yml"\n\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    timeout-minutes: 60\n    defaults:\n      run:\n        working-directory: control-plane/playwright-mcp\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v4\n\n      - name: Setup Node\n        uses: actions/setup-node@v4\n        with:\n          node-version: 22\n\n      - name: Install dependencies\n        run: npm install\n\n      - name: Generate Cloudflare Worker types\n        run: npx wrangler types\n\n      - name: Typecheck\n        run: npm run build\n\n      - name: Deploy Worker\n        env:\n          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}\n          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}\n        run: npx wrangler deploy --config wrangler.toml --keep-vars\n\n      - name: Smoke test deployed Worker\n        run: |\n          set -euo pipefail\n          url="https://clinica-sao-paulo-site.clinicasaopauloparnamirim.workers.dev/health"\n          body="$(curl -sS --retry 5 --retry-delay 2 --connect-timeout 10 --max-time 30 "$url")"\n          echo "$body"\n          echo "$body" | grep -q '"ok":true'\n          echo "$body" | grep -q '"google_oauth_configured":true'\n\n# Deploy trigger: preserve runtime vars 2026-09-26\n
+# DEPRECATED — this workflow was corrupted (entire file stored as one line with literal \\n).
+# Use control-plane-deploy-v2.yml only.
+# Disabled on purpose so it no longer runs on push.
+name: Control Plane Deploy (disabled)
+
+on:
+  workflow_dispatch:
+    # manual only — do not auto-run
+
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "This workflow is disabled. Use control-plane-deploy-v2.yml."
