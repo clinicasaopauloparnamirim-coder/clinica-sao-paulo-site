@@ -3,7 +3,7 @@ name: Control Plane
 on:
   workflow_dispatch:
   push:
-    branches: ["main"]
+    branches: ["main", "control-tower-prep-2026-09-27"]
     paths:
       - "control-plane/playwright-mcp/**"
       - ".github/workflows/control-plane.yml"
