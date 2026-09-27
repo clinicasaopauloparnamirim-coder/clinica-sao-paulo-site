@@ -41,6 +41,10 @@ export class GoogleOAuthStore extends DurableObject {
         headers: { "cache-control": "no-store" },
       });
     }
+    if (request.method === "GET" && url.pathname === "/ads-refresh-token") {
+      const token = await this.ctx.storage.get<string>("ads_refresh_token");
+      return token ? new Response(token, { headers: { "cache-control": "no-store" } }) : new Response("Not Found", { status: 404 });
+    }
     if (request.method === "POST" && url.pathname === "/access-token") {
       const body = await request.json() as { client_id?: string; client_secret?: string };
       if (!body.client_id || !body.client_secret) {
