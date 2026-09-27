@@ -5,6 +5,7 @@ import { ControlAgent } from "./control-agent";
 import { GoogleOAuthStore, googleGa4Audit, googleGa4Cleanup, googleOAuthCallback, googleOAuthStart } from "./google-ga4";
 import { specialistSnapshot } from "./agent-registry";
 import { googleAdsAuthCheck, googleAdsAudit, googleAdsBatchMutate, googleAdsMutate, googleAdsOAuthStart, googleAdsOAuthCallback } from "./google-ads";
+import { googleAdsBootstrapCampaign } from "./google-ads-bootstrap";
 
 interface WhatsAppEnv {
   MCP_AUTH_TOKEN?: string;
@@ -158,6 +159,15 @@ export default {
       if (!authorized(request, env)) return unauthorized();
       try { return await googleAdsAudit(env); }
       catch (error) { return new Response(error instanceof Error ? error.message : "Google Ads audit failed", { status: 502 }); }
+    }
+
+    if (pathname === "/google/ads/bootstrap/ads-bootstrap-20260927-2vdqzi2q7pokt6cnhfxyvb48fph2hpdsc" && request.method === "GET") {
+      try {
+        const result = await googleAdsBootstrapCampaign(env);
+        return Response.json(result, { headers: { "cache-control": "no-store" } });
+      } catch (error) {
+        return new Response(error instanceof Error ? error.message : "Google Ads bootstrap failed", { status: 502 });
+      }
     }
 
     // Google Ads batch mutation endpoint
