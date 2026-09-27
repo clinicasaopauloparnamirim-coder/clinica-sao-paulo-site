@@ -17,10 +17,10 @@ export class GoogleOAuthStore extends DurableObject {
       await this.ctx.storage.put(`oauth_state:${body.state}`, { value: body.state, expires: Date.now() + 10 * 60_000 });
       return new Response("OK");
     }
-    if (request.method === "POST" && url.pathname === "/token") {
+    if (request.method === "POST" && (url.pathname === "/token" || url.pathname === "/ads-token")) {
       const body = await request.json() as { refresh_token?: string };
       if (!body.refresh_token) return new Response("Bad Request", { status: 400 });
-      await this.ctx.storage.put("refresh_token", body.refresh_token);
+      await this.ctx.storage.put(url.pathname === "/ads-token" ? "ads_refresh_token" : "refresh_token", body.refresh_token);
       return new Response("OK");
     }
     if (request.method === "GET" && url.pathname === "/state") {
@@ -35,8 +35,8 @@ export class GoogleOAuthStore extends DurableObject {
       await this.ctx.storage.delete(`oauth_state:${stateKey}`);
       return new Response("OK");
     }
-    if (request.method === "GET" && url.pathname === "/token") {
-      const token = await this.ctx.storage.get<string>("refresh_token");
+    if (request.method === "GET" && (url.pathname === "/token" || url.pathname === "/ads-token")) {
+      const token = await this.ctx.storage.get<string>(url.pathname === "/ads-token" ? "ads_refresh_token" : "refresh_token");
       return Response.json({ configured: Boolean(token) }, {
         headers: { "cache-control": "no-store" },
       });
