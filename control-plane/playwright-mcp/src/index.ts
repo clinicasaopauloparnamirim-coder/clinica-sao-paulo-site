@@ -4,6 +4,7 @@ import { createMcpAgent } from "@cloudflare/playwright-mcp";
 import { ControlAgent } from "./control-agent";
 import { GoogleOAuthStore, googleGa4Audit, googleGa4Cleanup, googleOAuthCallback, googleOAuthStart } from "./google-ga4";
 import { specialistSnapshot } from "./agent-registry";
+import { googleAdsAuthCheck, googleAdsAudit, googleAdsMutate } from "./google-ads";
 
 interface WhatsAppEnv {
   MCP_AUTH_TOKEN?: string;
@@ -13,6 +14,9 @@ interface WhatsAppEnv {
   GOOGLE_OAUTH_STORE: DurableObjectNamespace;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  GOOGLE_ADS_REFRESH_TOKEN?: string;
+  GOOGLE_ADS_CUSTOMER_ID?: string;
+  GOOGLE_ADS_LOGIN_CUSTOMER_ID?: string;
 }
 
 export class WhatsAppLedger extends DurableObject {
@@ -134,6 +138,27 @@ export default {
       return Response.json({ ok: true, ...specialistSnapshot() }, {
         headers: { "cache-control": "no-store" },
       });
+    }
+
+    if (pathname === "/google/ads/auth-check") {
+      if (!authorized(request, env)) return unauthorized();
+      try { return await googleAdsAuthCheck(env); }
+      catch (error) { return new Response(error instanceof Error ? error.message : "Google Ads auth check failed", { status: 502 }); }
+    }
+
+    if (pathname === "/google/ads/audit") {
+      if (!authorized(request, env)) return unauthorized();
+      try { return await googleAdsAudit(env); }
+      catch (error) { return new Response(error instanceof Error ? error.message : "Google Ads audit failed", { status: 502 }); }
+    }
+
+    if (pathname === "/google/ads/mutate" && request.method === "POST") {
+      if (!authorized(request, env)) return unauthorized();
+      try {
+        const body = await request.json() as { resource?: "adGroups"|"adGroupCriteria"|"adGroupAds"|"campaignCriteria"; operations?: unknown[]; validateOnly?: boolean; confirm?: boolean };
+        if (!body.resource || !Array.isArray(body.operations)) return new Response("Invalid mutation payload.", { status: 400 });
+        return Response.json(await googleAdsMutate(env, body.resource, body.operations, body.validateOnly !== false, body.confirm === true), { headers: { "cache-control": "no-store" } });
+      } catch (error) { return new Response(error instanceof Error ? error.message : "Google Ads mutation failed", { status: 400 }); }
     }
 
     if (pathname === "/google/oauth/start") {
