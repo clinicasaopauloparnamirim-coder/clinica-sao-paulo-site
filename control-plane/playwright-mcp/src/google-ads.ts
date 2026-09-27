@@ -19,7 +19,7 @@ async function refreshAccessToken(env: GoogleAdsEnv) {
     body: new URLSearchParams({
       client_id: env.GOOGLE_CLIENT_ID,
       client_secret: env.GOOGLE_CLIENT_SECRET,
-      refresh_token: env.GOOGLE_ADS_REFRESH_TOKEN,
+      refresh_token: refreshToken,
       grant_type: "refresh_token",
     }),
   });
@@ -83,4 +83,70 @@ export async function googleAdsMutate(
   if (!operations.length) throw new Error("At least one mutation operation is required.");
   if (!validateOnly && confirm !== true) throw new Error("Explicit confirmation required for live mutation.");
   return adsRequest(env, `${resource}:mutate`, { operations, validateOnly });
+}
+
+
+async function exchangeAdsCode(env: GoogleAdsEnv, code: string, redirectUri: string) {
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      code,
+      client_id: env.GOOGLE_CLIENT_ID!,
+      client_secret: env.GOOGLE_CLIENT_SECRET!,
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code",
+    }),
+  });
+  if (!response.ok) throw new Error(`Google Ads token exchange failed: ${response.status}`);
+  return await response.json() as { refresh_token?: string };
+}
+
+export async function googleAdsOAuthStart(request: Request, env: GoogleAdsEnv) {
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+    return new Response("Google OAuth client is not configured.", { status: 503 });
+  }
+  const state = crypto.randomUUID();
+  const store = env.GOOGLE_OAUTH_STORE.get(env.GOOGLE_OAUTH_STORE.idFromName("google"));
+  await store.fetch("https://store.internal/state", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ state }),
+  });
+  const redirectUri = new URL("/google/ads/oauth/callback", request.url).toString();
+  const auth = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+  auth.searchParams.set("client_id", env.GOOGLE_CLIENT_ID);
+  auth.searchParams.set("redirect_uri", redirectUri);
+  auth.searchParams.set("response_type", "code");
+  auth.searchParams.set("scope", "https://www.googleapis.com/auth/adwords");
+  auth.searchParams.set("access_type", "offline");
+  auth.searchParams.set("prompt", "consent");
+  auth.searchParams.set("state", state);
+  return Response.redirect(auth.toString(), 302);
+}
+
+export async function googleAdsOAuthCallback(request: Request, env: GoogleAdsEnv) {
+  const url = new URL(request.url);
+  const state = url.searchParams.get("state");
+  const code = url.searchParams.get("code");
+  if (!state || !code) return new Response("Missing OAuth response.", { status: 400 });
+  const store = env.GOOGLE_OAUTH_STORE.get(env.GOOGLE_OAUTH_STORE.idFromName("google"));
+  const stateResponse = await store.fetch(`https://store.internal/state?state=${encodeURIComponent(state)}`);
+  const saved = await stateResponse.json() as { value?: string; expires?: number } | null;
+  if (!saved || saved.value !== state || !saved.expires || saved.expires < Date.now()) {
+    return new Response("Invalid or expired OAuth state.", { status: 400 });
+  }
+  await store.fetch(`https://store.internal/state?state=${encodeURIComponent(state)}`, { method: "DELETE" });
+  const redirectUri = new URL("/google/ads/oauth/callback", request.url).toString();
+  const tokens = await exchangeAdsCode(env, code, redirectUri);
+  if (!tokens.refresh_token) return new Response("Google did not return a refresh token. Revoke the previous grant and authorize again.", { status: 400 });
+  await store.fetch("https://store.internal/ads-token", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ refresh_token: tokens.refresh_token }),
+  });
+  return new Response("Google Ads autorizado no Control Tower. Você pode fechar esta página.", {
+    status: 200,
+    headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },
+  });
 }
