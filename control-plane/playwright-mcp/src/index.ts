@@ -4,7 +4,7 @@ import { createMcpAgent } from "@cloudflare/playwright-mcp";
 import { ControlAgent } from "./control-agent";
 import { GoogleOAuthStore, googleGa4Audit, googleGa4Cleanup, googleOAuthCallback, googleOAuthStart } from "./google-ga4";
 import { specialistSnapshot } from "./agent-registry";
-import { googleAdsAuthCheck, googleAdsAudit, googleAdsMutate, googleAdsOAuthStart, googleAdsOAuthCallback } from "./google-ads";
+import { googleAdsAuthCheck, googleAdsAudit, googleAdsBatchMutate, googleAdsMutate, googleAdsOAuthStart, googleAdsOAuthCallback } from "./google-ads";
 
 interface WhatsAppEnv {
   MCP_AUTH_TOKEN?: string;
@@ -160,7 +160,7 @@ export default {
       catch (error) { return new Response(error instanceof Error ? error.message : "Google Ads audit failed", { status: 502 }); }
     }
 
-    if (pathname === "/google/ads/mutate" && request.method === "POST") {
+    if (pathname === "/google/ads/batch-mutate" && request.method === "POST") {\n      if (!authorized(request, env)) return unauthorized();\n      try {\n        const body = await request.json() as { operations?: unknown[]; validateOnly?: boolean; confirm?: boolean };\n        if (!Array.isArray(body.operations)) return new Response("Invalid batch mutation payload.", { status: 400 });\n        return Response.json(await googleAdsBatchMutate(env, body.operations, body.validateOnly !== false, body.confirm === true), { headers: { "cache-control": "no-store" } });\n      } catch (error) { return new Response(error instanceof Error ? error.message : "Google Ads batch mutation failed", { status: 400 }); }\n    }\n\n    if (pathname === "/google/ads/mutate" && request.method === "POST") {
       if (!authorized(request, env)) return unauthorized();
       try {
         const body = await request.json() as { resource?: "campaignBudgets"|"campaigns"|"adGroups"|"adGroupCriteria"|"adGroupAds"|"campaignCriteria"; operations?: unknown[]; validateOnly?: boolean; confirm?: boolean };
