@@ -140,6 +140,14 @@ export default {
       });
     }
 
+    if (pathname === "/google/ads/oauth/start") {
+      return googleAdsOAuthStart(request, env);
+    }
+
+    if (pathname === "/google/ads/oauth/callback") {
+      return googleAdsOAuthCallback(request, env);
+    }
+
     if (pathname === "/google/ads/auth-check") {
       if (!authorized(request, env)) return unauthorized();
       try { return await googleAdsAuthCheck(env); }
