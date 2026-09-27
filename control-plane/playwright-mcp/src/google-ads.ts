@@ -1,3 +1,5 @@
+import type { DurableObjectNamespace } from "cloudflare:workers";
+
 const GOOGLE_ADS_API = "https://googleads.googleapis.com/v25";
 const DEFAULT_CUSTOMER_ID = "4603647788";
 
@@ -7,12 +9,23 @@ type GoogleAdsEnv = {
   GOOGLE_CLIENT_SECRET?: string;
   GOOGLE_ADS_CUSTOMER_ID?: string;
   GOOGLE_ADS_LOGIN_CUSTOMER_ID?: string;
+  GOOGLE_OAUTH_STORE: DurableObjectNamespace;
 };
 
+function oauthStore(env: GoogleAdsEnv) {
+  return env.GOOGLE_OAUTH_STORE.get(env.GOOGLE_OAUTH_STORE.idFromName("google"));
+}
+
 async function refreshAccessToken(env: GoogleAdsEnv) {
-  if (!env.GOOGLE_ADS_REFRESH_TOKEN || !env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+  let refreshToken = env.GOOGLE_ADS_REFRESH_TOKEN || "";
+  if (!refreshToken) {
+    const response = await oauthStore(env).fetch("https://store.internal/ads-refresh-token");
+    if (response.ok) refreshToken = await response.text();
+  }
+  if (!refreshToken || !env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
     throw new Error("Google Ads OAuth is not configured.");
   }
+
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -32,7 +45,7 @@ async function refreshAccessToken(env: GoogleAdsEnv) {
 async function adsRequest(env: GoogleAdsEnv, path: string, body: unknown) {
   const customerId = (env.GOOGLE_ADS_CUSTOMER_ID || DEFAULT_CUSTOMER_ID).replace(/-/g, "");
   const accessToken = await refreshAccessToken(env);
-  const headers: Record<string,string> = {
+  const headers: Record<string, string> = {
     authorization: `Bearer ${accessToken}`,
     "content-type": "application/json",
   };
@@ -40,12 +53,16 @@ async function adsRequest(env: GoogleAdsEnv, path: string, body: unknown) {
     headers["login-customer-id"] = env.GOOGLE_ADS_LOGIN_CUSTOMER_ID.replace(/-/g, "");
   }
   const response = await fetch(`${GOOGLE_ADS_API}/customers/${customerId}/${path}`, {
-    method: "POST", headers, body: JSON.stringify(body),
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
   });
   const raw = await response.text();
   let data: unknown;
   try { data = raw ? JSON.parse(raw) : null; } catch { data = { raw }; }
-  if (!response.ok) throw new Error(`Google Ads API ${response.status}: ${JSON.stringify(data).slice(0,2000)}`);
+  if (!response.ok) {
+    throw new Error(`Google Ads API ${response.status}: ${JSON.stringify(data).slice(0, 2000)}`);
+  }
   return data;
 }
 
@@ -70,7 +87,9 @@ export async function googleAdsAudit(env: GoogleAdsEnv) {
     adsRequest(env, "googleAds:search", { query: queries.keywords }),
     adsRequest(env, "googleAds:search", { query: queries.conversions }),
   ]);
-  return Response.json({ ok: true, campaigns, keywords, conversions }, { headers: { "cache-control": "no-store" } });
+  return Response.json({ ok: true, campaigns, keywords, conversions }, {
+    headers: { "cache-control": "no-store" },
+  });
 }
 
 export async function googleAdsMutate(
@@ -84,7 +103,6 @@ export async function googleAdsMutate(
   if (!validateOnly && confirm !== true) throw new Error("Explicit confirmation required for live mutation.");
   return adsRequest(env, `${resource}:mutate`, { operations, validateOnly });
 }
-
 
 async function exchangeAdsCode(env: GoogleAdsEnv, code: string, redirectUri: string) {
   const response = await fetch("https://oauth2.googleapis.com/token", {
@@ -107,8 +125,7 @@ export async function googleAdsOAuthStart(request: Request, env: GoogleAdsEnv) {
     return new Response("Google OAuth client is not configured.", { status: 503 });
   }
   const state = crypto.randomUUID();
-  const store = env.GOOGLE_OAUTH_STORE.get(env.GOOGLE_OAUTH_STORE.idFromName("google"));
-  await store.fetch("https://store.internal/state", {
+  await oauthStore(env).fetch("https://store.internal/state", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ state }),
@@ -130,16 +147,20 @@ export async function googleAdsOAuthCallback(request: Request, env: GoogleAdsEnv
   const state = url.searchParams.get("state");
   const code = url.searchParams.get("code");
   if (!state || !code) return new Response("Missing OAuth response.", { status: 400 });
-  const store = env.GOOGLE_OAUTH_STORE.get(env.GOOGLE_OAUTH_STORE.idFromName("google"));
+
+  const store = oauthStore(env);
   const stateResponse = await store.fetch(`https://store.internal/state?state=${encodeURIComponent(state)}`);
   const saved = await stateResponse.json() as { value?: string; expires?: number } | null;
   if (!saved || saved.value !== state || !saved.expires || saved.expires < Date.now()) {
     return new Response("Invalid or expired OAuth state.", { status: 400 });
   }
   await store.fetch(`https://store.internal/state?state=${encodeURIComponent(state)}`, { method: "DELETE" });
+
   const redirectUri = new URL("/google/ads/oauth/callback", request.url).toString();
   const tokens = await exchangeAdsCode(env, code, redirectUri);
-  if (!tokens.refresh_token) return new Response("Google did not return a refresh token. Revoke the previous grant and authorize again.", { status: 400 });
+  if (!tokens.refresh_token) {
+    return new Response("Google did not return a refresh token.", { status: 400 });
+  }
   await store.fetch("https://store.internal/ads-token", {
     method: "POST",
     headers: { "content-type": "application/json" },
