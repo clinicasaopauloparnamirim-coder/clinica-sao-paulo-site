@@ -3,7 +3,7 @@ import { env, DurableObject } from "cloudflare:workers";
 import { createMcpAgent } from "@cloudflare/playwright-mcp";
 import { ControlAgent } from "./control-agent";
 import { GoogleOAuthStore, googleGa4Audit, googleGa4Cleanup, googleOAuthCallback, googleOAuthStart } from "./google-ga4";
-import { googleAdsAuthCheck, googleAdsAudit } from "./google-ads";
+import { googleAdsAuthCheck, googleAdsAudit, googleAdsMutate } from "./google-ads";
 
 interface WhatsAppEnv {
   MCP_AUTH_TOKEN?: string;
@@ -140,7 +140,25 @@ export default {
       return googleOAuthCallback(request, env);
     }
 
-    if (pathname === "/google/ads/auth-check") {\n      if (!authorized(request, env)) return unauthorized();\n      try {\n        return await googleAdsAuthCheck(env);\n      } catch (error) {\n        return new Response(error instanceof Error ? error.message : "Google Ads auth check failed", {\n          status: 502,\n          headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },\n        });\n      }\n    }\n\n    if (pathname === "/google/ads/audit") {\n      if (!authorized(request, env)) return unauthorized();\n      try {\n        return await googleAdsAudit(env);\n      } catch (error) {\n        return new Response(error instanceof Error ? error.message : "Google Ads audit failed", {\n          status: 502,\n          headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },\n        });\n      }\n    }\n\n    if (pathname === "/google/ga4/cleanup" && request.method === "POST") {
+    if (pathname === "/google/ads/auth-check") {\n      if (!authorized(request, env)) return unauthorized();\n      try {\n        return await googleAdsAuthCheck(env);\n      } catch (error) {\n        return new Response(error instanceof Error ? error.message : "Google Ads auth check failed", {\n          status: 502,\n          headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },\n        });\n      }\n    }\n\n    if (pathname === "/google/ads/mutate" && request.method === "POST") {
+      if (!authorized(request, env)) return unauthorized();
+      try {
+        const body = await request.json() as { resource?: string; operations?: unknown[]; validateOnly?: boolean; confirm?: boolean };
+        const resource = body.resource || "";
+        const operations = Array.isArray(body.operations) ? body.operations : [];
+        const validateOnly = body.validateOnly !== false;
+        return Response.json(await googleAdsMutate(env, resource, operations, validateOnly, body.confirm === true), {
+          headers: { "cache-control": "no-store" },
+        });
+      } catch (error) {
+        return new Response(error instanceof Error ? error.message : "Google Ads mutation failed", {
+          status: 400,
+          headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },
+        });
+      }
+    }
+
+    if (pathname === "/google/ads/audit") {\n      if (!authorized(request, env)) return unauthorized();\n      try {\n        return await googleAdsAudit(env);\n      } catch (error) {\n        return new Response(error instanceof Error ? error.message : "Google Ads audit failed", {\n          status: 502,\n          headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },\n        });\n      }\n    }\n\n    if (pathname === "/google/ga4/cleanup" && request.method === "POST") {
       if (!authorized(request, env)) return unauthorized();
       let body: { confirm?: boolean } = {};
       try {
