@@ -92,14 +92,21 @@ export async function googleAdsAudit(env: GoogleAdsEnv) {
   });
 }
 
+export async function googleAdsBatchMutate(env: GoogleAdsEnv, operations: unknown[], validateOnly = true, confirm = false) {
+  if (!operations.length || operations.length > 100) throw new Error("Batch mutation must contain 1-100 operations.");
+  if (!validateOnly && confirm !== true) throw new Error("Explicit confirmation required for live mutation.");
+  return adsRequest(env, "googleAds:mutate", { operations, validateOnly });
+}
+
 export async function googleAdsMutate(
   env: GoogleAdsEnv,
-  resource: "adGroups" | "adGroupCriteria" | "adGroupAds" | "campaignCriteria",
+  resource: "campaignBudgets" | "campaigns" | "adGroups" | "adGroupCriteria" | "adGroupAds" | "campaignCriteria",
   operations: unknown[],
   validateOnly = true,
   confirm = false,
 ) {
-  if (!operations.length) throw new Error("At least one mutation operation is required.");
+  if (!["campaignBudgets","campaigns","adGroups","adGroupCriteria","adGroupAds","campaignCriteria"].includes(resource)) throw new Error(`Unsupported Google Ads resource: ${resource}`);
+  if (!operations.length || operations.length > 100) throw new Error("Mutation must contain 1-100 operations.");
   if (!validateOnly && confirm !== true) throw new Error("Explicit confirmation required for live mutation.");
   return adsRequest(env, `${resource}:mutate`, { operations, validateOnly });
 }
