@@ -4,7 +4,7 @@ import { createMcpAgent } from "@cloudflare/playwright-mcp";
 import { ControlAgent } from "./control-agent";
 import { GoogleOAuthStore, googleGa4Audit, googleGa4Cleanup, googleOAuthCallback, googleOAuthStart } from "./google-ga4";
 import { specialistSnapshot } from "./agent-registry";
-import { googleAdsAuthCheck, googleAdsAudit, googleAdsMutate, googleAdsOAuthStart, googleAdsOAuthCallback, googleAdsBatchMutate } from "./google-ads";
+import { googleAdsAuthCheck, googleAdsAudit, googleAdsMutate, googleAdsOAuthStart, googleAdsOAuthCallback } from "./google-ads";
 
 interface WhatsAppEnv {
   MCP_AUTH_TOKEN?: string;
@@ -163,7 +163,7 @@ export default {
     if (pathname === "/google/ads/mutate" && request.method === "POST") {
       if (!authorized(request, env)) return unauthorized();
       try {
-        const body = await request.json() as { resource?: "adGroups"|"adGroupCriteria"|"adGroupAds"|"campaignCriteria"; operations?: unknown[]; validateOnly?: boolean; confirm?: boolean };
+        const body = await request.json() as { resource?: "campaignBudgets"|"campaigns"|"adGroups"|"adGroupCriteria"|"adGroupAds"|"campaignCriteria"; operations?: unknown[]; validateOnly?: boolean; confirm?: boolean };
         if (!body.resource || !Array.isArray(body.operations)) return new Response("Invalid mutation payload.", { status: 400 });
         return Response.json(await googleAdsMutate(env, body.resource, body.operations, body.validateOnly !== false, body.confirm === true), { headers: { "cache-control": "no-store" } });
       } catch (error) { return new Response(error instanceof Error ? error.message : "Google Ads mutation failed", { status: 400 }); }
