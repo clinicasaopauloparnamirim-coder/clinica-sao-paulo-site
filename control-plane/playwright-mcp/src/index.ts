@@ -3,6 +3,7 @@ import { env, DurableObject } from "cloudflare:workers";
 import { createMcpAgent } from "@cloudflare/playwright-mcp";
 import { ControlAgent } from "./control-agent";
 import { GoogleOAuthStore, googleGa4Audit, googleGa4Cleanup, googleOAuthCallback, googleOAuthStart } from "./google-ga4";
+import { googleGscAudit } from "./google-gsc";
 import { specialistSnapshot } from "./agent-registry";
 import { googleAdsAuthCheck, googleAdsAudit, googleAdsBatchMutate, googleAdsMutate, googleAdsOAuthStart, googleAdsOAuthCallback } from "./google-ads";
 
@@ -160,7 +161,6 @@ export default {
       catch (error) { return new Response(error instanceof Error ? error.message : "Google Ads audit failed", { status: 502 }); }
     }
 
-    // Google Ads batch mutation endpoint
     if (pathname === "/google/ads/batch-mutate" && request.method === "POST") {
       if (!authorized(request, env)) return unauthorized();
       try {
@@ -233,6 +233,18 @@ export default {
         return await googleGa4Audit(env);
       } catch (error) {
         return new Response(error instanceof Error ? error.message : "GA4 audit failed", {
+          status: 502,
+          headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },
+        });
+      }
+    }
+
+    if (pathname === "/google/gsc/audit") {
+      if (!authorized(request, env)) return unauthorized();
+      try {
+        return await googleGscAudit(env);
+      } catch (error) {
+        return new Response(error instanceof Error ? error.message : "Search Console audit failed", {
           status: 502,
           headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },
         });
