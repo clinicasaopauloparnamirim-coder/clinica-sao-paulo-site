@@ -4,7 +4,7 @@ import { createMcpAgent } from "@cloudflare/playwright-mcp";
 import { ControlAgent } from "./control-agent";
 import { GoogleOAuthStore, googleGa4Audit, googleGa4Cleanup, googleOAuthCallback, googleOAuthStart } from "./google-ga4";
 import { specialistSnapshot } from "./agent-registry";
-import { googleAdsAuthCheck, googleAdsAudit, googleAdsMutate } from "./google-ads";
+import { googleAdsAuthCheck, googleAdsAudit, googleAdsMutate, googleAdsOAuthStart, googleAdsOAuthCallback, googleAdsBatchMutate } from "./google-ads";
 
 interface WhatsAppEnv {
   MCP_AUTH_TOKEN?: string;
