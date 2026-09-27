@@ -1,0 +1,86 @@
+const GOOGLE_ADS_API = "https://googleads.googleapis.com/v25";
+const DEFAULT_CUSTOMER_ID = "4603647788";
+
+type GoogleAdsEnv = {
+  GOOGLE_ADS_REFRESH_TOKEN?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  GOOGLE_ADS_CUSTOMER_ID?: string;
+  GOOGLE_ADS_LOGIN_CUSTOMER_ID?: string;
+};
+
+async function refreshAccessToken(env: GoogleAdsEnv) {
+  if (!env.GOOGLE_ADS_REFRESH_TOKEN || !env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+    throw new Error("Google Ads OAuth is not configured.");
+  }
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: env.GOOGLE_CLIENT_ID,
+      client_secret: env.GOOGLE_CLIENT_SECRET,
+      refresh_token: env.GOOGLE_ADS_REFRESH_TOKEN,
+      grant_type: "refresh_token",
+    }),
+  });
+  if (!response.ok) throw new Error(`Google Ads token refresh failed: ${response.status}`);
+  const token = await response.json() as { access_token?: string };
+  if (!token.access_token) throw new Error("Google did not return an Ads access token.");
+  return token.access_token;
+}
+
+async function adsRequest(env: GoogleAdsEnv, path: string, body: unknown) {
+  const customerId = (env.GOOGLE_ADS_CUSTOMER_ID || DEFAULT_CUSTOMER_ID).replace(/-/g, "");
+  const accessToken = await refreshAccessToken(env);
+  const headers: Record<string,string> = {
+    authorization: `Bearer ${accessToken}`,
+    "content-type": "application/json",
+  };
+  if (env.GOOGLE_ADS_LOGIN_CUSTOMER_ID) {
+    headers["login-customer-id"] = env.GOOGLE_ADS_LOGIN_CUSTOMER_ID.replace(/-/g, "");
+  }
+  const response = await fetch(`${GOOGLE_ADS_API}/customers/${customerId}/${path}`, {
+    method: "POST", headers, body: JSON.stringify(body),
+  });
+  const raw = await response.text();
+  let data: unknown;
+  try { data = raw ? JSON.parse(raw) : null; } catch { data = { raw }; }
+  if (!response.ok) throw new Error(`Google Ads API ${response.status}: ${JSON.stringify(data).slice(0,2000)}`);
+  return data;
+}
+
+export async function googleAdsAuthCheck(env: GoogleAdsEnv) {
+  return Response.json({
+    ok: true,
+    customer_id: (env.GOOGLE_ADS_CUSTOMER_ID || DEFAULT_CUSTOMER_ID).replace(/-/g, ""),
+    result: await adsRequest(env, "googleAds:search", {
+      query: "SELECT customer.id, customer.descriptive_name FROM customer LIMIT 1",
+    }),
+  }, { headers: { "cache-control": "no-store" } });
+}
+
+export async function googleAdsAudit(env: GoogleAdsEnv) {
+  const queries = {
+    campaigns: `SELECT campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type, campaign.bidding_strategy_type, campaign.optimization_score, campaign_budget.amount_micros, metrics.impressions, metrics.clicks, metrics.ctr, metrics.average_cpc, metrics.cost_micros, metrics.conversions, metrics.cost_per_conversion FROM campaign WHERE segments.date DURING LAST_30_DAYS AND campaign.status != 'REMOVED' ORDER BY metrics.cost_micros DESC`,
+    keywords: `SELECT campaign.name, ad_group.name, ad_group_criterion.criterion_id, ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type, ad_group_criterion.status, ad_group_criterion.quality_info.quality_score, metrics.impressions, metrics.clicks, metrics.average_cpc, metrics.cost_micros, metrics.conversions FROM keyword_view WHERE segments.date DURING LAST_30_DAYS AND ad_group_criterion.status != 'REMOVED' ORDER BY metrics.cost_micros DESC LIMIT 500`,
+    conversions: `SELECT conversion_action.id, conversion_action.name, conversion_action.status, conversion_action.type, conversion_action.category, conversion_action.primary_for_goal, conversion_action.counting_type FROM conversion_action WHERE conversion_action.status != 'REMOVED' ORDER BY conversion_action.name`,
+  };
+  const [campaigns, keywords, conversions] = await Promise.all([
+    adsRequest(env, "googleAds:search", { query: queries.campaigns }),
+    adsRequest(env, "googleAds:search", { query: queries.keywords }),
+    adsRequest(env, "googleAds:search", { query: queries.conversions }),
+  ]);
+  return Response.json({ ok: true, campaigns, keywords, conversions }, { headers: { "cache-control": "no-store" } });
+}
+
+export async function googleAdsMutate(
+  env: GoogleAdsEnv,
+  resource: "adGroups" | "adGroupCriteria" | "adGroupAds" | "campaignCriteria",
+  operations: unknown[],
+  validateOnly = true,
+  confirm = false,
+) {
+  if (!operations.length) throw new Error("At least one mutation operation is required.");
+  if (!validateOnly && confirm !== true) throw new Error("Explicit confirmation required for live mutation.");
+  return adsRequest(env, `${resource}:mutate`, { operations, validateOnly });
+}
