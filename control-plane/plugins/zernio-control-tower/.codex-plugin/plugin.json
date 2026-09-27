@@ -1,7 +1,0 @@
-{
-  "name": "zernio-control-tower",
-  "version": "1.0.0",
-  "description": "Control Tower integration for the hosted Zernio MCP server in Codex.",
-  "mcpServers": "./.mcp.json",
-  "skills": "./skills/"
-}
