@@ -58,6 +58,14 @@ async function searchStream(env: GoogleAdsEnv, query: string) {
   return JSON.parse(body);
 }
 
+export async function googleAdsMutate(env: GoogleAdsEnv, resource: string, operations: unknown[], validateOnly = true, confirm = false) {
+  const allowed = new Set(["adGroups", "adGroupCriteria", "adGroupAds", "campaignCriteria"]);
+  if (!allowed.has(resource)) throw new Error("Blocked resource. Budget, billing, campaign creation and payment mutations are intentionally unavailable.");
+  if (!Array.isArray(operations) || operations.length === 0) throw new Error("At least one mutation operation is required.");
+  if (!validateOnly && confirm !== true) throw new Error("Explicit confirmation required for a live Google Ads mutation.");
+  return adsRequest(env, `${resource}:mutate`, { operations, validateOnly });
+}
+
 export async function googleAdsAudit(env: GoogleAdsEnv) {
   const query = [
     "SELECT",
