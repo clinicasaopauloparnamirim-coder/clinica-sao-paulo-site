@@ -1,6 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 
-const GOOGLE_SCOPE = "https://www.googleapis.com/auth/analytics.edit";
+const GOOGLE_SCOPE = "https://www.googleapis.com/auth/analytics.edit https://www.googleapis.com/auth/webmasters.readonly";
 
 type GoogleEnv = {
   GOOGLE_CLIENT_ID?: string;
@@ -161,7 +161,7 @@ export async function googleOAuthCallback(request: Request, env: GoogleEnv) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ refresh_token: tokens.refresh_token }),
   });
-  return new Response("Google Analytics autorizado. Você pode fechar esta página.", {
+  return new Response("Google Analytics + Search Console autorizados. Você pode fechar esta página.", {
     status: 200,
     headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },
   });
@@ -202,7 +202,6 @@ export async function googleGa4Cleanup(env: GoogleEnv) {
 export async function googleGa4Audit(env: GoogleEnv) {
   const token = await accessToken(env);
 
-  // List accessible account/property summaries first (diagnoses 403 / wrong property)
   const summaryResponse = await fetch("https://analyticsadmin.googleapis.com/v1beta/accountSummaries", {
     headers: { authorization: `Bearer ${token}` },
   });
