@@ -201,14 +201,39 @@ export async function googleGa4Cleanup(env: GoogleEnv) {
 
 export async function googleGa4Audit(env: GoogleEnv) {
   const token = await accessToken(env);
-  const response = await fetch("https://analyticsadmin.googleapis.com/v1beta/properties/552216899/keyEvents", {
+
+  // List accessible account/property summaries first (diagnoses 403 / wrong property)
+  const summaryResponse = await fetch("https://analyticsadmin.googleapis.com/v1beta/accountSummaries", {
     headers: { authorization: `Bearer ${token}` },
   });
-  if (!response.ok) throw new Error(`GA4 Admin API failed: ${response.status}`);
-  const data = await response.json() as { keyEvents?: Array<{ name?: string; eventName?: string; count?: string }> };
+  const summaryRaw = await summaryResponse.text();
+  let summaries: unknown = null;
+  try { summaries = summaryRaw ? JSON.parse(summaryRaw) : null; } catch { summaries = { raw: summaryRaw }; }
+
+  const propertyId = "552216899";
+  const response = await fetch(`https://analyticsadmin.googleapis.com/v1beta/properties/${propertyId}/keyEvents`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  const raw = await response.text();
+  let data: { keyEvents?: Array<{ name?: string; eventName?: string; countingMethod?: string }> } = {};
+  try { data = raw ? JSON.parse(raw) : {}; } catch { data = {}; }
+
+  if (!response.ok) {
+    return Response.json({
+      ok: false,
+      property: `properties/${propertyId}`,
+      status: response.status,
+      error: data,
+      accountSummaries: summaries,
+      note: "Token works only if the authorized Google account is Admin/Editor on this GA4 property. Enable Analytics Admin API on the GCP project if needed.",
+    }, { status: 200, headers: { "cache-control": "no-store" } });
+  }
+
   return Response.json({
-    property: "properties/552216899",
+    ok: true,
+    property: `properties/${propertyId}`,
     keyEvents: data.keyEvents ?? [],
+    accountSummaries: summaries,
     note: "Read-only audit endpoint. No GA4 setting is changed automatically.",
   }, { headers: { "cache-control": "no-store" } });
 }
