@@ -160,7 +160,14 @@ export default {
       catch (error) { return new Response(error instanceof Error ? error.message : "Google Ads audit failed", { status: 502 }); }
     }
 
-    if (pathname === "/google/ads/batch-mutate" && request.method === "POST") {\n      if (!authorized(request, env)) return unauthorized();\n      try {\n        const body = await request.json() as { operations?: unknown[]; validateOnly?: boolean; confirm?: boolean };\n        if (!Array.isArray(body.operations)) return new Response("Invalid batch mutation payload.", { status: 400 });\n        return Response.json(await googleAdsBatchMutate(env, body.operations, body.validateOnly !== false, body.confirm === true), { headers: { "cache-control": "no-store" } });\n      } catch (error) { return new Response(error instanceof Error ? error.message : "Google Ads batch mutation failed", { status: 400 }); }\n    }\n\n    if (pathname === "/google/ads/mutate" && request.method === "POST") {
+    if (pathname === "/google/ads/batch-mutate" && request.method === "POST") {
+      if (!authorized(request, env)) return unauthorized();
+      try {
+        const body = await request.json() as { operations?: unknown[]; validateOnly?: boolean; confirm?: boolean };
+        if (!Array.isArray(body.operations)) return new Response("Invalid batch mutation payload.", { status: 400 });
+        return Response.json(await googleAdsBatchMutate(env, body.operations, body.validateOnly !== false, body.confirm === true), { headers: { "cache-control": "no-store" } });
+      } catch (error) { return new Response(error instanceof Error ? error.message : "Google Ads batch mutation failed", { status: 400 }); }
+    }\n\n    if (pathname === "/google/ads/mutate" && request.method === "POST") {
       if (!authorized(request, env)) return unauthorized();
       try {
         const body = await request.json() as { resource?: "campaignBudgets"|"campaigns"|"adGroups"|"adGroupCriteria"|"adGroupAds"|"campaignCriteria"; operations?: unknown[]; validateOnly?: boolean; confirm?: boolean };
