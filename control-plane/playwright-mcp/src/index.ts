@@ -162,6 +162,7 @@ pre{margin:18px 0 0;background:#070a0f;border:1px solid #202a38;border-radius:12
 <label for="token">MCP Auth Token</label>
 <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="Cole o token aqui — ele não será salvo">
 <div class="row">
+<button onclick="login()">Entrar</button>
 <button onclick="run('/health',false)">Health</button>
 <button onclick="run('/google/ads/auth-check')">Google Ads Auth</button>
 <button onclick="run('/google/ads/audit')">Auditar Google Ads</button>
@@ -170,8 +171,21 @@ pre{margin:18px 0 0;background:#070a0f;border:1px solid #202a38;border-radius:12
 <button class="secondary" onclick="document.getElementById('out').textContent=''">Limpar</button>
 </div>
 <div class="warn">O token fica apenas na memória desta página e é enviado somente ao endpoint do Control Tower. Não o salve no navegador nem compartilhe esta tela em computador público.</div>
-<pre id="out">Pronto. Cole o token e escolha uma ação.</pre>
+<pre id="out">Pronto. Cole o MCP Auth Token e toque em Entrar.</pre>
 <script>
+async function login(){
+  const token=document.getElementById('token').value;
+  const out=document.getElementById('out');
+  if(!token){out.textContent='Digite o MCP Auth Token.';return}
+  out.textContent='Validando acesso...';
+  try{
+    const res=await fetch('/google/ads/auth-check',{headers:{'Authorization':'Bearer '+token},cache:'no-store'});
+    const body=await res.text();
+    if(res.status===401){out.textContent='Acesso negado: token inválido.';return}
+    out.textContent='✓ Acesso autorizado. Control Tower liberado.\\n\\n'+body;
+  }catch(e){out.textContent='Falha de conexão: '+e.message}
+}
+document.getElementById('token').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
 async function run(path,auth=true){
   const out=document.getElementById('out');
   const token=document.getElementById('token').value;
