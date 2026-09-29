@@ -1,0 +1,24 @@
+entity:
+  brand: "Clínica São Paulo"
+  business_type: "dental clinic"
+  city: "Parnamirim"
+  state: "RN"
+  country: "BR"
+  website: "https://www.clinicasaopauloparnamirim.com.br/"
+  primary_intents:
+    - local dental care
+    - orthodontics
+    - dental aesthetics
+  services:
+    - orthodontics
+    - aesthetic restorations
+    - whitening
+    - cleaning
+    - resin veneers
+  source_policy:
+    - official website
+    - official business profile
+    - verified first-party data
+    - authoritative external sources
+  status: "foundation"
+  note: "Campos clínicos e comerciais devem ser confirmados antes de publicação."
