@@ -134,6 +134,11 @@ export default {
       });
     }
 
+    if (pathname === "/control/auth-check") {
+      if (!authorized(request, env)) return unauthorized();
+      return Response.json({ ok: true, authenticated: true }, { headers: { "cache-control": "no-store" } });
+    }
+
     if (pathname === "/control") {
       const html = `<!doctype html>
 <html lang="pt-BR">
@@ -179,10 +184,10 @@ async function login(){
   if(!token){out.textContent='Digite o MCP Auth Token.';return}
   out.textContent='Validando acesso...';
   try{
-    const res=await fetch('/google/ads/auth-check',{headers:{'Authorization':'Bearer '+token},cache:'no-store'});
+    const res=await fetch('/control/auth-check',{headers:{'Authorization':'Bearer '+token},cache:'no-store'});
     const body=await res.text();
     if(res.status===401){out.textContent='Acesso negado: token inválido.';return}
-    out.textContent='✓ Acesso autorizado. Control Tower liberado.\\n\\n'+body;
+    out.textContent='✓ Acesso autorizado. Control Tower liberado.\\n\\nAgora você pode usar os módulos abaixo.';
   }catch(e){out.textContent='Falha de conexão: '+e.message}
 }
 document.getElementById('token').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
