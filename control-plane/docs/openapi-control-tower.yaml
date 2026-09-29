@@ -1,0 +1,139 @@
+openapi: 3.1.0
+info:
+  title: Clínica São Paulo — Control Tower
+  description: |
+    API do Control Tower (Google Ads, GA4, Search Console).
+    Autenticação: Bearer token (MCP_AUTH_TOKEN).
+    Customer ID Ads: 4603647788
+  version: "1.0.0"
+servers:
+  - url: https://clinica-sao-paulo-site.clinicasaopauloparnamirim.workers.dev
+    description: Cloudflare Worker
+  - url: https://control.clinicasaopauloparnamirim.com.br
+    description: Domínio custom (se configurado no Cloudflare)
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      operationId: health
+      summary: Status do worker
+      security: []
+      responses:
+        "200":
+          description: OK
+  /google/ads/auth-check:
+    get:
+      operationId: adsAuthCheck
+      summary: Valida OAuth Google Ads
+      responses:
+        "200":
+          description: Conta conectada
+  /google/ads/audit:
+    get:
+      operationId: adsAudit
+      summary: Auditoria Ads (campanhas, keywords, conversões 30d)
+      responses:
+        "200":
+          description: JSON com campaigns, keywords, conversions
+  /google/ads/search:
+    post:
+      operationId: adsSearch
+      summary: GAQL search (somente leitura)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query:
+                  type: string
+                  description: Query GAQL
+                  example: SELECT campaign.id, campaign.name, campaign.status FROM campaign WHERE campaign.status != 'REMOVED'
+      responses:
+        "200":
+          description: Resultados GAQL
+  /google/ads/mutate:
+    post:
+      operationId: adsMutate
+      summary: Mutate de resource (budget, campaign, adGroup, criteria, ads, userLists)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resource, operations]
+              properties:
+                resource:
+                  type: string
+                  enum:
+                    - campaignBudgets
+                    - campaigns
+                    - adGroups
+                    - adGroupCriteria
+                    - adGroupAds
+                    - campaignCriteria
+                    - userLists
+                    - remarketingActions
+                operations:
+                  type: array
+                  items:
+                    type: object
+                validateOnly:
+                  type: boolean
+                  default: true
+                confirm:
+                  type: boolean
+                  description: Obrigatório true para mutação live
+                  default: false
+      responses:
+        "200":
+          description: Resultado do mutate
+  /google/ads/batch-mutate:
+    post:
+      operationId: adsBatchMutate
+      summary: Batch mutate (mutateOperations)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [operations]
+              properties:
+                operations:
+                  type: array
+                  items:
+                    type: object
+                validateOnly:
+                  type: boolean
+                  default: true
+                confirm:
+                  type: boolean
+                  default: false
+      responses:
+        "200":
+          description: Resultado batch
+  /google/ga4/audit:
+    get:
+      operationId: ga4Audit
+      summary: Key events da property GA4 552216899
+      responses:
+        "200":
+          description: Lista de key events
+  /google/gsc/audit:
+    get:
+      operationId: gscAudit
+      summary: Performance Search Console (~28 dias)
+      responses:
+        "200":
+          description: topQueries, topPages, byDevice
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: MCP_AUTH_TOKEN do Worker Cloudflare
