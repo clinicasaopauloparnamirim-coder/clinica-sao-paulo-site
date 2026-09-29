@@ -94,7 +94,14 @@ function authorized(request: Request, env: { MCP_AUTH_TOKEN?: string }) {
   const configured = env.MCP_AUTH_TOKEN;
   if (!configured) return false;
   const header = request.headers.get("Authorization") || "";
-  return header === "Bearer " + configured;
+  if (header === "Bearer " + configured) return true;
+  const cookie = request.headers.get("Cookie") || "";
+  const match = cookie.match(/(?:^|;\\s*)control_session=([^;]+)/);
+  return match?.[1] === encodeURIComponent(configured);
+}
+
+function controlCookie(value: string, maxAge = 3600) {
+  return "control_session=" + encodeURIComponent(value) + "; Max-Age=" + maxAge + "; Path=/; Secure; HttpOnly; SameSite=Strict";
 }
 
 async function validMetaSignature(body: string, signature: string, secret: string) {
@@ -134,12 +141,43 @@ export default {
       });
     }
 
+    if (pathname === "/control/login" && request.method === "POST") {
+      const form = await request.formData();
+      const token = String(form.get("token") || "");
+      if (!env.MCP_AUTH_TOKEN || token !== env.MCP_AUTH_TOKEN) {
+        return new Response("Acesso negado: MCP Auth Token inválido.", {
+          status: 401,
+          headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },
+        });
+      }
+      return new Response(null, {
+        status: 303,
+        headers: {
+          "Location": "/control",
+          "Set-Cookie": controlCookie(token),
+          "cache-control": "no-store",
+        },
+      });
+    }
+
+    if (pathname === "/control/logout") {
+      return new Response(null, {
+        status: 303,
+        headers: {
+          "Location": "/control",
+          "Set-Cookie": controlCookie("", 0),
+          "cache-control": "no-store",
+        },
+      });
+    }
+
     if (pathname === "/control/auth-check") {
       if (!authorized(request, env)) return unauthorized();
       return Response.json({ ok: true, authenticated: true }, { headers: { "cache-control": "no-store" } });
     }
 
     if (pathname === "/control") {
+      const authenticated = authorized(request, env);
       const html = `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -154,9 +192,9 @@ h1{margin:0 0 6px;font-size:28px}.sub{color:#9aa6b5;margin-bottom:24px}
 label{display:block;font-size:13px;color:#aeb8c6;margin:0 0 7px}
 input{box-sizing:border-box;width:100%;padding:13px 14px;border-radius:10px;border:1px solid #344154;background:#0b1018;color:#fff;font:inherit}
 .row{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
-button{border:0;border-radius:10px;padding:11px 15px;background:#e9eef5;color:#10151d;font-weight:700;cursor:pointer}
-button.secondary{background:#263243;color:#e9eef5}button:disabled{opacity:.5;cursor:not-allowed}
-pre{margin:18px 0 0;background:#070a0f;border:1px solid #202a38;border-radius:12px;padding:16px;min-height:180px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+a,button{display:inline-block;border:0;border-radius:10px;padding:11px 15px;background:#e9eef5;color:#10151d;font-weight:700;text-decoration:none;cursor:pointer}
+.secondary{background:#263243;color:#e9eef5}
+pre{margin:18px 0 0;background:#070a0f;border:1px solid #202a38;border-radius:12px;padding:16px;min-height:120px;overflow:auto;white-space:pre-wrap;word-break:break-word}
 .ok{color:#72e6a2}.warn{color:#ffd166;font-size:12px;margin-top:12px}
 </style>
 </head>
@@ -164,47 +202,29 @@ pre{margin:18px 0 0;background:#070a0f;border:1px solid #202a38;border-radius:12
 <main>
 <h1>Control Tower</h1>
 <div class="sub">Clínica São Paulo · acesso seguro aos endpoints administrativos</div>
-<label for="token">MCP Auth Token</label>
-<input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="Cole o token aqui — ele não será salvo">
+${authenticated ? `
+<div class="ok">✓ Acesso autorizado</div>
 <div class="row">
-<button onclick="login()">Entrar</button>
-<button onclick="run('/health',false)">Health</button>
-<button onclick="run('/google/ads/auth-check')">Google Ads Auth</button>
-<button onclick="run('/google/ads/audit')">Auditar Google Ads</button>
-<button onclick="run('/google/ga4/audit')">Auditar GA4</button>
-<button onclick="run('/google/gsc/audit')">Auditar GSC</button>
-<button class="secondary" onclick="document.getElementById('out').textContent=''">Limpar</button>
+<a href="/health">Health</a>
+<a href="/google/ads/auth-check">Google Ads Auth</a>
+<a href="/google/ads/audit">Auditar Google Ads</a>
+<a href="/google/ga4/audit">Auditar GA4</a>
+<a href="/google/gsc/audit">Auditar GSC</a>
+<a href="/control/agents">Agentes</a>
+<a class="secondary" href="/control/logout">Sair</a>
 </div>
-<div class="warn">O token fica apenas na memória desta página e é enviado somente ao endpoint do Control Tower. Não o salve no navegador nem compartilhe esta tela em computador público.</div>
-<pre id="out">Pronto. Cole o MCP Auth Token e toque em Entrar.</pre>
-<script>
-async function login(){
-  const token=document.getElementById('token').value;
-  const out=document.getElementById('out');
-  if(!token){out.textContent='Digite o MCP Auth Token.';return}
-  out.textContent='Validando acesso...';
-  try{
-    const res=await fetch('/control/auth-check',{headers:{'Authorization':'Bearer '+token},cache:'no-store'});
-    const body=await res.text();
-    if(res.status===401){out.textContent='Acesso negado: token inválido.';return}
-    out.textContent='✓ Acesso autorizado. Control Tower liberado.\\n\\nAgora você pode usar os módulos abaixo.';
-  }catch(e){out.textContent='Falha de conexão: '+e.message}
-}
-document.getElementById('token').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
-async function run(path,auth=true){
-  const out=document.getElementById('out');
-  const token=document.getElementById('token').value;
-  if(auth&&!token){out.textContent='Cole o MCP Auth Token primeiro.';return}
-  out.textContent='Consultando '+path+'...';
-  try{
-    const headers=auth?{'Authorization':'Bearer '+token}:{};
-    const res=await fetch(path,{headers,cache:'no-store'});
-    const text=await res.text();
-    let body; try{body=JSON.stringify(JSON.parse(text),null,2)}catch{body=text}
-    out.textContent='HTTP '+res.status+'\n\n'+body;
-  }catch(e){out.textContent='Falha de conexão: '+e.message}
-}
-</script>
+<pre>Control Tower liberado. Escolha um módulo acima.</pre>
+` : `
+<form method="POST" action="/control/login">
+<label for="token">MCP Auth Token</label>
+<input id="token" name="token" type="password" autocomplete="off" spellcheck="false" placeholder="Cole o token aqui" required autofocus>
+<div class="row">
+<button type="submit">Entrar</button>
+</div>
+<div class="warn">O token é enviado diretamente ao endpoint de login e, após a validação, fica protegido em cookie HttpOnly. Não compartilhe o token.</div>
+</form>
+<pre>Digite o MCP Auth Token e toque em Entrar.</pre>
+`}
 </main>
 </body>
 </html>`;
