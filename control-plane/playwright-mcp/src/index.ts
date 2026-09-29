@@ -134,6 +134,71 @@ export default {
       });
     }
 
+    if (pathname === "/control") {
+      const html = `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Control Tower — Clínica São Paulo</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+body{margin:0;background:#080b10;color:#eef2f7;min-height:100vh;display:grid;place-items:center}
+main{width:min(920px,92vw);background:#111722;border:1px solid #273142;border-radius:20px;padding:28px;box-shadow:0 20px 70px #0008}
+h1{margin:0 0 6px;font-size:28px}.sub{color:#9aa6b5;margin-bottom:24px}
+label{display:block;font-size:13px;color:#aeb8c6;margin:0 0 7px}
+input{box-sizing:border-box;width:100%;padding:13px 14px;border-radius:10px;border:1px solid #344154;background:#0b1018;color:#fff;font:inherit}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
+button{border:0;border-radius:10px;padding:11px 15px;background:#e9eef5;color:#10151d;font-weight:700;cursor:pointer}
+button.secondary{background:#263243;color:#e9eef5}button:disabled{opacity:.5;cursor:not-allowed}
+pre{margin:18px 0 0;background:#070a0f;border:1px solid #202a38;border-radius:12px;padding:16px;min-height:180px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+.ok{color:#72e6a2}.warn{color:#ffd166;font-size:12px;margin-top:12px}
+</style>
+</head>
+<body>
+<main>
+<h1>Control Tower</h1>
+<div class="sub">Clínica São Paulo · acesso seguro aos endpoints administrativos</div>
+<label for="token">MCP Auth Token</label>
+<input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="Cole o token aqui — ele não será salvo">
+<div class="row">
+<button onclick="run('/health',false)">Health</button>
+<button onclick="run('/google/ads/auth-check')">Google Ads Auth</button>
+<button onclick="run('/google/ads/audit')">Auditar Google Ads</button>
+<button onclick="run('/google/ga4/audit')">Auditar GA4</button>
+<button onclick="run('/google/gsc/audit')">Auditar GSC</button>
+<button class="secondary" onclick="document.getElementById('out').textContent=''">Limpar</button>
+</div>
+<div class="warn">O token fica apenas na memória desta página e é enviado somente ao endpoint do Control Tower. Não o salve no navegador nem compartilhe esta tela em computador público.</div>
+<pre id="out">Pronto. Cole o token e escolha uma ação.</pre>
+<script>
+async function run(path,auth=true){
+  const out=document.getElementById('out');
+  const token=document.getElementById('token').value;
+  if(auth&&!token){out.textContent='Cole o MCP Auth Token primeiro.';return}
+  out.textContent='Consultando '+path+'...';
+  try{
+    const headers=auth?{'Authorization':'Bearer '+token}:{};
+    const res=await fetch(path,{headers,cache:'no-store'});
+    const text=await res.text();
+    let body; try{body=JSON.stringify(JSON.parse(text),null,2)}catch{body=text}
+    out.textContent='HTTP '+res.status+'\n\n'+body;
+  }catch(e){out.textContent='Falha de conexão: '+e.message}
+}
+</script>
+</main>
+</body>
+</html>`;
+      return new Response(html, {
+        status: 200,
+        headers: {
+          "content-type": "text/html; charset=UTF-8",
+          "cache-control": "no-store",
+          "x-content-type-options": "nosniff",
+        },
+      });
+    }
+
     if (pathname === "/control/agents") {
       if (!authorized(request, env)) return unauthorized();
       return Response.json({ ok: true, ...specialistSnapshot() }, {
