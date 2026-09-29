@@ -1,0 +1,30 @@
+intents:
+  informational:
+    examples:
+      - "aparelho ortodôntico dói?"
+      - "como escovar os dentes com aparelho?"
+      - "clareamento dental dói?"
+  investigation:
+    examples:
+      - "qual aparelho é melhor?"
+      - "qual clareamento dental é melhor?"
+      - "faceta de resina ou porcelana?"
+  commercial:
+    examples:
+      - "quanto custa aparelho dentário?"
+      - "quanto custa clareamento dental?"
+  local:
+    examples:
+      - "dentista em Parnamirim"
+      - "ortodontista em Parnamirim"
+  transactional:
+    examples:
+      - "quero marcar avaliação"
+      - "dentista perto de mim"
+
+routing:
+  informational: [content, faq, social, stories]
+  investigation: [comparison_content, faq, consultation_cta]
+  commercial: [service_page, transparent_offer, consultation_cta]
+  local: [local_page, business_profile, local_content, whatsapp]
+  transactional: [whatsapp, booking, reception]
