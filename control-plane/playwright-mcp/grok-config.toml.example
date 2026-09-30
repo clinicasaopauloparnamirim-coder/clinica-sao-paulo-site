@@ -1,6 +1,18 @@
+# Grok / MCP client — Clínica São Paulo
+
+# 1) Playwright MCP (browser read/automation no site)
 [mcp_servers.clinica-playwright]
-url = "${CLINICA_PLAYWRIGHT_MCP_URL}"
-headers = { "Authorization" = "Bearer ${CLINICA_PLAYWRIGHT_MCP_TOKEN}" }
+url = "https://clinica-sao-paulo-site.clinicasaopauloparnamirim.workers.dev/sse"
+headers = { "Authorization" = "Bearer ${CLINICA_MCP_TOKEN}" }
 enabled = true
 startup_timeout_sec = 30
 tool_timeout_sec = 6000
+
+# 2) Control Tower MCP (Google Ads, GA4, Search Console)
+# Clientes HTTP JSON-RPC: POST /mcp/tower
+[mcp_servers.clinica-control-tower]
+url = "https://clinica-sao-paulo-site.clinicasaopauloparnamirim.workers.dev/mcp/tower"
+headers = { "Authorization" = "Bearer ${CLINICA_MCP_TOKEN}" }
+enabled = true
+startup_timeout_sec = 30
+tool_timeout_sec = 120
