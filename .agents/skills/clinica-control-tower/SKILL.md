@@ -128,7 +128,7 @@ For material repository, deployment, SEO, UI, or integration changes, apply the 
 
 ## Policy Kernel
 
-All Google Ads production mutations must pass the centralized policy kernel at `control-plane/policy-kernel.ts` before reaching the Google Ads API. Tool availability never overrides project policy. Campaign Search-2 (ID 24146336625) and campaign budget mutations are protected by default.
+All Google Ads production mutations must pass the centralized policy kernel at `control-plane/policy-kernel.ts` before reaching the Google Ads API. Tool availability never overrides project policy. The kernel uses an explicit operational campaign registry: active campaigns may be mutated only under normal confirmation rules; retired/out-of-scope campaigns are rejected; campaign budget mutations are blocked.
 
 ## Agent roles
 
