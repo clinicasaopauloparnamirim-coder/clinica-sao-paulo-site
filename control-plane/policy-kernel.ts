@@ -33,7 +33,7 @@ export function authorizeGoogleAdsMutation(
     return { allowed: false, code: "MUTATION_TOO_LARGE", reason: "A mutation batch may contain at most 100 operations." };
   }
 
-  if (resource === "campaignBudgets") {
+  if (resource === "campaignBudgets" || payload.includes("campaignbudget")) {
     return {
       allowed: false,
       code: "FINANCIAL_ACTION_BLOCKED",
