@@ -33,6 +33,8 @@ export function authorizeGoogleAdsMutation(
     return { allowed: false, code: "MUTATION_TOO_LARGE", reason: "A mutation batch may contain at most 100 operations." };
   }
 
+  const payload = serializedOperations(operations);
+
   if (resource === "campaignBudgets" || payload.includes("campaignbudget")) {
     return {
       allowed: false,
@@ -41,7 +43,6 @@ export function authorizeGoogleAdsMutation(
     };
   }
 
-  const payload = serializedOperations(operations);
   if (payload.includes(SEARCH_2_ID) || payload.includes(SEARCH_2_NAME)) {
     return {
       allowed: false,
