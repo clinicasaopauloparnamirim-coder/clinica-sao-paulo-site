@@ -70,8 +70,10 @@ async function assertNoSearch2ChildMutation(env: GoogleAdsEnv, operations: unkno
       query = `SELECT campaign.id FROM ad_group_ad WHERE ad_group_ad.resource_name = '${reference.resourceName}' LIMIT 1`;
     }
 
-    const result = await adsRequest(env, "googleAds:search", { query });
-    const campaignId = result?.results?.[0]?.campaign?.id ?? result?.results?.[0]?.campaign?.id?.toString?.();
+    const result = await adsRequest(env, "googleAds:search", { query }) as {
+      results?: Array<{ campaign?: { id?: string | number } }>;
+    };
+    const campaignId = result.results?.[0]?.campaign?.id;
     if (String(campaignId || "") === "24146336625") {
       throw new Error("[SEARCH_2_PROTECTED] Mutation targets a child resource belonging to protected campaign Search-2.");
     }
