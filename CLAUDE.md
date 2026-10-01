@@ -10,7 +10,7 @@ For repository-changing work:
 - use the Gauntlet contract for material changes;
 - verify the real artifact/resource after every mutation;
 - never expose secrets;
-- Search-2 remains protected unless explicitly authorized by the user;
+- Search-2 (ID 24146336625) is retired/out of scope and must never be operated, optimized, revived, or mutated; references are historical only;
 - report INCONCLUSIVE when evidence is insufficient.
 
 Do not duplicate or override the rules in AGENTS.md.
