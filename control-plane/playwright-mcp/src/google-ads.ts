@@ -46,7 +46,7 @@ type ProtectedChildResource = "adGroups" | "adGroupCriteria" | "adGroupAds";
 
 function extractProtectedChildReferences(operations: unknown[]): Array<{ resource: ProtectedChildResource; resourceName: string }> {
   const payload = JSON.stringify(operations);
-  const pattern = /customers\\/\\d+\\/(adGroups|adGroupCriteria|adGroupAds)\\/[A-Za-z0-9_~:-]+/g;
+  const pattern = /customers\/\d+\/(adGroups|adGroupCriteria|adGroupAds)\/[A-Za-z0-9_~:-]+/g;
   const found = new Set<string>();
   const references: Array<{ resource: ProtectedChildResource; resourceName: string }> = [];
   for (const match of payload.matchAll(pattern)) {
