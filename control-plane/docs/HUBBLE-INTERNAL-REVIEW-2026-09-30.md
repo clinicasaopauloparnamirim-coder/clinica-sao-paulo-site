@@ -193,3 +193,30 @@ O sistema precisa provar:
 **“eu consigo decidir → executar → observar → verificar → criticar → concluir.”**
 
 Até isso existir, qualquer alegação de autonomia total seria exagerada.
+
+
+## 10. Documentação legada / drift identificado
+
+A auditoria encontrou documentação que precisa ser reconciliada antes de declarar o novo modelo operacional concluído:
+
+- `control-plane/docs/AGENT-MODE-MONKEY.md` descreve Grok como agente único e trata MonkeyCode/Claude/Codex como fluxos auxiliares.
+- `control-plane/docs/MONKEYCODE.md` restringe MonkeyCode ao código e proíbe acesso ao MCP Tower/Ads, o que continua coerente como guardrail, mas a descrição de papéis precisa ser atualizada quando o Hubble estiver consolidado.
+- `control-plane/docs/INTEGRACAO-CLAUDE-CHATGPT.md` contém instruções manuais para conectores e ainda presume uma divisão antiga de responsabilidades.
+- `control-plane/docs/CLINICA-AGENT-OPERATING-MODE.md` é conceitualmente alinhado ao Hubble, mas deve virar referência única em vez de duplicar regras.
+
+**Crítica:** manter documentos conflitantes é um risco de prompt/config drift. O Hubble deve terminar com uma fonte canônica de verdade e documentos de integração derivados, não com múltiplas versões concorrentes.
+
+## 11. Estado após o primeiro Start
+
+**DONE**
+- `CLAUDE.md` criado.
+- reunião interna registrada.
+- Hubble self-audit criado.
+- Hubble adicionado ao CI de PR.
+
+**INCONCLUSIVE / OPEN**
+- hard-block de Search-2 no código de mutação não foi aplicado; a ferramenta de execução bloqueou a mutação do arquivo.
+- executor real de especialistas ainda não existe.
+- runtime consequence verification ainda não existe.
+- suíte de testes formal ainda não existe.
+- workflow Hubble ainda precisa produzir o primeiro resultado de CI para validar a implementação no ambiente GitHub.
