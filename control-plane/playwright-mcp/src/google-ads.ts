@@ -1,4 +1,4 @@
-import { authorizeGoogleAdsMutation } from "../../policy-kernel";
+import { authorizeGoogleAdsMutation, getCampaignScope } from "../../policy-kernel";
 
 const GOOGLE_ADS_API = "https://googleads.googleapis.com/v25";
 const DEFAULT_CUSTOMER_ID = "4603647788";
@@ -73,9 +73,13 @@ async function assertNoRetiredCampaignChildMutation(env: GoogleAdsEnv, operation
     const result = await adsRequest(env, "googleAds:search", { query }) as {
       results?: Array<{ campaign?: { id?: string | number } }>;
     };
-    const campaignId = result.results?.[0]?.campaign?.id;
-    if (String(campaignId || "") === "24146336625") {
-      throw new Error("[CAMPAIGN_RETIRED] Mutation targets a child resource belonging to retired campaign 24146336625.");
+    const campaignId = String(result.results?.[0]?.campaign?.id || "");
+    const scope = getCampaignScope(campaignId);
+    if (scope === "retired") {
+      throw new Error(`[CAMPAIGN_RETIRED] Child resource belongs to retired campaign ${campaignId}.`);
+    }
+    if (scope !== "active") {
+      throw new Error(`[CAMPAIGN_OUT_OF_SCOPE] Child resource belongs to campaign ${campaignId || "unknown"}, which is not in the active operational scope.`);
     }
   }
 }
