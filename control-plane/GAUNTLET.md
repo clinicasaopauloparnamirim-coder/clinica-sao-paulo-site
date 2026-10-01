@@ -21,7 +21,7 @@ The Control Tower uses a Gauntlet Loop for changes that can alter production beh
 - Never treat an API success response as proof of final state.
 - Never allow the builder to be its own final critic.
 - Never use a score as the sole exit condition when a concrete comparison is available.
-- Never mutate Search-2 without explicit project authorization.
+- Search-2 (ID 24146336625) is retired/out of scope; never mutate or revive it.
 - Never mutate campaign budgets through the normal Control Tower Google Ads path.
 - Never expose secrets in prompts, logs, commits, reports, or artifacts.
 
