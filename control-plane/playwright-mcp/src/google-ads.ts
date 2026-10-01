@@ -42,23 +42,23 @@ async function refreshAccessToken(env: GoogleAdsEnv) {
   return token.access_token;
 }
 
-type ProtectedChildResource = "adGroups" | "adGroupCriteria" | "adGroupAds";
+type RetiredCampaignChildResource = "adGroups" | "adGroupCriteria" | "adGroupAds";
 
-function extractProtectedChildReferences(operations: unknown[]): Array<{ resource: ProtectedChildResource; resourceName: string }> {
+function extractProtectedChildReferences(operations: unknown[]): Array<{ resource: RetiredCampaignChildResource; resourceName: string }> {
   const payload = JSON.stringify(operations);
   const pattern = /customers\/\d+\/(adGroups|adGroupCriteria|adGroupAds)\/[A-Za-z0-9_~:-]+/g;
   const found = new Set<string>();
-  const references: Array<{ resource: ProtectedChildResource; resourceName: string }> = [];
+  const references: Array<{ resource: RetiredCampaignChildResource; resourceName: string }> = [];
   for (const match of payload.matchAll(pattern)) {
     const resourceName = match[0];
     if (found.has(resourceName)) continue;
     found.add(resourceName);
-    references.push({ resource: match[1] as ProtectedChildResource, resourceName });
+    references.push({ resource: match[1] as RetiredCampaignChildResource, resourceName });
   }
   return references;
 }
 
-async function assertNoSearch2ChildMutation(env: GoogleAdsEnv, operations: unknown[]) {
+async function assertNoRetiredCampaignChildMutation(env: GoogleAdsEnv, operations: unknown[]) {
   const references = extractProtectedChildReferences(operations);
   for (const reference of references) {
     let query = "";
@@ -75,7 +75,7 @@ async function assertNoSearch2ChildMutation(env: GoogleAdsEnv, operations: unkno
     };
     const campaignId = result.results?.[0]?.campaign?.id;
     if (String(campaignId || "") === "24146336625") {
-      throw new Error("[SEARCH_2_PROTECTED] Mutation targets a child resource belonging to protected campaign Search-2.");
+      throw new Error("[CAMPAIGN_RETIRED] Mutation targets a child resource belonging to retired campaign 24146336625.");
     }
   }
 }
@@ -138,7 +138,7 @@ export async function googleAdsSearch(env: GoogleAdsEnv, query: string) {
 export async function googleAdsBatchMutate(env: GoogleAdsEnv, operations: unknown[], validateOnly = true, confirm = false) {
   const decision = authorizeGoogleAdsMutation("campaigns", operations, validateOnly, confirm);
   if (!decision.allowed) throw new Error(`[${decision.code}] ${decision.reason}`);
-  await assertNoSearch2ChildMutation(env, operations);
+  await assertNoRetiredCampaignChildMutation(env, operations);
   return adsRequest(env, "googleAds:mutate", { mutateOperations: operations, validateOnly });
 }
 
@@ -152,7 +152,7 @@ export async function googleAdsMutate(
   if (!["campaignBudgets","campaigns","adGroups","adGroupCriteria","adGroupAds","campaignCriteria","userLists","remarketingActions"].includes(resource)) throw new Error(`Unsupported Google Ads resource: ${resource}`);
   const decision = authorizeGoogleAdsMutation(resource, operations, validateOnly, confirm);
   if (!decision.allowed) throw new Error(`[${decision.code}] ${decision.reason}`);
-  await assertNoSearch2ChildMutation(env, operations);
+  await assertNoRetiredCampaignChildMutation(env, operations);
   return adsRequest(env, `${resource}:mutate`, { operations, validateOnly });
 }
 
