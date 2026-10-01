@@ -32,9 +32,7 @@ export function extractCampaignIdsFromOperations(operations: unknown[]): string[
   const payload = JSON.stringify(operations);
   const found = new Set<string>();
   const pattern = /customers\/\d+\/campaigns\/(\d+)/g;
-  for (const match of payload.matchAll(pattern)) {
-    found.add(match[1]);
-  }
+  for (const match of payload.matchAll(pattern)) found.add(match[1]);
   return [...found];
 }
 
