@@ -13,7 +13,7 @@ import {
 } from "./google-ads";
 import { googleGa4Audit } from "./google-ga4";
 import { googleGscAudit } from "./google-gsc";
-import { authorizeGoogleAdsMutation } from "../policy-kernel";
+import { authorizeGoogleAdsMutation } from "../../policy-kernel";
 
 type TowerEnv = {
   GOOGLE_ADS_REFRESH_TOKEN?: string;
