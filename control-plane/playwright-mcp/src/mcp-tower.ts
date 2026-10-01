@@ -63,7 +63,7 @@ const TOOLS = [
   {
     name: "ads_mutate",
     description:
-      "Mutate Google Ads por resource. EXIGE confirm=true para live; budgets e Search-2 são bloqueados pela política.",
+      "Mutate Google Ads por resource. Validação usa validateOnly=true; mutação real exige confirm=true. Campanhas fora do escopo operacional e budgets são bloqueados pela política.",
     inputSchema: {
       type: "object",
       required: ["resource", "operations", "confirm"],
@@ -170,17 +170,19 @@ async function callTool(env: TowerEnv, name: string, args: Record<string, unknow
         | "userLists"
         | "remarketingActions";
       const operations = Array.isArray(args.operations) ? args.operations : [];
+      const validateOnly = args.validateOnly === true;
       const confirm = args.confirm === true;
-      const decision = authorizeGoogleAdsMutation(resource, operations, false, confirm);
+      const decision = authorizeGoogleAdsMutation(resource, operations, validateOnly, confirm);
       if (!decision.allowed) throw new Error(`[${decision.code}] ${decision.reason}`);
-      return await googleAdsMutate(env, resource, operations, false, true);
+      return await googleAdsMutate(env, resource, operations, validateOnly, confirm);
     }
     case "ads_batch_mutate": {
       const operations = Array.isArray(args.operations) ? args.operations : [];
+      const validateOnly = args.validateOnly === true;
       const confirm = args.confirm === true;
-      const decision = authorizeGoogleAdsMutation("campaigns", operations, false, confirm);
+      const decision = authorizeGoogleAdsMutation("campaigns", operations, validateOnly, confirm);
       if (!decision.allowed) throw new Error(`[${decision.code}] ${decision.reason}`);
-      return await googleAdsBatchMutate(env, operations, false, true);
+      return await googleAdsBatchMutate(env, operations, validateOnly, confirm);
     }
     case "ga4_audit":
       return responseToJson(await googleGa4Audit(env));
