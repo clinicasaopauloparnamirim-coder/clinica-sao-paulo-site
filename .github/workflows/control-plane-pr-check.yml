@@ -20,4 +20,5 @@ jobs:
           node-version: 22
       - run: npm install
       - run: npx wrangler types
+      - run: npm test
       - run: npm run build
