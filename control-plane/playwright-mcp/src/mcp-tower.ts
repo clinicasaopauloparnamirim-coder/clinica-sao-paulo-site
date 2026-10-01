@@ -13,6 +13,7 @@ import {
 } from "./google-ads";
 import { googleGa4Audit } from "./google-ga4";
 import { googleGscAudit } from "./google-gsc";
+import { authorizeGoogleAdsMutation } from "../policy-kernel";
 
 type TowerEnv = {
   GOOGLE_ADS_REFRESH_TOKEN?: string;
@@ -171,15 +172,15 @@ async function callTool(env: TowerEnv, name: string, args: Record<string, unknow
         | "remarketingActions";
       const operations = Array.isArray(args.operations) ? args.operations : [];
       const confirm = args.confirm === true;
-      if (!resource || !operations.length) throw new Error("resource e operations obrigatorios");
-      if (!confirm) throw new Error("confirm:true obrigatorio para ads_mutate live");
+      const decision = authorizeGoogleAdsMutation(resource, operations, false, confirm);
+      if (!decision.allowed) throw new Error(`[${decision.code}] ${decision.reason}`);
       return await googleAdsMutate(env, resource, operations, false, true);
     }
     case "ads_batch_mutate": {
       const operations = Array.isArray(args.operations) ? args.operations : [];
       const confirm = args.confirm === true;
-      if (!operations.length) throw new Error("operations obrigatorio");
-      if (!confirm) throw new Error("confirm:true obrigatorio para ads_batch_mutate live");
+      const decision = authorizeGoogleAdsMutation("campaigns", operations, false, confirm);
+      if (!decision.allowed) throw new Error(`[${decision.code}] ${decision.reason}`);
       return await googleAdsBatchMutate(env, operations, false, true);
     }
     case "ga4_audit":
