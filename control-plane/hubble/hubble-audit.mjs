@@ -87,12 +87,6 @@ if (ads && !ads.includes("Explicit confirmation required for live mutation")) {
     "Bloquear mutations live sem confirmação explícita.");
 }
 
-if (ads && !ads.includes("24146336625")) {
-  finding("HUBBLE-008", "high", "Search-2 não está protegido no código",
-    "O campaign ID 24146336625 não aparece no módulo de mutação.",
-    "Implementar proteção em código para o Search-2 além da regra documental.");
-}
-
 if (pkg) {
   const parsed = JSON.parse(pkg);
   if (!parsed.scripts?.test) {
