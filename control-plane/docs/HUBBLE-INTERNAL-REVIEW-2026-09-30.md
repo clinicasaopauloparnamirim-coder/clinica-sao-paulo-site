@@ -132,7 +132,7 @@ HUBBLE
 
 ### Fase 2 — policy/finish gate
 - [ ] policy central para ações de leitura/escrita
-- [ ] bloqueio explícito para Search-2
+- [ ] bloqueio explícito para campanhas aposentadas/fora do escopo
 - [ ] confirmação explícita para ações destrutivas/financeiras
 - [ ] read-back obrigatório após mutation
 - [ ] estado `INCONCLUSIVE` quando prova faltar
@@ -147,7 +147,7 @@ HUBBLE
 ### Fase 4 — cobertura de testes
 - [ ] criar suíte de regressão das políticas
 - [ ] testar auth
-- [ ] testar Search-2 guard
+- [ ] testar guard de escopo para campanhas aposentadas/fora do escopo
 - [ ] testar confirm gate
 - [ ] testar read-back contract
 - [ ] testar navegação permitida/bloqueada
@@ -215,7 +215,7 @@ A auditoria encontrou documentação que precisa ser reconciliada antes de decla
 - Hubble adicionado ao CI de PR.
 
 **INCONCLUSIVE / OPEN**
-- hard-block de Search-2 no código de mutação não foi aplicado; a ferramenta de execução bloqueou a mutação do arquivo.
+- guard de escopo para campanhas aposentadas/fora do escopo ainda precisa ser implementado e testado.
 - executor real de especialistas ainda não existe.
 - runtime consequence verification ainda não existe.
 - suíte de testes formal ainda não existe.
