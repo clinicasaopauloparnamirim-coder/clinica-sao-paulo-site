@@ -42,6 +42,42 @@ async function refreshAccessToken(env: GoogleAdsEnv) {
   return token.access_token;
 }
 
+type ProtectedChildResource = "adGroups" | "adGroupCriteria" | "adGroupAds";
+
+function extractProtectedChildReferences(operations: unknown[]): Array<{ resource: ProtectedChildResource; resourceName: string }> {
+  const payload = JSON.stringify(operations);
+  const pattern = /customers\\/\\d+\\/(adGroups|adGroupCriteria|adGroupAds)\\/[A-Za-z0-9_~:-]+/g;
+  const found = new Set<string>();
+  const references: Array<{ resource: ProtectedChildResource; resourceName: string }> = [];
+  for (const match of payload.matchAll(pattern)) {
+    const resourceName = match[0];
+    if (found.has(resourceName)) continue;
+    found.add(resourceName);
+    references.push({ resource: match[1] as ProtectedChildResource, resourceName });
+  }
+  return references;
+}
+
+async function assertNoSearch2ChildMutation(env: GoogleAdsEnv, operations: unknown[]) {
+  const references = extractProtectedChildReferences(operations);
+  for (const reference of references) {
+    let query = "";
+    if (reference.resource === "adGroups") {
+      query = `SELECT campaign.id FROM ad_group WHERE ad_group.resource_name = '${reference.resourceName}' LIMIT 1`;
+    } else if (reference.resource === "adGroupCriteria") {
+      query = `SELECT campaign.id FROM ad_group_criterion WHERE ad_group_criterion.resource_name = '${reference.resourceName}' LIMIT 1`;
+    } else {
+      query = `SELECT campaign.id FROM ad_group_ad WHERE ad_group_ad.resource_name = '${reference.resourceName}' LIMIT 1`;
+    }
+
+    const result = await adsRequest(env, "googleAds:search", { query });
+    const campaignId = result?.results?.[0]?.campaign?.id ?? result?.results?.[0]?.campaign?.id?.toString?.();
+    if (String(campaignId || "") === "24146336625") {
+      throw new Error("[SEARCH_2_PROTECTED] Mutation targets a child resource belonging to protected campaign Search-2.");
+    }
+  }
+}
+
 async function adsRequest(env: GoogleAdsEnv, path: string, body: unknown) {
   const customerId = (env.GOOGLE_ADS_CUSTOMER_ID || DEFAULT_CUSTOMER_ID).replace(/-/g, "");
   const accessToken = await refreshAccessToken(env);
@@ -100,6 +136,7 @@ export async function googleAdsSearch(env: GoogleAdsEnv, query: string) {
 export async function googleAdsBatchMutate(env: GoogleAdsEnv, operations: unknown[], validateOnly = true, confirm = false) {
   const decision = authorizeGoogleAdsMutation("campaigns", operations, validateOnly, confirm);
   if (!decision.allowed) throw new Error(`[${decision.code}] ${decision.reason}`);
+  await assertNoSearch2ChildMutation(env, operations);
   return adsRequest(env, "googleAds:mutate", { mutateOperations: operations, validateOnly });
 }
 
@@ -113,6 +150,7 @@ export async function googleAdsMutate(
   if (!["campaignBudgets","campaigns","adGroups","adGroupCriteria","adGroupAds","campaignCriteria","userLists","remarketingActions"].includes(resource)) throw new Error(`Unsupported Google Ads resource: ${resource}`);
   const decision = authorizeGoogleAdsMutation(resource, operations, validateOnly, confirm);
   if (!decision.allowed) throw new Error(`[${decision.code}] ${decision.reason}`);
+  await assertNoSearch2ChildMutation(env, operations);
   return adsRequest(env, `${resource}:mutate`, { operations, validateOnly });
 }
 
