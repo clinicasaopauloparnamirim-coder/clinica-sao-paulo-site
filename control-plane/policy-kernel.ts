@@ -19,6 +19,17 @@ function serializedOperations(operations: unknown[]) {
   return JSON.stringify(operations).toLowerCase();
 }
 
+function containsProtectedCampaignReference(operations: unknown[]) {
+  const payload = serializedOperations(operations);
+  return payload.includes(SEARCH_2_ID) || payload.includes(SEARCH_2_NAME);
+}
+
+function containsBudgetMutation(resource: MutationResource, operations: unknown[]) {
+  if (resource === "campaignBudgets") return true;
+  const payload = serializedOperations(operations);
+  return payload.includes('"campaignbudget') || payload.includes('"campaign_budget') || payload.includes('"campaign budget');
+}
+
 export function authorizeGoogleAdsMutation(
   resource: MutationResource,
   operations: unknown[],
@@ -33,9 +44,7 @@ export function authorizeGoogleAdsMutation(
     return { allowed: false, code: "MUTATION_TOO_LARGE", reason: "A mutation batch may contain at most 100 operations." };
   }
 
-  const payload = serializedOperations(operations);
-
-  if (resource === "campaignBudgets" || payload.includes("campaignbudget")) {
+  if (containsBudgetMutation(resource, operations)) {
     return {
       allowed: false,
       code: "FINANCIAL_ACTION_BLOCKED",
@@ -43,7 +52,7 @@ export function authorizeGoogleAdsMutation(
     };
   }
 
-  if (payload.includes(SEARCH_2_ID) || payload.includes(SEARCH_2_NAME)) {
+  if (containsProtectedCampaignReference(operations)) {
     return {
       allowed: false,
       code: "SEARCH_2_PROTECTED",
