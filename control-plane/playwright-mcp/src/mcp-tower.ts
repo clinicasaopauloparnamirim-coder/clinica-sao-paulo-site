@@ -63,7 +63,7 @@ const TOOLS = [
   {
     name: "ads_mutate",
     description:
-      "Mutate Google Ads por resource. EXIGE confirm=true para live.",
+      "Mutate Google Ads por resource. EXIGE confirm=true para live; budgets e Search-2 são bloqueados pela política.",
     inputSchema: {
       type: "object",
       required: ["resource", "operations", "confirm"],
@@ -71,7 +71,6 @@ const TOOLS = [
         resource: {
           type: "string",
           enum: [
-            "campaignBudgets",
             "campaigns",
             "adGroups",
             "adGroupCriteria",
