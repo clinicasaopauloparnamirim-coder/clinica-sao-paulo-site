@@ -1,3 +1,5 @@
+import { authorizeGoogleAdsMutation } from "../../policy-kernel";
+
 const GOOGLE_ADS_API = "https://googleads.googleapis.com/v25";
 const DEFAULT_CUSTOMER_ID = "4603647788";
 
@@ -96,8 +98,8 @@ export async function googleAdsSearch(env: GoogleAdsEnv, query: string) {
 }
 
 export async function googleAdsBatchMutate(env: GoogleAdsEnv, operations: unknown[], validateOnly = true, confirm = false) {
-  if (!operations.length || operations.length > 100) throw new Error("Batch mutation must contain 1-100 operations.");
-  if (!validateOnly && confirm !== true) throw new Error("Explicit confirmation required for live mutation.");
+  const decision = authorizeGoogleAdsMutation("campaigns", operations, validateOnly, confirm);
+  if (!decision.allowed) throw new Error(`[${decision.code}] ${decision.reason}`);
   return adsRequest(env, "googleAds:mutate", { mutateOperations: operations, validateOnly });
 }
 
@@ -109,8 +111,8 @@ export async function googleAdsMutate(
   confirm = false,
 ) {
   if (!["campaignBudgets","campaigns","adGroups","adGroupCriteria","adGroupAds","campaignCriteria","userLists","remarketingActions"].includes(resource)) throw new Error(`Unsupported Google Ads resource: ${resource}`);
-  if (!operations.length || operations.length > 100) throw new Error("Mutation must contain 1-100 operations.");
-  if (!validateOnly && confirm !== true) throw new Error("Explicit confirmation required for live mutation.");
+  const decision = authorizeGoogleAdsMutation(resource, operations, validateOnly, confirm);
+  if (!decision.allowed) throw new Error(`[${decision.code}] ${decision.reason}`);
   return adsRequest(env, `${resource}:mutate`, { operations, validateOnly });
 }
 
