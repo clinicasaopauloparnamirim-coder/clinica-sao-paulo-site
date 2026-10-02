@@ -9,6 +9,12 @@ const activeCampaign = "customers/4603647788/campaigns/24289443969";
 const retiredCampaign = "customers/4603647788/campaigns/24146336625";
 const unknownCampaign = "customers/4603647788/campaigns/99999999999";
 
+function assertDeniedCode(decision: ReturnType<typeof authorizeGoogleAdsMutation>, expected: string) {
+  assert.equal(decision.allowed, false);
+  if (decision.allowed) return;
+  assert.equal(decision.code, expected);
+}
+
 assert.equal(authorizeGoogleAdsMutation("campaignBudgets", [{}], false, true).allowed, false);
 assert.equal(
   authorizeGoogleAdsMutation(
@@ -29,23 +35,23 @@ assert.deepEqual(
   ["24289443969", "24146336625"],
 );
 
-assert.equal(
-  authorizeGoogleAdsMutation("campaigns", [{ resourceName: retiredCampaign }], true, false).code,
+assertDeniedCode(
+  authorizeGoogleAdsMutation("campaigns", [{ resourceName: retiredCampaign }], true, false),
   "CAMPAIGN_RETIRED",
 );
 
-assert.equal(
-  authorizeGoogleAdsMutation("campaigns", [{ resourceName: retiredCampaign }], false, true).code,
+assertDeniedCode(
+  authorizeGoogleAdsMutation("campaigns", [{ resourceName: retiredCampaign }], false, true),
   "CAMPAIGN_RETIRED",
 );
 
-assert.equal(
-  authorizeGoogleAdsMutation("campaigns", [{ resourceName: unknownCampaign }], true, false).code,
+assertDeniedCode(
+  authorizeGoogleAdsMutation("campaigns", [{ resourceName: unknownCampaign }], true, false),
   "CAMPAIGN_OUT_OF_SCOPE",
 );
 
-assert.equal(
-  authorizeGoogleAdsMutation("campaigns", [{ resourceName: activeCampaign }], false, false).code,
+assertDeniedCode(
+  authorizeGoogleAdsMutation("campaigns", [{ resourceName: activeCampaign }], false, false),
   "EXPLICIT_CONFIRMATION_REQUIRED",
 );
 
@@ -61,8 +67,8 @@ assert.equal(
 
 assert.equal(authorizeGoogleAdsMutation("campaigns", [{}], false, true).allowed, true);
 
-assert.equal(
-  authorizeGoogleAdsMutation("campaigns", Array.from({ length: 101 }, () => ({})), true, false).code,
+assertDeniedCode(
+  authorizeGoogleAdsMutation("campaigns", Array.from({ length: 101 }, () => ({})), true, false),
   "MUTATION_TOO_LARGE",
 );
 
