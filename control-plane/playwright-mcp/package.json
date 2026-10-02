@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "wrangler types && tsc --noEmit",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "test": "node --experimental-strip-types ../policy-kernel.test.ts"
   },
   "dependencies": {
     "@cloudflare/playwright-mcp": "0.0.5",
