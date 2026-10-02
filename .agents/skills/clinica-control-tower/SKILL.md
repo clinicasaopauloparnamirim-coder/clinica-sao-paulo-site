@@ -28,7 +28,7 @@ If evidence is missing, report **INCONCLUSIVE** rather than claiming success.
 
 - The repository is the source of truth for the site and Control Tower implementation.
 - Preserve existing deployment architecture unless the task explicitly asks to change it.
-- Do not change Google Ads campaign **Search-2** unless the user explicitly authorizes that change.
+- Treat Google Ads campaign **Search-2 (ID 24146336625)** as retired/out of scope: never operate, optimize, revive, or mutate it. References are historical only.
 - For authorized Google Ads mutations, validate first when the available action supports validation, mutate, then re-read the affected resource and verify the final state.
 - Never expose, commit, echo, or place credentials, OAuth refresh tokens, API keys, Cloudflare tokens, or other secrets in files, logs, prompts, commits, or reports.
 - Prefer existing project workflows and documented interfaces over inventing new infrastructure.
@@ -121,3 +121,15 @@ Do not:
 - report a deployment as live without a real post-deploy smoke check.
 
 The goal is not more activity. The goal is **verified outcomes with an auditable trail**.
+
+## Gauntlet Loop
+
+For material repository, deployment, SEO, UI, or integration changes, apply the project Gauntlet contract in `control-plane/GAUNTLET.md`: baseline, builder, independent critic, comparison, scoped correction, re-verification, and evidence ledger. The builder must not serve as the final critic.
+
+## Policy Kernel
+
+All Google Ads production mutations must pass the centralized policy kernel at `control-plane/policy-kernel.ts` before reaching the Google Ads API. Tool availability never overrides project policy. The kernel uses an explicit operational campaign registry: active campaigns may be mutated only under normal confirmation rules; retired/out-of-scope campaigns are rejected; campaign budget mutations are blocked.
+
+## Agent roles
+
+Use external agent frameworks as bounded workers, not as policy authorities: Superpowers for engineering workflow, OpenHands for isolated implementation, SuperDesign for UI work, and AgentJev for fast decision/risk signals. Ruflo remains research-only until separately security-reviewed and benchmarked.

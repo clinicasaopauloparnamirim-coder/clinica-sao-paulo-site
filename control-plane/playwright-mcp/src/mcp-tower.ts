@@ -13,6 +13,7 @@ import {
 } from "./google-ads";
 import { googleGa4Audit } from "./google-ga4";
 import { googleGscAudit } from "./google-gsc";
+import { authorizeGoogleAdsMutation } from "../../policy-kernel";
 
 type TowerEnv = {
   GOOGLE_ADS_REFRESH_TOKEN?: string;
@@ -62,7 +63,7 @@ const TOOLS = [
   {
     name: "ads_mutate",
     description:
-      "Mutate Google Ads por resource. EXIGE confirm=true para live.",
+      "Mutate Google Ads por resource. Validação usa validateOnly=true; mutação real exige confirm=true. Campanhas fora do escopo operacional e budgets são bloqueados pela política.",
     inputSchema: {
       type: "object",
       required: ["resource", "operations", "confirm"],
@@ -70,7 +71,6 @@ const TOOLS = [
         resource: {
           type: "string",
           enum: [
-            "campaignBudgets",
             "campaigns",
             "adGroups",
             "adGroupCriteria",
@@ -170,17 +170,19 @@ async function callTool(env: TowerEnv, name: string, args: Record<string, unknow
         | "userLists"
         | "remarketingActions";
       const operations = Array.isArray(args.operations) ? args.operations : [];
+      const validateOnly = args.validateOnly === true;
       const confirm = args.confirm === true;
-      if (!resource || !operations.length) throw new Error("resource e operations obrigatorios");
-      if (!confirm) throw new Error("confirm:true obrigatorio para ads_mutate live");
-      return await googleAdsMutate(env, resource, operations, false, true);
+      const decision = authorizeGoogleAdsMutation(resource, operations, validateOnly, confirm);
+      if (!decision.allowed) throw new Error(`[${decision.code}] ${decision.reason}`);
+      return await googleAdsMutate(env, resource, operations, validateOnly, confirm);
     }
     case "ads_batch_mutate": {
       const operations = Array.isArray(args.operations) ? args.operations : [];
+      const validateOnly = args.validateOnly === true;
       const confirm = args.confirm === true;
-      if (!operations.length) throw new Error("operations obrigatorio");
-      if (!confirm) throw new Error("confirm:true obrigatorio para ads_batch_mutate live");
-      return await googleAdsBatchMutate(env, operations, false, true);
+      const decision = authorizeGoogleAdsMutation("campaigns", operations, validateOnly, confirm);
+      if (!decision.allowed) throw new Error(`[${decision.code}] ${decision.reason}`);
+      return await googleAdsBatchMutate(env, operations, validateOnly, confirm);
     }
     case "ga4_audit":
       return responseToJson(await googleGa4Audit(env));

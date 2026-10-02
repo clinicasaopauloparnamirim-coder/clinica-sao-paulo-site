@@ -11,6 +11,8 @@
   },
   "include": [
     "src/**/*.ts",
+    "../policy-kernel.ts",
+    "../policy-kernel.test.ts",
     "worker-configuration.d.ts"
   ]
 }
