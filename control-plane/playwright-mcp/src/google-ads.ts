@@ -1,3 +1,5 @@
+import { authorizeGoogleAdsMutation, getCampaignScope } from "../../policy-kernel";
+
 const GOOGLE_ADS_API = "https://googleads.googleapis.com/v25";
 const DEFAULT_CUSTOMER_ID = "4603647788";
 
@@ -38,6 +40,48 @@ async function refreshAccessToken(env: GoogleAdsEnv) {
   const token = await response.json() as { access_token?: string };
   if (!token.access_token) throw new Error("Google did not return an Ads access token.");
   return token.access_token;
+}
+
+type RetiredCampaignChildResource = "adGroups" | "adGroupCriteria" | "adGroupAds";
+
+function extractProtectedChildReferences(operations: unknown[]): Array<{ resource: RetiredCampaignChildResource; resourceName: string }> {
+  const payload = JSON.stringify(operations);
+  const pattern = /customers\/\d+\/(adGroups|adGroupCriteria|adGroupAds)\/[A-Za-z0-9_~:-]+/g;
+  const found = new Set<string>();
+  const references: Array<{ resource: RetiredCampaignChildResource; resourceName: string }> = [];
+  for (const match of payload.matchAll(pattern)) {
+    const resourceName = match[0];
+    if (found.has(resourceName)) continue;
+    found.add(resourceName);
+    references.push({ resource: match[1] as RetiredCampaignChildResource, resourceName });
+  }
+  return references;
+}
+
+async function assertNoRetiredCampaignChildMutation(env: GoogleAdsEnv, operations: unknown[]) {
+  const references = extractProtectedChildReferences(operations);
+  for (const reference of references) {
+    let query = "";
+    if (reference.resource === "adGroups") {
+      query = `SELECT campaign.id FROM ad_group WHERE ad_group.resource_name = '${reference.resourceName}' LIMIT 1`;
+    } else if (reference.resource === "adGroupCriteria") {
+      query = `SELECT campaign.id FROM ad_group_criterion WHERE ad_group_criterion.resource_name = '${reference.resourceName}' LIMIT 1`;
+    } else {
+      query = `SELECT campaign.id FROM ad_group_ad WHERE ad_group_ad.resource_name = '${reference.resourceName}' LIMIT 1`;
+    }
+
+    const result = await adsRequest(env, "googleAds:search", { query }) as {
+      results?: Array<{ campaign?: { id?: string | number } }>;
+    };
+    const campaignId = String(result.results?.[0]?.campaign?.id || "");
+    const scope = getCampaignScope(campaignId);
+    if (scope === "retired") {
+      throw new Error(`[CAMPAIGN_RETIRED] Child resource belongs to retired campaign ${campaignId}.`);
+    }
+    if (scope !== "active") {
+      throw new Error(`[CAMPAIGN_OUT_OF_SCOPE] Child resource belongs to campaign ${campaignId || "unknown"}, which is not in the active operational scope.`);
+    }
+  }
 }
 
 async function adsRequest(env: GoogleAdsEnv, path: string, body: unknown) {
@@ -96,8 +140,9 @@ export async function googleAdsSearch(env: GoogleAdsEnv, query: string) {
 }
 
 export async function googleAdsBatchMutate(env: GoogleAdsEnv, operations: unknown[], validateOnly = true, confirm = false) {
-  if (!operations.length || operations.length > 100) throw new Error("Batch mutation must contain 1-100 operations.");
-  if (!validateOnly && confirm !== true) throw new Error("Explicit confirmation required for live mutation.");
+  const decision = authorizeGoogleAdsMutation("campaigns", operations, validateOnly, confirm);
+  if (!decision.allowed) throw new Error(`[${decision.code}] ${decision.reason}`);
+  await assertNoRetiredCampaignChildMutation(env, operations);
   return adsRequest(env, "googleAds:mutate", { mutateOperations: operations, validateOnly });
 }
 
@@ -109,8 +154,9 @@ export async function googleAdsMutate(
   confirm = false,
 ) {
   if (!["campaignBudgets","campaigns","adGroups","adGroupCriteria","adGroupAds","campaignCriteria","userLists","remarketingActions"].includes(resource)) throw new Error(`Unsupported Google Ads resource: ${resource}`);
-  if (!operations.length || operations.length > 100) throw new Error("Mutation must contain 1-100 operations.");
-  if (!validateOnly && confirm !== true) throw new Error("Explicit confirmation required for live mutation.");
+  const decision = authorizeGoogleAdsMutation(resource, operations, validateOnly, confirm);
+  if (!decision.allowed) throw new Error(`[${decision.code}] ${decision.reason}`);
+  await assertNoRetiredCampaignChildMutation(env, operations);
   return adsRequest(env, `${resource}:mutate`, { operations, validateOnly });
 }
 
