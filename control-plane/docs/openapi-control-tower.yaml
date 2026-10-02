@@ -58,7 +58,7 @@ paths:
   /google/ads/mutate:
     post:
       operationId: adsMutate
-      summary: Mutate de resource (budget, campaign, adGroup, criteria, ads, userLists)
+      summary: Mutate de resource permitido (campaign, adGroup, criteria, ads, userLists); budget e Search-2 são bloqueados pela política
       requestBody:
         required: true
         content:
@@ -70,7 +70,6 @@ paths:
                 resource:
                   type: string
                   enum:
-                    - campaignBudgets
                     - campaigns
                     - adGroups
                     - adGroupCriteria

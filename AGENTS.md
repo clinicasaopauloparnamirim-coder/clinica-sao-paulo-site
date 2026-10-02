@@ -9,7 +9,7 @@ The required operating loop is:
 A response is not proof of completion. A mutation is not proof of the requested final state. Always read back the real artifact/resource when the tools permit it.
 
 Project guardrails:
-- Do not modify Google Ads campaign Search-2 without explicit user authorization.
+- Campaign Search-2 (ID 24146336625) is retired and out of scope. Never operate, optimize, revive, or mutate it; references are historical only.
 - Never commit or expose secrets.
 - Preserve existing deployment architecture unless explicitly instructed otherwise.
 - Prefer direct verification over inference.
