@@ -1,0 +1,22 @@
+{
+  "name": "clinica-sao-paulo-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "install:worker": "npm install --prefix control-plane/playwright-mcp",
+    "build": "npm run install:worker && npm install && npx wrangler types --config wrangler.jsonc",
+    "deploy": "npm run install:worker && npm install && npx wrangler deploy --config wrangler.jsonc --keep-vars",
+    "deploy:ci": "npm install --prefix control-plane/playwright-mcp && npm install && npx wrangler deploy --config wrangler.jsonc --keep-vars"
+  },
+  "dependencies": {
+    "@cloudflare/playwright-mcp": "0.0.5",
+    "agents": "0.24.0",
+    "ai": "7.0.114",
+    "workers-ai-provider": "4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.14.1",
+    "typescript": "5.8.2",
+    "wrangler": "4.68.0"
+  }
+}
