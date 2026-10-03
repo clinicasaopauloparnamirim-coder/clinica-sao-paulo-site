@@ -13,6 +13,7 @@ import {
 } from "./google-ads";
 import { googleGa4Audit } from "./google-ga4";
 import { googleGscAudit } from "./google-gsc";
+import { runAdsMutateJudgment } from "./judgment-gate";
 
 type TowerEnv = {
   GOOGLE_ADS_REFRESH_TOKEN?: string;
@@ -22,6 +23,9 @@ type TowerEnv = {
   GOOGLE_ADS_LOGIN_CUSTOMER_ID?: string;
   GOOGLE_OAUTH_STORE: DurableObjectNamespace;
   MCP_AUTH_TOKEN?: string;
+  TYPESAFE_API_KEY?: string;
+  LAYA_HTTP_URL?: string;
+  JUDGMENT_REQUIRED?: string;
 };
 
 const SERVER_INFO = {
@@ -62,7 +66,7 @@ const TOOLS = [
   {
     name: "ads_mutate",
     description:
-      "Mutate Google Ads por resource. EXIGE confirm=true para live.",
+      "Mutate Google Ads por resource. EXIGE confirm=true para live. Judgment gate Laya/Jev/local.",
     inputSchema: {
       type: "object",
       required: ["resource", "operations", "confirm"],
@@ -93,7 +97,7 @@ const TOOLS = [
   {
     name: "ads_batch_mutate",
     description:
-      "Batch mutate (mutateOperations). EXIGE confirm=true para live.",
+      "Batch mutate (mutateOperations). EXIGE confirm=true para live. Judgment gate Laya/Jev/local.",
     inputSchema: {
       type: "object",
       required: ["operations", "confirm"],
@@ -149,6 +153,11 @@ async function callTool(env: TowerEnv, name: string, args: Record<string, unknow
         auth_configured: Boolean(env.MCP_AUTH_TOKEN),
         google_oauth_configured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
         customer_id: (env.GOOGLE_ADS_CUSTOMER_ID || "4603647788").replace(/-/g, ""),
+        judgment: {
+          laya_configured: Boolean(env.LAYA_HTTP_URL),
+          jev_configured: Boolean(env.TYPESAFE_API_KEY),
+          required: String(env.JUDGMENT_REQUIRED || "").toLowerCase() === "true",
+        },
       };
     case "ads_auth_check":
       return responseToJson(await googleAdsAuthCheck(env));
@@ -171,16 +180,43 @@ async function callTool(env: TowerEnv, name: string, args: Record<string, unknow
         | "remarketingActions";
       const operations = Array.isArray(args.operations) ? args.operations : [];
       const confirm = args.confirm === true;
+      const validateOnly = args.validateOnly === true;
       if (!resource || !operations.length) throw new Error("resource e operations obrigatorios");
-      if (!confirm) throw new Error("confirm:true obrigatorio para ads_mutate live");
-      return await googleAdsMutate(env, resource, operations, false, true);
+      const gate = await runAdsMutateJudgment(env, {
+        action: `ads_mutate:${resource}`,
+        campaignId: "24289443969",
+        validateOnly,
+        confirm,
+      });
+      if (gate.decision === "block") {
+        return { ok: false, gated: true, gate };
+      }
+      if (!validateOnly && !confirm) {
+        throw new Error("confirm:true obrigatorio para ads_mutate live");
+      }
+      if (!validateOnly && gate.decision === "confirm" && !confirm) {
+        return { ok: false, gated: true, gate, message: "human confirm required" };
+      }
+      return await googleAdsMutate(env, resource, operations, validateOnly, confirm);
     }
     case "ads_batch_mutate": {
       const operations = Array.isArray(args.operations) ? args.operations : [];
       const confirm = args.confirm === true;
+      const validateOnly = args.validateOnly === true;
       if (!operations.length) throw new Error("operations obrigatorio");
-      if (!confirm) throw new Error("confirm:true obrigatorio para ads_batch_mutate live");
-      return await googleAdsBatchMutate(env, operations, false, true);
+      const gate = await runAdsMutateJudgment(env, {
+        action: "ads_batch_mutate",
+        campaignId: "24289443969",
+        validateOnly,
+        confirm,
+      });
+      if (gate.decision === "block") {
+        return { ok: false, gated: true, gate };
+      }
+      if (!validateOnly && !confirm) {
+        throw new Error("confirm:true obrigatorio para ads_batch_mutate live");
+      }
+      return await googleAdsBatchMutate(env, operations, validateOnly, confirm);
     }
     case "ga4_audit":
       return responseToJson(await googleGa4Audit(env));
