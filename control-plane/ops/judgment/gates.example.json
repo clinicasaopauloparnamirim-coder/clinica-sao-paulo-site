@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "provider_preference": ["laya", "jev"],
+  "fail_closed_on_provider_error": true,
+  "gates": [
+    {
+      "id": "ads_mutate_gate",
+      "when": "before_ads_mutate",
+      "questions": {
+        "is_mutate": {"type": "noul", "instructions": "This changes live Google Ads spend or structure."},
+        "decision": {
+          "type": "choice",
+          "instructions": "Gate decision",
+          "criteria": {"allow": "Safe after validateOnly", "confirm": "Need human", "block": "Do not run"}
+        },
+        "budget_risk": {
+          "type": "score",
+          "instructions": "Risk of unintended budget impact",
+          "criteria": {"1": "negligible", "2": "low", "3": "moderate", "4": "high", "5": "critical"}
+        }
+      },
+      "thresholds": {
+        "block_if_decision": "block",
+        "confirm_if_decision": "confirm",
+        "confirm_if_budget_risk_gte": 4
+      }
+    }
+  ]
+}
