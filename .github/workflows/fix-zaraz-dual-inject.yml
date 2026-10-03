@@ -1,0 +1,31 @@
+name: Fix Zaraz dual inject
+on:
+  workflow_dispatch:
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 20
+      - name: Restore index.html from pre-placeholder commit
+        run: |
+          set -euo pipefail
+          # Last known good content before PLACEHOLDER accident
+          git show fe282853993a79a643e7c4d62476b19d1044ed92:public/index.html > public/index.html
+          python3 scripts/strip-zaraz-dual.py public/index.html
+          # sanity
+          grep -q clique_whatsapp public/index.html
+          ! grep -q 'zaraz is loaded twice' public/index.html
+          ! grep -q '/cdn-cgi/zaraz/s.js' public/index.html
+      - name: Commit and push
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/index.html scripts/strip-zaraz-dual.py
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "fix(p0): strip baked dual Zaraz inject; restore site HTML"
+          git push
