@@ -1,0 +1,41 @@
+name: Fix ASSETS fallthrough
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/fix-assets-fallthrough.yml"
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 30
+      - name: Restore and patch index.ts
+        run: |
+          set -euo pipefail
+          # last good full index before PLACEHOLDER
+          git show a95c80bd2dcff2c998d63d8de80ea5f47312310f:control-plane/playwright-mcp/src/index.ts > control-plane/playwright-mcp/src/index.ts
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path("control-plane/playwright-mcp/src/index.ts")
+          t = p.read_text()
+          old = '''    if (!isMcpRoute) {\n      return new Response("Not Found", { status: 404 });\n    }'''
+          new = '''    if (!isMcpRoute) {\n      // Serve static site from public/ (wrangler.jsonc assets binding)\n      const assets = (env as unknown as { ASSETS?: { fetch: (req: Request) => Promise<Response> } }).ASSETS;\n      if (assets && typeof assets.fetch === "function") {\n        const assetResponse = await assets.fetch(request);\n        const headers = new Headers(assetResponse.headers);\n        headers.set("x-content-type-options", "nosniff");\n        headers.set("x-frame-options", "SAMEORIGIN");\n        headers.set("referrer-policy", "strict-origin-when-cross-origin");\n        headers.set("permissions-policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");\n        return new Response(assetResponse.body, {\n          status: assetResponse.status,\n          statusText: assetResponse.statusText,\n          headers,\n        });\n      }\n      return new Response("Not Found", { status: 404 });\n    }'''
+          if old not in t:
+              raise SystemExit("block not found")
+          p.write_text(t.replace(old, new))
+          print("patched", p.stat().st_size)
+          PY
+          grep -q ASSETS control-plane/playwright-mcp/src/index.ts
+          ! grep -q PLACEHOLDER control-plane/playwright-mcp/src/index.ts
+      - name: Commit
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add control-plane/playwright-mcp/src/index.ts
+          git commit -m "fix(p0): restore index.ts and ASSETS fallthrough for static site"
+          git push
