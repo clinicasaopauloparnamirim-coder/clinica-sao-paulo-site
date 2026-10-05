@@ -82,15 +82,23 @@ repositories:
   - name: Hermes Agent
     full_name: NousResearch/hermes-agent
     role: autonomous-agent
-    status: candidate
+    status: verified-identity
     approved: false
-    source: prior-audit-reference
-    note: Candidate only; requires controlled read-only evaluation before adoption.
+    source: github-public-search + official-docs-2026-10-05
+    note: ~251k stars; install via hermes-agent.nousresearch.com/install.sh; needs model provider (OpenRouter/OpenAI/Nous Portal). Gate: sandbox read-only before any production use.
 
   - name: Composio
-    full_name: null
-    role: tool-integration-and-auth-layer
+    full_name: ComposioHQ/composio
+    role: tool-auth-layer
+    status: verified-identity
+    approved: false
+    source: github-public-search + gauntlet-audit-2026-10-05
+    note: ~30k stars; 1000+ toolkits, managed OAuth, MCP sessions. Self-host Enterprise-only. Complementary to native GitHub MCP.
+
+  - name: Open-dot
+    full_name: composio-community/open-dot
+    role: personal-openai-composio-agent
     status: candidate
     approved: false
-    source: prior-audit-reference
-    note: Exact repository identity not confirmed by the current GitHub search; do not invent it.
+    source: github-public-search
+    note: OpenAI + Composio personal agent template. Requires OPENAI_API_KEY + COMPOSIO_API_KEY. Gate: read-only session first.
