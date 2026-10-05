@@ -1,1 +1,1 @@
-window.__H1="PLACEHOLDER1";
+PLACEHOLDER
