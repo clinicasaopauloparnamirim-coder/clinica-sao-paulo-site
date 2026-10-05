@@ -1,0 +1,96 @@
+# Registry of repositories relevant to the Control Tower.
+# Identity states:
+# verified = identity confirmed for the intended project
+# candidate = plausible identity found, but project match still needs audit confirmation
+# unverified = name remembered/referenced, exact repository not established
+#
+# Search-2 is intentionally excluded from this registry.
+# Zernio is intentionally excluded.
+
+repositories:
+  - name: clinica-sao-paulo-site
+    full_name: clinicasaopauloparnamirim-coder/clinica-sao-paulo-site
+    role: production-site
+    status: verified
+    approved: true
+    source: github-connector
+
+  - name: JEV
+    full_name: malevrigns/agent-jev
+    role: candidate-agent
+    status: candidate
+    approved: false
+    source: github-public-search
+    note: Repository exists, but exact match to the previously audited JEV project is not yet proven.
+
+  - name: Laya
+    full_name: vishalmysore/layaAgent
+    role: candidate-agent
+    status: candidate
+    approved: false
+    source: github-public-search
+    note: Repository exists, but exact match to the previously audited Laya project is not yet proven.
+
+  - name: MonkeyCode
+    full_name: chaitin/MonkeyCode
+    role: candidate-agent-or-coding-tool
+    status: candidate
+    approved: false
+    source: github-public-search
+    note: Repository identity found; prior-audit equivalence still requires verification.
+
+  - name: FreeLLMAPI
+    full_name: tashfeenahmed/freellmapi
+    role: candidate-api-or-llm-infrastructure
+    status: candidate
+    approved: false
+    source: github-public-search
+    note: Repository identity found; prior-audit equivalence still requires verification.
+
+  - name: Open-SEO
+    full_name: every-app/open-seo
+    role: candidate-seo-tool
+    status: candidate
+    approved: false
+    source: github-public-search
+    note: Repository identity found; prior-audit equivalence still requires verification.
+
+  - name: Browser Harness
+    full_name: browser-use/browser-harness
+    role: candidate-browser-agent-infrastructure
+    status: candidate
+    approved: false
+    source: github-public-search
+    note: Repository identity found; prior-audit equivalence still requires verification.
+
+  - name: Ruflo
+    full_name: ruvnet/ruflo
+    role: multi-agent-orchestration
+    status: candidate
+    approved: false
+    source: github-public-search
+    note: Repository identity found; adoption remains unapproved pending audit evidence.
+
+  - name: Superpowers
+    full_name: obra/superpowers
+    role: agent-development-workflow
+    status: candidate
+    approved: false
+    source: github-public-search
+    note: Repository identity found; exact prior-audit scope should be verified before adoption.
+
+  - name: Hermes Agent
+    full_name: NousResearch/hermes-agent
+    role: autonomous-agent
+    status: candidate
+    approved: false
+    source: prior-audit-reference
+    note: Candidate only; requires controlled read-only evaluation before adoption.
+
+  - name: Composio
+    full_name: null
+    role: tool-integration-and-auth-layer
+    status: candidate
+    approved: false
+    source: prior-audit-reference
+    note: Exact repository identity not confirmed by the current GitHub search; do not invent it.
