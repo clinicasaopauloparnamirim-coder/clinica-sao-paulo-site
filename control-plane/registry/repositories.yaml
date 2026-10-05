@@ -1,0 +1,68 @@
+# Registry of repositories relevant to the Control Tower.
+# Do not invent repository URLs or ownership. Use status=unverified when identity is not confirmed.
+
+repositories:
+  - name: clinica-sao-paulo-site
+    full_name: clinicasaopauloparnamirim-coder/clinica-sao-paulo-site
+    role: production-site
+    status: verified
+    approved: true
+    source: github-connector
+
+  - name: JEV
+    full_name: null
+    role: candidate-agent-or-tool
+    status: unverified
+    approved: false
+    source: prior-audit-reference
+
+  - name: Laya
+    full_name: null
+    role: candidate-agent-or-tool
+    status: unverified
+    approved: false
+    source: prior-audit-reference
+
+  - name: MonkeyCode
+    full_name: null
+    role: candidate-agent-or-tool
+    status: unverified
+    approved: false
+    source: prior-audit-reference
+
+  - name: FreeLLMAPI
+    full_name: null
+    role: candidate-api-or-llm-infrastructure
+    status: unverified
+    approved: false
+    source: prior-audit-reference
+
+  - name: Open-SEO
+    full_name: null
+    role: candidate-seo-tool
+    status: unverified
+    approved: false
+    source: prior-audit-reference
+
+  - name: Browser Harness
+    full_name: null
+    role: candidate-browser-agent-infrastructure
+    status: unverified
+    approved: false
+    source: prior-audit-reference
+
+  - name: Hermes Agent
+    full_name: NousResearch/hermes-agent
+    role: autonomous-agent
+    status: candidate
+    approved: false
+    source: prior-audit-reference
+    note: Candidate only; requires controlled read-only evaluation before adoption.
+
+  - name: Composio
+    full_name: null
+    role: tool-integration-and-auth-layer
+    status: candidate
+    approved: false
+    source: prior-audit-reference
+    note: Candidate only; exact repository identity is intentionally not asserted here.
