@@ -1,4 +1,3 @@
 User-agent: *
 Allow: /
-
 Sitemap: https://clinicasaopauloparnamirim.com.br/sitemap.xml
