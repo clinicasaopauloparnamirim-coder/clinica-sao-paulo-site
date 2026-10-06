@@ -19,13 +19,27 @@ interface WhatsAppEnv {
   GOOGLE_ADS_REFRESH_TOKEN?: string;
   GOOGLE_ADS_CUSTOMER_ID?: string;
   GOOGLE_ADS_LOGIN_CUSTOMER_ID?: string;
+  GA4_MEASUREMENT_ID?: string;
+  GA4_API_SECRET?: string;
 }
 
 export class WhatsAppLedger extends DurableObject {
   async fetch(request: Request) {
+    if (request.method === "GET" && new URL(request.url).pathname === "/audit") return Response.json(await this.audit());
     if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
     const payload: any = await request.json();
     const receivedAt = new Date().toISOString();
+
+    // Browser-side click: no PII; only attribution identifiers and landing metadata.
+    if (payload?.type === "click" && payload?.lead_id) {
+      await this.ctx.storage.put(`click:${payload.lead_id}`, {
+        received_at: receivedAt,
+        lead_id: payload.lead_id,
+        attribution: payload.attribution ?? {},
+      });
+      return Response.json({ ok: true, lead_id: payload.lead_id, recorded: "click" });
+    }
+
     const messages = Array.isArray(payload?.entry)
       ? payload.entry.flatMap((entry: any) =>
           Array.isArray(entry?.changes)
@@ -35,20 +49,26 @@ export class WhatsAppLedger extends DurableObject {
             : [],
         )
       : [];
+
+    let attributedMessages = 0;
     for (const message of messages) {
       const referral = message?.referral ?? message?.context?.referral ?? null;
+      const text = String(message?.text?.body ?? "");
+      const ref = text.match(/CSP-[A-F0-9]{10}/i)?.[0]?.toUpperCase() ?? null;
+      const click = ref ? await this.ctx.storage.get(`click:${ref}`) : null;
+      if (click) attributedMessages++;
       const record = {
         received_at: receivedAt,
         message_id: message?.id ?? null,
-        from: message?.from ?? null,
         type: message?.type ?? null,
-        text: message?.text?.body ?? null,
+        lead_id: ref,
+        attributed: Boolean(click || referral),
+        attribution: click?.attribution ?? null,
         source_type: referral?.source_type ?? referral?.sourceType ?? null,
         source_id: referral?.source_id ?? referral?.sourceId ?? null,
         source_url: referral?.source_url ?? referral?.sourceUrl ?? null,
         headline: referral?.headline ?? null,
         ctwa_clid: referral?.ctwa_clid ?? referral?.ctwaClid ?? null,
-        raw: message,
       };
       await this.ctx.storage.put(`message:${message?.id ?? crypto.randomUUID()}`, record);
     }
@@ -56,16 +76,36 @@ export class WhatsAppLedger extends DurableObject {
     await this.ctx.storage.put(`event:${Date.now()}:${id}`, {
       received_at: receivedAt,
       message_count: messages.length,
-      raw: payload,
+      attributed_messages: attributedMessages,
     });
     return Response.json({
       ok: true,
       id,
       message_count: messages.length,
-      attributed_messages: messages.filter((message: any) =>
-        Boolean(message?.referral ?? message?.context?.referral),
-      ).length,
+      attributed_messages: attributedMessages,
     });
+  }
+
+  async audit() {
+    const rows = await this.ctx.storage.list({ reverse: true, limit: 100 });
+    const items = Array.from(rows.entries()).map(([key, value]) => ({
+      key,
+      received_at: value?.received_at ?? null,
+      lead_id: value?.lead_id ?? null,
+      attributed: value?.attributed ?? null,
+      attribution: value?.attribution ?? null,
+      source_type: value?.source_type ?? null,
+      source_url: value?.source_url ?? null,
+      type: value?.type ?? null,
+    }));
+    return {
+      ok: true,
+      total_sampled: items.length,
+      clicks: items.filter(x => x.key.startsWith("click:")).length,
+      messages: items.filter(x => x.key.startsWith("message:")).length,
+      attributed_messages: items.filter(x => x.key.startsWith("message:") && x.attributed).length,
+      items,
+    };
   }
 }
 
@@ -266,6 +306,30 @@ ${authenticated ? `<p>Acesso autorizado</p>
       if (!authorized(request, env)) return unauthorized();
       try { return await googleGscAudit(env); }
       catch (error) { return new Response(error instanceof Error ? error.message : "Search Console audit failed", { status: 502 }); }
+    }
+
+    if (pathname === "/api/lead-click" && request.method === "POST") {
+      try {
+        const payload = await request.json() as { type?: string; lead_id?: string; attribution?: Record<string, unknown> };
+        if (payload.type !== "click" || !payload.lead_id || !/^CSP-[A-F0-9]{10}$/i.test(payload.lead_id)) {
+          return new Response("Invalid attribution payload.", { status: 400 });
+        }
+        const ledger = env.WHATSAPP_LEDGER.get(env.WHATSAPP_LEDGER.idFromName("whatsapp"));
+        return await ledger.fetch("https://ledger.internal/", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } catch {
+        return new Response("Bad Request", { status: 400 });
+      }
+    }
+
+    if (pathname === "/control/whatsapp/audit") {
+      if (!authorized(request, env)) return unauthorized();
+      const ledger = env.WHATSAPP_LEDGER.get(env.WHATSAPP_LEDGER.idFromName("whatsapp"));
+      const result = await ledger.fetch("https://ledger.internal/audit", { method: "GET" });
+      return new Response(result.body, { status: result.status, headers: { "content-type": "application/json; charset=UTF-8", "cache-control": "no-store" } });
     }
 
     if (pathname === "/webhooks/whatsapp") {
