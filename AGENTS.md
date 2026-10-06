@@ -14,3 +14,5 @@ Project guardrails:
 - Preserve existing deployment architecture unless explicitly instructed otherwise.
 - Prefer direct verification over inference.
 - Report INCONCLUSIVE when evidence is insufficient.
+
+- For React/Next.js or browser-performance audits, also apply the project skill `vercel-react-best-practices` and report only rules that are applicable to the actual artifact.
