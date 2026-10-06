@@ -9,6 +9,8 @@
   function params(){
     var p=new URLSearchParams(location.search), keys=['gclid','gbraid','wbraid','utm_source','utm_medium','utm_campaign','utm_term','utm_content'];
     var o={landing_page:location.pathname,landing_url:location.href,referrer:document.referrer||''};
+    var ga=(document.cookie.match(/(?:^|; )_ga=([^;]+)/)||[])[1];
+    if(ga){var parts=decodeURIComponent(ga).split('.'); if(parts.length>=4)o.ga_client_id=parts.slice(-2).join('.');}
     keys.forEach(function(k){var v=p.get(k);if(v)o[k]=v});
     return o;
   }
