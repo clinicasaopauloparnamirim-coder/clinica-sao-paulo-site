@@ -119,18 +119,18 @@ toolchain:
     account: clinicasaopauloparnamirim-coder
 
   gemini:
-    status: active
+    status: available-discovery-only
     role: secondary-reviewer
     source: composio
-    verification: toolkit-available
-    limitation: Gemini service connection is available through Composio; this does not mean the Gemini Android app is remotely controlled.
+    verification: active-toolkit-and-live-model-catalog
+    limitation: GEMINI_GENERATE_CONTENT is restricted in this execution environment, so Gemini cannot currently be used here as an executing reviewer; the Gemini Android app is not remotely controlled.
 
   claude:
     status: blocked
     role: secondary-reviewer
-    verification: github-models-claude-path-discovered-but-live-call-failed
+    verification: github-models-path-discovered;live-call-failed
     path: github-models/anthropic/*
-    limitation: GitHub Models exposes a Claude-compatible model route, but the live inference test returned a connector parsing failure; do not mark Claude execution active until a successful live call is verified.
+    limitation: A Claude-compatible GitHub Models route is exposed by the connector schema, but the live inference test returned a connector parsing failure; do not mark Claude execution active until a successful live call is verified.
 
   google_ads:
     status: active
@@ -188,3 +188,14 @@ audit_pipeline:
       - Open-dot
   claude_gate: blocked-until-direct-anthropic-connection-is-verified
   mutation_gate: read-verify-before-write; no production mutation from an unverified audit
+
+
+verification:
+  registry_commit: d8aee1d9f4d80fdb13ba2fce6ddf02134762372d
+  ci:
+    state: failed
+    provider: cloudflare-workers-and-pages
+    note: Branch check failed on 2026-10-06; PR #24 remains unmerged and main was not changed by this registry update.
+  llm:
+    gemini: catalog_verified;generation_restricted
+    claude: live_inference_unverified
