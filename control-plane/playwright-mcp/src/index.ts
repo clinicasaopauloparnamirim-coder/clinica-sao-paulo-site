@@ -71,6 +71,7 @@ export class WhatsAppLedger extends DurableObject {
         ctwa_clid: referral?.ctwa_clid ?? referral?.ctwaClid ?? null,
       };
       await this.ctx.storage.put(`message:${message?.id ?? crypto.randomUUID()}`, record);
+      if (click) { try { await sendGa4WhatsAppLead(env as unknown as WhatsAppEnv, click.attribution ?? null, receivedAt); } catch {} }
     }
     const id = crypto.randomUUID();
     await this.ctx.storage.put(`event:${Date.now()}:${id}`, {
@@ -113,6 +114,41 @@ export { ControlAgent, GoogleOAuthStore };
 
 const browserBinding = (env as unknown as { BROWSER: Parameters<typeof createMcpAgent>[0] }).BROWSER;
 export const PlaywrightMCP = createMcpAgent(browserBinding);
+
+
+async function sendGa4WhatsAppLead(env: WhatsAppEnv, attribution: Record<string, any> | null, receivedAt: string) {
+  const measurementId = env.GA4_MEASUREMENT_ID;
+  const apiSecret = env.GA4_API_SECRET;
+  const clientId = attribution?.ga_client_id;
+  if (!measurementId || !apiSecret || !clientId) return false;
+  const params: Record<string, string> = {
+    lead_id: String(attribution?.lead_id ?? ""),
+    source: String(attribution?.utm_source ?? (attribution?.gclid ? "google" : "")),
+    medium: String(attribution?.utm_medium ?? (attribution?.gclid ? "cpc" : "")),
+    campaign: String(attribution?.utm_campaign ?? ""),
+    landing_page: String(attribution?.landing_page ?? ""),
+  };
+  if (attribution?.gclid) params.gclid = String(attribution.gclid);
+  const response = await fetch(
+    `https://www.google-analytics.com/mp/collect?measurement_id=${encodeURIComponent(measurementId)}&api_secret=${encodeURIComponent(apiSecret)}`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        client_id: String(clientId),
+        events: [{
+          name: "whatsapp_lead",
+          params: {
+            ...params,
+            engagement_time_msec: 1,
+            timestamp_micros: String(Math.floor(new Date(receivedAt).getTime() * 1000)),
+          },
+        }],
+      }),
+    },
+  );
+  return response.ok;
+}
 
 function unauthorized() {
   return new Response("Unauthorized", {
