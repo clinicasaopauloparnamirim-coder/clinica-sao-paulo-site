@@ -18,7 +18,7 @@ repositories:
   - name: JEV
     full_name: malevrigns/agent-jev
     role: candidate-agent
-    status: candidate
+    status: verified-identity
     approved: false
     source: github-public-search
     note: Repository exists, but exact match to the previously audited JEV project is not yet proven.
@@ -26,7 +26,7 @@ repositories:
   - name: Laya
     full_name: vishalmysore/layaAgent
     role: candidate-agent
-    status: candidate
+    status: verified-identity
     approved: false
     source: github-public-search
     note: Repository exists, but exact match to the previously audited Laya project is not yet proven.
@@ -34,7 +34,7 @@ repositories:
   - name: MonkeyCode
     full_name: chaitin/MonkeyCode
     role: candidate-agent-or-coding-tool
-    status: candidate
+    status: verified-identity
     approved: false
     source: github-public-search
     note: Repository identity found; prior-audit equivalence still requires verification.
@@ -42,7 +42,7 @@ repositories:
   - name: FreeLLMAPI
     full_name: tashfeenahmed/freellmapi
     role: candidate-api-or-llm-infrastructure
-    status: candidate
+    status: verified-identity
     approved: false
     source: github-public-search
     note: Repository identity found; prior-audit equivalence still requires verification.
@@ -50,7 +50,7 @@ repositories:
   - name: Open-SEO
     full_name: every-app/open-seo
     role: candidate-seo-tool
-    status: candidate
+    status: verified-identity
     approved: false
     source: github-public-search
     note: Repository identity found; prior-audit equivalence still requires verification.
@@ -58,7 +58,7 @@ repositories:
   - name: Browser Harness
     full_name: browser-use/browser-harness
     role: candidate-browser-agent-infrastructure
-    status: candidate
+    status: verified-identity
     approved: false
     source: github-public-search
     note: Repository identity found; prior-audit equivalence still requires verification.
@@ -66,7 +66,7 @@ repositories:
   - name: Ruflo
     full_name: ruvnet/ruflo
     role: multi-agent-orchestration
-    status: candidate
+    status: verified-identity
     approved: false
     source: github-public-search
     note: Repository identity found; adoption remains unapproved pending audit evidence.
@@ -74,7 +74,7 @@ repositories:
   - name: Superpowers
     full_name: obra/superpowers
     role: agent-development-workflow
-    status: candidate
+    status: verified-identity
     approved: false
     source: github-public-search
     note: Repository identity found; exact prior-audit scope should be verified before adoption.
@@ -98,7 +98,7 @@ repositories:
   - name: Open-dot
     full_name: composio-community/open-dot
     role: personal-openai-composio-agent
-    status: candidate
+    status: verified-identity
     approved: false
     source: github-public-search
     note: OpenAI + Composio personal agent template. Requires OPENAI_API_KEY + COMPOSIO_API_KEY. Gate: read-only session first.
@@ -126,10 +126,11 @@ toolchain:
     limitation: Gemini service connection is available through Composio; this does not mean the Gemini Android app is remotely controlled.
 
   claude:
-    status: unavailable
+    status: blocked
     role: secondary-reviewer
-    verification: no-direct-anthropic-connector-found
-    limitation: no authenticated direct Claude/Anthropic execution path was verified; do not mark Claude integrated.
+    verification: github-models-claude-path-discovered-but-live-call-failed
+    path: github-models/anthropic/*
+    limitation: GitHub Models exposes a Claude-compatible model route, but the live inference test returned a connector parsing failure; do not mark Claude execution active until a successful live call is verified.
 
   google_ads:
     status: active
