@@ -102,3 +102,88 @@ repositories:
     approved: false
     source: github-public-search
     note: OpenAI + Composio personal agent template. Requires OPENAI_API_KEY + COMPOSIO_API_KEY. Gate: read-only session first.
+
+
+# Toolchain status (verified 2026-10-05)
+# This section records real connector/tool state; it does not imply production deployment.
+toolchain:
+  control_tower:
+    status: active
+    role: central-orchestration-and-governance
+    verification: health-ok
+    limitation: internal Google OAuth refresh is currently failing; use direct connected Google tools for Ads/GA4/GSC until repaired.
+
+  github:
+    status: active
+    role: repository-read-write-and-audit-evidence
+    account: clinicasaopauloparnamirim-coder
+
+  gemini:
+    status: active
+    role: secondary-reviewer
+    source: composio
+    verification: toolkit-available
+    limitation: Gemini service connection is available through Composio; this does not mean the Gemini Android app is remotely controlled.
+
+  claude:
+    status: unavailable
+    role: secondary-reviewer
+    verification: no-direct-anthropic-connector-found
+    limitation: no authenticated direct Claude/Anthropic execution path was verified; do not mark Claude integrated.
+
+  google_ads:
+    status: active
+    role: paid-search-audit
+    verification: direct-composio-connection
+    scope: customer-4603647788
+
+  google_analytics:
+    status: active
+    role: GA4-audit-and-conversion-verification
+    verification: direct-composio-connection
+    property: properties/552216899
+
+  search_console:
+    status: active
+    role: SEO-indexing-and-search-audit
+    verification: direct-composio-connection
+    properties:
+      - sc-domain:clinicasaopauloparnamirim.com.br
+      - https://www.clinicasaopauloparnamirim.com.br/
+
+  slack:
+    status: active
+    role: audit-notifications-and-team-output
+    verification: direct-composio-connection
+
+  google_drive:
+    status: active
+    role: evidence-and-document-storage
+    verification: direct-composio-connection
+
+audit_pipeline:
+  production_repo:
+    - github
+    - control_tower
+    - gemini-review
+    - google_ads
+    - google_analytics
+    - search_console
+    - slack
+    - google_drive
+  candidate_repositories:
+    policy: read-only-audit-until-identity-verified
+    repositories:
+      - JEV
+      - Laya
+      - MonkeyCode
+      - FreeLLMAPI
+      - Open-SEO
+      - Browser Harness
+      - Ruflo
+      - Superpowers
+      - Hermes Agent
+      - Composio
+      - Open-dot
+  claude_gate: blocked-until-direct-anthropic-connection-is-verified
+  mutation_gate: read-verify-before-write; no production mutation from an unverified audit
