@@ -1,5 +1,5 @@
 (function(){
-  var n=0, total=19;
+  var n=0, total=14;
   function next(){
     if(n>=total){
       var el=document.getElementById("hero-photo");
