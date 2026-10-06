@@ -51,12 +51,13 @@ export class WhatsAppLedger extends DurableObject {
       : [];
 
     let attributedMessages = 0;
+    const attributed: Array<{lead_id:string; attribution:Record<string,unknown>}> = [];
     for (const message of messages) {
       const referral = message?.referral ?? message?.context?.referral ?? null;
       const text = String(message?.text?.body ?? "");
       const ref = text.match(/CSP-[A-F0-9]{10}/i)?.[0]?.toUpperCase() ?? null;
       const click = ref ? await this.ctx.storage.get(`click:${ref}`) : null;
-      if (click) attributedMessages++;
+      if (click) { attributedMessages++; attributed.push({ lead_id: ref!, attribution: click.attribution ?? {} }); }
       const record = {
         received_at: receivedAt,
         message_id: message?.id ?? null,
@@ -71,19 +72,21 @@ export class WhatsAppLedger extends DurableObject {
         ctwa_clid: referral?.ctwa_clid ?? referral?.ctwaClid ?? null,
       };
       await this.ctx.storage.put(`message:${message?.id ?? crypto.randomUUID()}`, record);
-      if (click) { try { await sendGa4WhatsAppLead(env as unknown as WhatsAppEnv, click.attribution ?? null, receivedAt); } catch {} }
+
     }
     const id = crypto.randomUUID();
     await this.ctx.storage.put(`event:${Date.now()}:${id}`, {
       received_at: receivedAt,
       message_count: messages.length,
       attributed_messages: attributedMessages,
+      attributed,
     });
     return Response.json({
       ok: true,
       id,
       message_count: messages.length,
       attributed_messages: attributedMessages,
+      attributed,
     });
   }
 
@@ -396,6 +399,12 @@ ${authenticated ? `<p>Acesso autorizado</p>
           body: JSON.stringify(payload),
         });
         if (!stored.ok) return new Response("Ledger Error", { status: 500 });
+        try {
+          const storedData = await stored.json() as { attributed?: Array<{lead_id:string; attribution:Record<string,unknown>}> };
+          for (const item of storedData.attributed ?? []) {
+            await sendGa4WhatsAppLead(env, item.attribution, new Date().toISOString());
+          }
+        } catch {}
         return new Response("EVENT_RECEIVED", { status: 200 });
       }
       return new Response("Method Not Allowed", { status: 405 });
