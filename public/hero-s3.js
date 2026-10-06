@@ -1,1 +1,1 @@
-PLACEHOLDER
+window.__H3="";
