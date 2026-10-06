@@ -19,53 +19,57 @@ interface WhatsAppEnv {
   GOOGLE_ADS_REFRESH_TOKEN?: string;
   GOOGLE_ADS_CUSTOMER_ID?: string;
   GOOGLE_ADS_LOGIN_CUSTOMER_ID?: string;
+  GA4_MEASUREMENT_ID?: string;
+  GA4_API_SECRET?: string;
 }
 
 export class WhatsAppLedger extends DurableObject {
   async fetch(request: Request) {
+    if (request.method === "GET" && new URL(request.url).pathname === "/audit") return Response.json(await this.audit());
     if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
     const payload: any = await request.json();
     const receivedAt = new Date().toISOString();
-    const messages = Array.isArray(payload?.entry)
-      ? payload.entry.flatMap((entry: any) =>
-          Array.isArray(entry?.changes)
-            ? entry.changes.flatMap((change: any) =>
-                Array.isArray(change?.value?.messages) ? change.value.messages : [],
-              )
-            : [],
-        )
-      : [];
+    if (payload?.type === "click" && payload?.lead_id) {
+      await this.ctx.storage.put(`click:${payload.lead_id}`, { received_at: receivedAt, lead_id: payload.lead_id, attribution: payload.attribution ?? {} });
+      return Response.json({ ok: true, lead_id: payload.lead_id, recorded: "click" });
+    }
+    const messages = Array.isArray(payload?.entry) ? payload.entry.flatMap((entry: any) =>
+      Array.isArray(entry?.changes) ? entry.changes.flatMap((change: any) =>
+        Array.isArray(change?.value?.messages) ? change.value.messages : [],
+      ) : [],
+    ) : [];
+    let attributedMessages = 0;
+    const attributed: Array<{lead_id:string; attribution:Record<string,unknown>}> = [];
     for (const message of messages) {
       const referral = message?.referral ?? message?.context?.referral ?? null;
-      const record = {
-        received_at: receivedAt,
-        message_id: message?.id ?? null,
-        from: message?.from ?? null,
-        type: message?.type ?? null,
-        text: message?.text?.body ?? null,
+      const text = String(message?.text?.body ?? "");
+      const ref = text.match(/CSP-[A-F0-9]{10}/i)?.[0]?.toUpperCase() ?? null;
+      const click = ref ? await this.ctx.storage.get(`click:${ref}`) : null;
+      if (click) { attributedMessages++; attributed.push({ lead_id: ref!, attribution: click.attribution ?? {} }); }
+      await this.ctx.storage.put(`message:${message?.id ?? crypto.randomUUID()}`, {
+        received_at: receivedAt, message_id: message?.id ?? null, type: message?.type ?? null,
+        lead_id: ref, attributed: Boolean(click || referral), attribution: click?.attribution ?? null,
         source_type: referral?.source_type ?? referral?.sourceType ?? null,
         source_id: referral?.source_id ?? referral?.sourceId ?? null,
         source_url: referral?.source_url ?? referral?.sourceUrl ?? null,
-        headline: referral?.headline ?? null,
-        ctwa_clid: referral?.ctwa_clid ?? referral?.ctwaClid ?? null,
-        raw: message,
-      };
-      await this.ctx.storage.put(`message:${message?.id ?? crypto.randomUUID()}`, record);
+        headline: referral?.headline ?? null, ctwa_clid: referral?.ctwa_clid ?? referral?.ctwaClid ?? null,
+      });
     }
     const id = crypto.randomUUID();
-    await this.ctx.storage.put(`event:${Date.now()}:${id}`, {
-      received_at: receivedAt,
-      message_count: messages.length,
-      raw: payload,
-    });
-    return Response.json({
-      ok: true,
-      id,
-      message_count: messages.length,
-      attributed_messages: messages.filter((message: any) =>
-        Boolean(message?.referral ?? message?.context?.referral),
-      ).length,
-    });
+    await this.ctx.storage.put(`event:${Date.now()}:${id}`, { received_at: receivedAt, message_count: messages.length, attributed_messages: attributedMessages, attributed });
+    return Response.json({ ok: true, id, message_count: messages.length, attributed_messages: attributedMessages, attributed });
+  }
+  async audit() {
+    const rows = await this.ctx.storage.list({ reverse: true, limit: 100 });
+    const items = Array.from(rows.entries()).map(([key, value]) => ({
+      key, received_at: value?.received_at ?? null, lead_id: value?.lead_id ?? null,
+      attributed: value?.attributed ?? null, attribution: value?.attribution ?? null,
+      source_type: value?.source_type ?? null, source_url: value?.source_url ?? null, type: value?.type ?? null,
+    }));
+    return { ok: true, total_sampled: items.length,
+      clicks: items.filter(x => x.key.startsWith("click:")).length,
+      messages: items.filter(x => x.key.startsWith("message:")).length,
+      attributed_messages: items.filter(x => x.key.startsWith("message:") && x.attributed).length, items };
   }
 }
 
@@ -73,6 +77,16 @@ export { ControlAgent, GoogleOAuthStore };
 
 const browserBinding = (env as unknown as { BROWSER: Parameters<typeof createMcpAgent>[0] }).BROWSER;
 export const PlaywrightMCP = createMcpAgent(browserBinding);
+
+
+async function sendGa4WhatsAppLead(env: WhatsAppEnv, attribution: Record<string, any> | null, receivedAt: string) {
+  const measurementId=env.GA4_MEASUREMENT_ID, apiSecret=env.GA4_API_SECRET, clientId=attribution?.ga_client_id;
+  if(!measurementId||!apiSecret||!clientId)return false;
+  const params:Record<string,string>={lead_id:String(attribution?.lead_id??""),source:String(attribution?.utm_source??(attribution?.gclid?"google":"")),medium:String(attribution?.utm_medium??(attribution?.gclid?"cpc":"")),campaign:String(attribution?.utm_campaign??""),landing_page:String(attribution?.landing_page??"")};
+  if(attribution?.gclid)params.gclid=String(attribution.gclid);
+  const response=await fetch(`https://www.google-analytics.com/mp/collect?measurement_id=${encodeURIComponent(measurementId)}&api_secret=${encodeURIComponent(apiSecret)}`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({client_id:String(clientId),events:[{name:"whatsapp_lead",params:{...params,engagement_time_msec:1,timestamp_micros:String(Math.floor(new Date(receivedAt).getTime()*1000))}}]})});
+  return response.ok;
+}
 
 function unauthorized() {
   return new Response("Unauthorized", {
@@ -268,6 +282,22 @@ ${authenticated ? `<p>Acesso autorizado</p>
       catch (error) { return new Response(error instanceof Error ? error.message : "Search Console audit failed", { status: 502 }); }
     }
 
+    if (pathname === "/api/lead-click" && request.method === "POST") {
+      try {
+        const payload = await request.json() as { type?: string; lead_id?: string; attribution?: Record<string, unknown> };
+        if (payload.type !== "click" || !payload.lead_id || !/^CSP-[A-F0-9]{10}$/i.test(payload.lead_id)) return new Response("Invalid attribution payload.", { status: 400 });
+        const ledger = env.WHATSAPP_LEDGER.get(env.WHATSAPP_LEDGER.idFromName("whatsapp"));
+        return await ledger.fetch("https://ledger.internal/", { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(payload) });
+      } catch { return new Response("Bad Request", { status: 400 }); }
+    }
+
+    if (pathname === "/control/whatsapp/audit") {
+      if (!authorized(request, env)) return unauthorized();
+      const ledger = env.WHATSAPP_LEDGER.get(env.WHATSAPP_LEDGER.idFromName("whatsapp"));
+      const result = await ledger.fetch("https://ledger.internal/audit", { method:"GET" });
+      return new Response(result.body,{status:result.status,headers:{"content-type":"application/json; charset=UTF-8","cache-control":"no-store"}});
+    }
+
     if (pathname === "/webhooks/whatsapp") {
       if (request.method === "GET") {
         const url = new URL(request.url);
@@ -296,6 +326,7 @@ ${authenticated ? `<p>Acesso autorizado</p>
           body: JSON.stringify(payload),
         });
         if (!stored.ok) return new Response("Ledger Error", { status: 500 });
+        try { const storedData = await stored.json() as { attributed?: Array<{lead_id:string; attribution:Record<string,unknown>}> }; for (const item of storedData.attributed ?? []) await sendGa4WhatsAppLead(env, item.attribution, new Date().toISOString()); } catch {}
         return new Response("EVENT_RECEIVED", { status: 200 });
       }
       return new Response("Method Not Allowed", { status: 405 });
