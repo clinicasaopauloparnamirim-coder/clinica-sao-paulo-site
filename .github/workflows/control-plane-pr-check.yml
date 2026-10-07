@@ -1,0 +1,23 @@
+name: Control Plane PR Check
+
+on:
+  pull_request:
+    paths:
+      - "control-plane/playwright-mcp/**"
+      - ".github/workflows/control-plane-pr-check.yml"
+      - ".github/workflows/control-plane-deploy-v2.yml"
+      - "wrangler.jsonc"
+      - "package.json"
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build and typecheck worker
+        working-directory: control-plane/playwright-mcp
+        run: npm install && npm run build
