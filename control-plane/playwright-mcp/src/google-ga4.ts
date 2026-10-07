@@ -1,6 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 
-const GOOGLE_SCOPE = "https://www.googleapis.com/auth/analytics.edit https://www.googleapis.com/auth/webmasters.readonly";
+const GOOGLE_SCOPE = "https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/webmasters.readonly";
 
 type GoogleEnv = {
   GOOGLE_CLIENT_ID?: string;

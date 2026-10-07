@@ -38,6 +38,11 @@ function localRules(input: JudgmentInput): JudgmentResult {
     reasons.push("confirm:true required for live mutate");
   }
 
+  if (!input.validateOnly && !input.campaignId) {
+    decision = "block";
+    reasons.push("campaign target must be explicitly identified for live mutate");
+  }
+
   if (input.campaignId && input.campaignId !== ALTA_INTENCAO) {
     decision = "block";
     reasons.push(`campaign ${input.campaignId} out of scope (ALTA INTENCAO only)`);
