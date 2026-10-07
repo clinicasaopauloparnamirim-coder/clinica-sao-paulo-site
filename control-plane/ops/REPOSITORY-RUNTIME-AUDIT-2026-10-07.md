@@ -127,3 +127,52 @@ Não conectar Hermes diretamente ao caminho de mutação do Google Ads.
 ## 9. Estado de evidência
 
 Conexão/execução real continua sendo o gargalo central: repositório existente não equivale a ferramenta conectada; ferramenta conectada não equivale a executor operacional. A próxima etapa deve procurar evidência de runtime para **um único candidato por função**, começando por Brain 2 e pelo caminho seguro de leitura, antes de qualquer ação mutável.
+
+
+## 10. Ruflo
+
+Repositório: ruvnet/ruflo
+Código-fonte atual confirmado no GitHub. O projeto se apresenta como meta-harness/orquestração para Claude Code e Codex, com MCP, agentes especializados, memória e controles.
+
+### Achados
+- O README descreve o fluxo User → Ruflo → Router → Swarm → Agents → Memory → LLM providers como arquitetura conceitual, não como rastreio de uma execução real.
+- O projeto possui MCP e uma camada explícita de permissões: read/write/manage/full, com ask/auto; rede, gastos e ações destrutivas continuam exigindo confirmação.
+- O pacote raiz atual é publicado como `claude-flow` 3.54.0 e inclui componentes de MCP, neural, security e federation.
+- Nenhum runtime Ruflo conectado ao Control Tower foi comprovado nesta rodada.
+
+### Classificação
+P1 — candidato de **Brain 2 / orquestração e controle**, não um quarto cérebro.
+INCONCLUSIVO — execução no ambiente da clínica não comprovada.
+Não duplicar o papel de um orquestrador já ativo sem definir qual runtime tem autoridade.
+
+## 11. Superpowers
+
+Repositório: obra/superpowers
+Código-fonte e metodologia atuais confirmados no GitHub.
+
+### Achados
+- Superpowers é uma metodologia composta por skills/hooks para coding agents, não um motor LLM, MCP backend ou executor independente.
+- O fluxo inclui brainstorming, worktrees, planos, subagentes, TDD, code review e finalização de branch.
+- O próprio projeto trata o workflow como obrigatório e usa severidade para bloquear avanço quando há problemas críticos.
+- Não foi encontrada evidência de um runtime Superpowers autônomo conectado ao Control Tower.
+
+### Classificação
+SUPORTE — camada de disciplina/processo que pode reforçar Brain 1 e Brain 2.
+Não promover como cérebro, orquestrador ou executor separado.
+Antes de instalar hooks/plugins em qualquer harness, revisar o código e validar o alvo exato; instalação em múltiplos harnesses não implica uma integração central.
+
+## 12. Decisão após esta rodada
+
+A arquitetura permanece limitada a três cérebros:
+- Brain 1 = automação/execução.
+- Brain 2 = orquestração + julgamento/controle, com no máximo um caminho de autoridade por função.
+- Brain 3 = marketing/SEO/dados de marketing.
+
+Mapeamento provisório:
+- Hermes: candidato de Brain 1, alto privilégio, sandbox obrigatório.
+- Ruflo: candidato de Brain 2 para orquestração/controle.
+- JEV ou LAYA: candidato de Brain 2 para julgamento rápido; ainda falta escolher por execução/benchmark aplicado ao caso real.
+- OpenSEO/OpenGSC: candidatos de Brain 3/dados SEO.
+- Superpowers: camada transversal de processo, não cérebro.
+
+Estado: nenhum novo runtime foi ativado; nenhum segredo ou credencial foi alterado; main permanece intocado.
