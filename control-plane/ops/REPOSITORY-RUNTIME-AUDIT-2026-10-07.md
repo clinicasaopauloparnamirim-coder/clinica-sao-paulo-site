@@ -407,3 +407,20 @@ NÃO PASSOU (prova de runtime): nenhum dos três foi demonstrado executando dent
 CONFRONTO independente: o site da clínica respondeu HTTP 200 ao crawler externo e expôs homepage, páginas de serviços, CTA WhatsApp e dados locais; isso não substitui teste do candidato.
 
 Decisão: não promover nenhum candidato com base apenas no README. O próximo alvo lógico permanece mcp-gsc, mas a próxima etapa obrigatória é prova de execução/autenticação real; em paralelo, WebsiteProfiling deve passar pela leitura dirigida dos handlers de pipeline/auth antes de qualquer deployment.
+
+
+## 31. GSC runtime evidence — 2026-10-07
+
+- Conexão Google Search Console via Composio está ACTIVE e expõe duas propriedades: domínio e prefixo www.
+- Leitura real finalizada de 28 dias (2026-09-07 a 2026-10-04) no domínio: 9 cliques, 183 impressões, CTR 4,92%, posição média 7,83.
+- Páginas com impressões: homepage não-www/wwww e página de aparelho; as demais LPs não apareceram no relatório.
+- Inspeção real: homepage = Enviada e indexada; aparelho = Enviada e indexada.
+- Inspeção real: dentista = Detectada, mas não indexada; limpeza = Detectada, mas não indexada; clareamento = URL não reconhecida; clínica odontológica = URL não reconhecida.
+- Confronto externo: todas as cinco LPs responderam HTTP 200 e entregaram canonical, JSON-LD e conteúdo rastreável. Portanto o gargalo atual é Google indexação/descoberta, não indisponibilidade HTTP.
+- OpenSEO está conectado como conta, porém ambos os projetos testados retornaram reason=not_connected para Search Console. Logo, OpenSEO não é fonte operacional de GSC neste momento.
+
+### Classificação
+- P1 SEO/GSC: 4 das 6 URLs principais ainda não estão indexadas/reconhecidas na inspeção atual.
+- P2 dados: sitemap usa lastmod 2026-10-03 apesar de alterações posteriores no Git; revisar geração.
+- P1 integração: OpenSEO não está usando a conexão GSC apesar de a conexão Google Search Console estar ativa no Composio.
+- Nenhuma mutação foi executada.
