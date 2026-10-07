@@ -326,3 +326,55 @@ O usuário determinou que OpenGSC está fora por custo. Portanto:
 - futuras comparações devem priorizar alternativas gratuitas/self-hosted.
 
 A partir desta decisão, OpenSEO e alternativas gratuitas/self-hosted passam a ser avaliados sem OpenGSC como referência operacional.
+
+## 25. Alternativa gratuita — mcp-gsc
+
+Repositório: AminForou/mcp-gsc
+
+### Achados
+- MIT, versão 0.4.1 e instalação local/self-hosted.
+- Usa as próprias credenciais Google do operador via OAuth ou service account.
+- Ferramentas cobrem Search Analytics, URL Inspection, propriedades e sitemaps.
+- O código grava tokens em diretório de configuração do usuário e suporta caminho explícito de credenciais por variável de ambiente.
+- Operações destrutivas são protegidas por GSC_ALLOW_DESTRUCTIVE=false por padrão; add_site/delete_site e exclusões de sitemap exigem habilitação explícita.
+- O pacote fixa mcp[cli] < 2.0 por compatibilidade; isso reduz surpresa de instalação, mas cria uma restrição de dependência que precisa ser considerada no runtime.
+- Não há prova de que o servidor esteja conectado ao Control Tower ainda.
+
+### Classificação
+P1 — candidato forte e gratuito para Brain 3/GSC.
+PRÉ-APROVADO PARA TESTE — deve ser testado em modo somente leitura antes de qualquer integração.
+Não habilitar GSC_ALLOW_DESTRUCTIVE.
+
+## 26. WebsiteProfiling
+
+Repositório: codefrydev/WebsiteProfiling
+
+### Achados
+- Crawler/report engine open source com execução offline e SQLite.
+- Gera sinais de SEO on-page, links internos, Lighthouse, duplicação, NER, clusters semânticos e diffs entre crawls.
+- A própria documentação delimita o que não fornece: backlinks, volume/dificuldade/ranking externo e benchmarks de concorrentes sem fontes externas.
+- Possui branch Docker para execução como serviço, mas não foi conectado ao runtime da clínica.
+
+### Classificação
+SUPORTE — candidato útil para SEO técnico/semântico local, especialmente sem depender de API paga.
+Não substitui GSC e não deve virar fonte de verdade de ranking.
+
+## 27. GEO-SEO Claude
+
+Repositório: zubair-trabzada/geo-seo-claude
+
+### Achados
+- Skill local para GEO/SEO com auditoria técnica, citability, crawlers, schema, conteúdo e relatórios.
+- É principalmente uma camada de skills/orquestração para Claude Code, não uma fonte própria de dados.
+- Tem potencial de complementar SEO semântico/GEO, mas existe sobreposição com OpenSEO e com o trabalho já feito no site.
+
+### Classificação
+SUPORTE — candidato a skill especializada de Brain 3.
+Não adicionar ao núcleo antes de testar contra um caso real da clínica e medir ganho sobre o stack atual.
+
+## 28. Nova prioridade de teste
+
+1. mcp-gsc — leitura GSC gratuita/self-hosted.
+2. WebsiteProfiling — crawl/SEO semântico offline.
+3. GEO-SEO Claude — skill complementar, somente após os dois anteriores.
+OpenGSC permanece fora por decisão de custo.
