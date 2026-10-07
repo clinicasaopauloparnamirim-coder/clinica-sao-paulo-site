@@ -28,7 +28,7 @@ jobs:
           npm install
       - name: Typecheck worker
         working-directory: control-plane/playwright-mcp
-        run: npx tsc --noEmit
+        run: npm run build
       - name: Deploy Worker + public assets
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
