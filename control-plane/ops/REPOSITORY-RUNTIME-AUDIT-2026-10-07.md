@@ -251,3 +251,68 @@ Não promover, instalar ou atribuir função até localizar a fonte exata.
 - CommandCode/JEV-nudge é candidato de padrão para continuação, não runtime conectado.
 - Maestri permanece não resolvido.
 - Nenhuma alteração no main; apenas este registro no branch de auditoria.
+## 19. SE Ranking SEO Skills
+
+Repositório: seranking/seo-skills
+Código e documentação atuais confirmados.
+
+### Achados
+- É uma coleção de Agent Skills orientada ao MCP remoto da SE Ranking.
+- Entrega briefs, AI search share of voice, auditoria técnica, drift, SXO e análise competitiva.
+- Depende de um provedor externo de dados/credenciais; não é um banco de dados SEO próprio.
+- Há forte sobreposição funcional com OpenSEO/OpenGSC no Brain 3.
+
+### Classificação
+SUPORTE/ALTERNATIVA — útil como skill especializada quando houver necessidade específica de SE Ranking.
+Não adicionar por padrão ao núcleo do Brain 3; primeiro demonstrar uma lacuna que OpenSEO/OpenGSC não cobre.
+
+## 20. Open SEO MCP Skills / Ryze
+
+Repositório: Ryze-AI-Adgent/open-seo-mcp-skills
+Código e documentação atuais confirmados.
+
+### Achados
+- Skills SEO/GEO para um MCP remoto da Ryze, incluindo GSC, GA4, keyword research, rank tracking e SEO-vs-Ads.
+- As capacidades se sobrepõem diretamente às conexões Google e às camadas OpenSEO/OpenGSC já auditadas.
+- O valor adicional depende de uma conexão externa ao workspace Ryze; essa conexão não foi comprovada no runtime da clínica nesta rodada.
+
+### Classificação
+SUPORTE/ALTERNATIVA — não promover ao núcleo sem provar uma capacidade diferencial real.
+Não criar uma segunda fonte de verdade para GSC/GA4/Google Ads.
+
+## 21. SkillSpector
+
+Repositório: NVIDIA/SkillSpector
+Código e documentação atuais confirmados.
+
+### Achados
+- É um scanner de segurança para skills de agentes, com análise estática e opcional semântica, relatórios JSON/Markdown/SARIF e controles de baseline.
+- O projeto declara categorias que incluem prompt injection, exfiltração, escalada de privilégio, supply chain, excessive agency e tool/MCP poisoning.
+- O scanner possui limites de ingestão para controlar downloads/arquivos grandes e falha fechado ao exceder limites.
+
+### Classificação
+SUPORTE FORTE — candidato transversal à cadeia de auditoria antes de instalar skills/plugins.
+Não é cérebro nem executor. Deve funcionar como gate de segurança para os candidatos de skills/harness.
+
+## 22. DeepWiki
+
+Repositório: CognitionAI/deepwiki
+Código/documentação confirmados.
+
+### Achados
+- Oferece um servidor MCP remoto de consulta de documentação de repositórios.
+- O servidor remoto descrito pelo README é no-auth e expõe apenas três ferramentas de leitura.
+- Pode acelerar compreensão de repositórios, mas não fornece execução ou autoridade operacional.
+
+### Classificação
+SUPORTE — ferramenta de compreensão/documentação.
+Não é candidato a cérebro nem a caminho de mutação.
+
+## 23. Decisão Brain 3
+
+- OpenSEO permanece candidato principal para inteligência SEO estruturada.
+- OpenGSC permanece candidato forte para dados GSC/rank/AEO/SEO local quando houver runtime próprio comprovado.
+- SE Ranking e Ryze ficam como alternativas, evitando duplicação de dados.
+- SkillSpector ganha prioridade como gate de segurança antes da instalação de qualquer skill/plugin de terceiros.
+- DeepWiki fica como ferramenta de leitura/reconhecimento, sem autoridade.
+- Nenhuma dessas camadas foi promovida para produção nesta rodada.
