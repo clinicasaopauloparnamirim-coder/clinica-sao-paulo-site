@@ -51,3 +51,13 @@ jobs:
             echo "baked dual zaraz still in public/index.html" && exit 1
           fi
           echo "public/index.html P0 HTML checks OK"
+      - name: Verify protected Control Tower routes
+        run: |
+          set -euo pipefail
+          base="https://clinica-sao-paulo-site.clinicasaopauloparnamirim.workers.dev"
+          for path in /mcp/tower /google/ads/oauth/start /google/oauth/start /google/ads/audit /google/ga4/audit /google/gsc/audit; do
+            code="$(curl -sS -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 2 --connect-timeout 10 --max-time 30 "$base$path")"
+            echo "$path -> HTTP $code"
+            test "$code" = "401"
+          done
+
