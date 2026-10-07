@@ -64,3 +64,66 @@ Reconciliar os demais repositórios históricos com:
 6. duplicação;
 7. riscos P0/P1;
 8. somente então considerar ativação.
+
+
+## 5. AgentJev
+
+Repositório: malevrigns/agent-jev
+Código-fonte atual confirmado no GitHub. O repositório contém implementação Python, cliente, hook, serviço HTTP e script de teste prático.
+
+### Achados
+- O README define o AgentJev como um motor de decisão não autoregressivo: recebe um estado + perguntas tipadas e devolve distribuições/probabilidades, não texto.
+- O próprio README limita o papel: usar como gate, route ou score; a prosa permanece com um modelo maior.
+- O benchmark publicado não prova sucesso operacional de um agente nem sucesso de execução de tarefas; é um benchmark de concordância com um teacher argmax.
+- Há um serviço HTTP no repositório, mas não há conexão operacional JEV descoberta no runtime do Control Tower nesta rodada.
+
+### Classificação
+P1 — candidato forte para **Brain 2 / camada de julgamento**, especialmente para decisões binárias/roteamento.
+INCONCLUSIVO — execução do modelo JEV dentro do Control Tower não foi comprovada nesta rodada.
+Não declarar JEV como “cérebro já funcionando” sem um teste real de inferência ligado ao pipeline.
+
+## 6. LAYA
+
+Repositório: NandhaKishorM/laya
+Código-fonte atual confirmado no GitHub.
+
+### Achados
+- Laya é um motor de decisão não autoregressivo, com Router, suporte multilíngue e extras para HTTP/MCP/LangChain/CrewAI etc.
+- O README documenta instalação via Python e demonstra inferência local com `Router().predict(...)`.
+- O projeto publica checkpoints e benchmark próprio; isso comprova existência do motor, não integração do motor com o Control Tower.
+- O runtime do Control Tower verificado anteriormente reporta `laya_configured:false`, portanto não há evidência de que LAYA esteja ativo como executor do Control Tower.
+
+### Classificação
+P1 — candidato forte para **Brain 2 / decisão rápida**, com vantagem de cobertura multilíngue.
+INCONCLUSIVO — MCP/HTTP externo e inferência real dentro do Control Tower ainda não comprovados.
+JEV e LAYA não devem ser instalados em paralelo como dois julgadores independentes sem uma política explícita de seleção/fallback.
+
+## 7. Hermes Agent
+
+Repositório: NousResearch/hermes-agent
+Código-fonte atual confirmado no GitHub.
+
+### Achados
+- O README descreve agente geral com terminal, subagentes, memória, skills, cron e múltiplos canais.
+- O pyproject atual fixa muitas dependências diretamente, incluindo `browser-harness==0.1.13`, e restringe Python a >=3.11,<3.15.
+- Isso é significativamente mais amplo que um “judge”; Hermes é candidato a **Brain 1 / execução-orquestração**, não a substituto do JEV/LAYA.
+- A amplitude de acesso ao terminal e canais aumenta o blast radius; conexão direta ao ambiente de produção exigiria sandbox e permissões mínimas.
+- Não há prova nesta rodada de Hermes executando como worker do Control Tower.
+
+### Classificação
+P1 — forte capacidade potencial de Brain 1, mas com superfície de privilégio alta.
+INCONCLUSIVO — runtime integrado não comprovado.
+Não conectar Hermes diretamente ao caminho de mutação do Google Ads.
+
+## 8. Decisão arquitetural atual
+
+- **Brain 1:** Hermes pode ser candidato de execução/orquestração, mas somente em sandbox/escopo mínimo.
+- **Brain 2:** JEV ou LAYA podem ocupar a camada de julgamento; ainda falta teste de inferência real para escolher um vencedor.
+- **Brain 3:** OpenSEO/OpenGSC são candidatos de dados/SEO; OpenSEO mostra controles de autenticação mais completos, OpenGSC oferece MCP com token + RBAC/custos explícitos.
+- **Google Ads:** nenhum desses motores recebeu autorização para mutar Search-2; Search-2 permanece fora de todos os fluxos.
+- **Canva:** continua fora.
+- Nenhuma alteração foi feita no branch main nesta rodada.
+
+## 9. Estado de evidência
+
+Conexão/execução real continua sendo o gargalo central: repositório existente não equivale a ferramenta conectada; ferramenta conectada não equivale a executor operacional. A próxima etapa deve procurar evidência de runtime para **um único candidato por função**, começando por Brain 2 e pelo caminho seguro de leitura, antes de qualquer ação mutável.
