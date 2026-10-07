@@ -176,3 +176,78 @@ Mapeamento provisório:
 - Superpowers: camada transversal de processo, não cérebro.
 
 Estado: nenhum novo runtime foi ativado; nenhum segredo ou credencial foi alterado; main permanece intocado.
+
+## 13. OpenManus
+
+Repositório: FoundationAgents/OpenManus
+Código atual confirmado.
+
+### Achados
+- Agente geral com execução via terminal e integração de browser.
+- A documentação atual indica Browser Use CLI/MCP como camada padrão de browser e permite modo local/isolado.
+- O fluxo multiagente existe, mas a própria documentação o trata como versão instável.
+- Não existe evidência nesta rodada de OpenManus conectado ao runtime da clínica.
+
+### Classificação
+P1 — capacidade sobreposta com Hermes/Agent Zero/Browser Harness.
+INCONCLUSIVO — sem runtime operacional no Control Tower.
+Não adicionar enquanto Brain 1 não tiver uma escolha de executor única.
+
+## 14. Agent Zero
+
+Repositório: agent0ai/agent-zero
+Código atual confirmado.
+
+### Achados
+- Framework de agente com Linux desktop em Docker, browser, terminal, arquivos, memória, plugins e subagentes.
+- Pode fazer tarefas de GUI que APIs não cobrem.
+- A abrangência de terminal + bridge para máquina host cria superfície de privilégio elevada.
+- Não há conexão operacional comprovada com o Control Tower nesta rodada.
+
+### Classificação
+P1 — forte, mas altamente sobreposto ao Brain 1 e com blast radius elevado.
+INCONCLUSIVO — sem execução integrada.
+Não promover nem conectar diretamente à produção.
+
+## 15. MonkeyCode
+
+Repositório: chaitin/MonkeyCode
+Código atual confirmado.
+
+### Achados
+- Plataforma de desenvolvimento com ambientes remotos, tarefas, múltiplos modelos e revisão automatizada.
+- Arquiteturalmente é uma plataforma de desenvolvimento completa, não um componente pequeno do Control Tower.
+- A documentação recomenda infraestrutura dedicada para console e hosts de desenvolvimento.
+- Não foi comprovada integração operacional com o runtime da clínica.
+
+### Classificação
+SUPORTE/ALTERNATIVA — potencial para laboratório de engenharia, não componente necessário do Control Tower.
+Adoção criaria outra plataforma de execução e duplicaria Brain 1.
+
+## 16. CommandCode
+
+A organização CommandCodeAI foi localizada, mas o repositório exato command-code não foi resolvido pelo GitHub nesta rodada; portanto não vou inventar sua localização.
+
+O módulo cmd-mod-jev-nudge foi confirmado e documenta uso de Jev para decidir se um agente deve continuar após um ponto de parada. Ele opera como uma modificação do Command Code e usa serviço externo para a inferência.
+
+### Classificação
+INCONCLUSIVO — identidade completa do runtime Command Code não resolvida.
+O mod Jev é evidência de um padrão útil para o Brain 2 (nudge/continuation), mas não prova integração com nosso Control Tower.
+Não instalar nem tratar como componente operacional sem repositório/runtime exato.
+
+## 17. Maestri
+
+O repositório anteriormente referido como open-maestri/maestri / MaestriAI/maestri não foi encontrado pelo GitHub conectado nesta rodada.
+
+### Classificação
+INCONCLUSIVO — identidade do repositório não resolvida.
+Não promover, instalar ou atribuir função até localizar a fonte exata.
+
+## 18. Decisão desta rodada
+
+- Brain 1 mantém um único executor principal a ser escolhido entre os candidatos já auditados; Hermes é o candidato mais claramente alinhado, mas ainda INCONCLUSIVO em integração.
+- OpenManus, Agent Zero e MonkeyCode ficam como alternativas laboratoriais, não adicionadas.
+- Brain 2 pode usar JEV/LAYA como julgamento e Ruflo como orquestração, mas a autoridade precisa ser única por função.
+- CommandCode/JEV-nudge é candidato de padrão para continuação, não runtime conectado.
+- Maestri permanece não resolvido.
+- Nenhuma alteração no main; apenas este registro no branch de auditoria.
