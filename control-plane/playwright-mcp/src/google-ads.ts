@@ -3,8 +3,9 @@ const DEFAULT_CUSTOMER_ID = "4603647788";
 const ALTA_INTENCAO_CAMPAIGN_ID = "24289443969";
 
 import { runAdsMutateJudgment } from "./judgment-gate";
+import type { JudgmentEnv } from "./judgment-gate";
 
-type GoogleAdsEnv = {
+type GoogleAdsEnv = JudgmentEnv & {
   GOOGLE_ADS_REFRESH_TOKEN?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
