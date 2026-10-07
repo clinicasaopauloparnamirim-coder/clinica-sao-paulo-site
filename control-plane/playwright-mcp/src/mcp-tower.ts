@@ -10,6 +10,7 @@ import {
   googleAdsSearch,
   googleAdsMutate,
   googleAdsBatchMutate,
+  containsCampaignId,
 } from "./google-ads";
 import { googleGa4Audit } from "./google-ga4";
 import { googleGscAudit } from "./google-gsc";
@@ -182,9 +183,11 @@ async function callTool(env: TowerEnv, name: string, args: Record<string, unknow
       const confirm = args.confirm === true;
       const validateOnly = args.validateOnly === true;
       if (!resource || !operations.length) throw new Error("resource e operations obrigatorios");
+      const campaignId = containsCampaignId(operations);
       const gate = await runAdsMutateJudgment(env, {
         action: `ads_mutate:${resource}`,
-        campaignId: "24289443969",
+        campaignId,
+        scope: campaignId === "24289443969" ? "ALTA_INTENCAO" : "UNKNOWN",
         validateOnly,
         confirm,
       });
@@ -204,9 +207,11 @@ async function callTool(env: TowerEnv, name: string, args: Record<string, unknow
       const confirm = args.confirm === true;
       const validateOnly = args.validateOnly === true;
       if (!operations.length) throw new Error("operations obrigatorio");
+      const campaignId = containsCampaignId(operations);
       const gate = await runAdsMutateJudgment(env, {
         action: "ads_batch_mutate",
-        campaignId: "24289443969",
+        campaignId,
+        scope: campaignId === "24289443969" ? "ALTA_INTENCAO" : "UNKNOWN",
         validateOnly,
         confirm,
       });

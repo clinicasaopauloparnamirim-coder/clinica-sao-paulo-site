@@ -87,14 +87,16 @@ export async function googleAdsAudit(env: GoogleAdsEnv) {
       campaign.bidding_strategy_type, campaign.optimization_score, campaign_budget.amount_micros,
       metrics.impressions, metrics.clicks, metrics.ctr, metrics.average_cpc, metrics.cost_micros,
       metrics.conversions, metrics.cost_per_conversion
-      FROM campaign WHERE segments.date DURING LAST_30_DAYS AND campaign.status != 'REMOVED'
+      FROM campaign WHERE segments.date DURING LAST_30_DAYS
+      AND campaign.status != 'REMOVED' AND campaign.id = 24289443969
       ORDER BY metrics.cost_micros DESC`,
     keywords: `SELECT campaign.name, ad_group.name, ad_group_criterion.criterion_id,
       ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type,
       ad_group_criterion.status, ad_group_criterion.quality_info.quality_score,
       metrics.impressions, metrics.clicks, metrics.average_cpc, metrics.cost_micros, metrics.conversions
       FROM keyword_view WHERE segments.date DURING LAST_30_DAYS
-      AND ad_group_criterion.status != 'REMOVED' ORDER BY metrics.cost_micros DESC LIMIT 500`,
+      AND ad_group_criterion.status != 'REMOVED' AND campaign.id = 24289443969
+      ORDER BY metrics.cost_micros DESC LIMIT 500`,
     conversions: `SELECT conversion_action.id, conversion_action.name, conversion_action.status,
       conversion_action.type, conversion_action.category, conversion_action.primary_for_goal,
       conversion_action.counting_type FROM conversion_action
@@ -117,10 +119,18 @@ export async function googleAdsAudit(env: GoogleAdsEnv) {
 export async function googleAdsSearch(env: GoogleAdsEnv, query: string) {
   if (!query || query.trim().length < 10) throw new Error("Invalid GAQL query.");
   const normalized = query.trim().toLowerCase();
+  if (normalized.includes("search-2")) {
+    throw new Error("Search-2 is permanently retired and out of scope.");
+  }
   if (normalized.includes(" mutate ") || normalized.includes(":mutate") ||
       normalized.startsWith("insert ") || normalized.startsWith("update ") ||
       normalized.startsWith("delete ")) {
     throw new Error("Only read-only GAQL is allowed.");
+  }
+  const campaignScoped = /from\s+(campaign|keyword_view|search_term_view)\b/i.test(query);
+  if (campaignScoped &&
+      !new RegExp("campaign\\.id\\s*=\\s*"+ALTA+"\\b", "i").test(query)) {
+    throw new Error("Campaign-scoped GAQL must explicitly target approved campaign "+ALTA+" only.");
   }
   return adsRequest(env, "googleAds:search", { query });
 }

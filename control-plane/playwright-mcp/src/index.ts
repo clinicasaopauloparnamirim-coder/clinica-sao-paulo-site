@@ -196,7 +196,10 @@ ${authenticated ? `<p>Acesso autorizado</p>
       return Response.json({ ok: true, ...specialistSnapshot() }, { headers: { "cache-control": "no-store" } });
     }
 
-    if (pathname === "/google/ads/oauth/start") return googleAdsOAuthStart(request, env);
+    if (pathname === "/google/ads/oauth/start") {
+      if (!authorized(request, env)) return unauthorized();
+      return googleAdsOAuthStart(request, env);
+    }
     if (pathname === "/google/ads/oauth/callback") return googleAdsOAuthCallback(request, env);
 
     if (pathname === "/google/ads/auth-check") {
@@ -242,7 +245,10 @@ ${authenticated ? `<p>Acesso autorizado</p>
       } catch (error) { return new Response(error instanceof Error ? error.message : "Google Ads mutation failed", { status: 400 }); }
     }
 
-    if (pathname === "/google/oauth/start") return googleOAuthStart(request, env);
+    if (pathname === "/google/oauth/start") {
+      if (!authorized(request, env)) return unauthorized();
+      return googleOAuthStart(request, env);
+    }
     if (pathname === "/google/oauth/callback") return googleOAuthCallback(request, env);
 
     if (pathname === "/google/ga4/cleanup" && request.method === "POST") {
