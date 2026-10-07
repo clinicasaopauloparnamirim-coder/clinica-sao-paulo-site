@@ -129,8 +129,8 @@ export async function googleAdsSearch(env: GoogleAdsEnv, query: string) {
   }
   const campaignScoped = /from\s+(campaign|keyword_view|search_term_view)\b/i.test(query);
   if (campaignScoped &&
-      !new RegExp("campaign\\.id\\s*=\\s*"+ALTA+"\\b", "i").test(query)) {
-    throw new Error("Campaign-scoped GAQL must explicitly target approved campaign "+ALTA+" only.");
+      !new RegExp("campaign\\.id\\s*=\\s*"+ALTA_INTENCAO_CAMPAIGN_ID+"\\b", "i").test(query)) {
+    throw new Error("Campaign-scoped GAQL must explicitly target approved campaign "+ALTA_INTENCAO_CAMPAIGN_ID+" only.");
   }
   return adsRequest(env, "googleAds:search", { query });
 }
@@ -144,7 +144,7 @@ const MUTABLE_RESOURCES = new Set<MutationResource>([
   "adGroupAds", "campaignCriteria", "userLists", "remarketingActions",
 ]);
 
-function containsCampaignId(value: unknown): string | undefined {
+export function containsCampaignId(value: unknown): string | undefined {
   const text = JSON.stringify(value ?? "");
   const match = text.match(/campaigns[\\/](\\d+)/);
   return match?.[1];
