@@ -227,3 +227,36 @@ Achados principais:
 - P2: worker.js legado.
 
 Nenhuma mutação foi feita na main durante esta auditoria.
+
+## 16. NOVA EVIDÊNCIA — conexão Cloudflare via Composio
+A busca atual do Composio encontrou toolkit `cloudflare` com conexão marcada ACTIVE e alias `clinic-cloudflare`.
+A tentativa real de executar `CLOUDFLARE_LIST_ACCOUNTS` falhou no endpoint da Cloudflare com HTTP 400 / código 6003: "Invalid request headers" / "Invalid format for X-Auth-Key header".
+A tentativa real de `CLOUDFLARE_LIST_ZONES` falhou com HTTP 403 / código 9109: "Invalid access token".
+
+Portanto:
+- existe uma conexão Composio registrada como ACTIVE;
+- mas a credencial atualmente usada por essas ferramentas NÃO está produzindo acesso administrativo funcional à API Cloudflare;
+- não foi obtido um account_id Cloudflare válido de 32 hex;
+- não foi possível enumerar Workers/rotas/DOs via essa conexão;
+- o toolkit `cloudflare_mcp` (MCP hospedado pela Cloudflare) apareceu SEM conexão ativa e não foi conectado, pois isso exigiria autenticação explícita.
+
+Isto substitui a formulação anterior "não existe conector": existe conexão registrada, mas ela está operacionalmente quebrada para as chamadas auditadas.
+
+## 17. NOVO P0 — Search-2 pode escapar pelo endpoint genérico
+Na main, `googleAdsAudit()` consulta `campaign` e `keyword_view` sem filtro de exclusão do Search-2.
+Na main, `googleAdsSearch(query)` aceita GAQL arbitrária sem injetar exclusão do Search-2.
+Isso contradiz a regra permanente de excluir Search-2 de toda análise/relatório/estratégia.
+O guard atual de mutate não corrige esse problema de leitura porque só observa `campaignId` hardcoded no mcp-tower.
+
+Classificação: P0 — bypass de escopo de leitura e análise.
+
+## 18. NOVO P0 — budget mutation exposto
+Na main, `mcp-tower.ts` inclui `campaignBudgets` como resource válido e `googleAdsMutate()` aceita esse resource.
+Não há bloqueio equivalente ao policy-kernel do branch de Gauntlet.
+A Constitution explicitamente proíbe budget mutation no caminho normal.
+Classificação: P0.
+
+## 19. Decisão do loop
+Nenhuma mutação foi feita na main ou no Cloudflare.
+A conexão Composio Cloudflare foi apenas auditada; não foi alterada/removida.
+O próximo bloqueio técnico real é corrigir/reautenticar a conexão Cloudflare ou conectar explicitamente `cloudflare_mcp`; depois disso será possível fechar o inventário administrativo de Workers.
