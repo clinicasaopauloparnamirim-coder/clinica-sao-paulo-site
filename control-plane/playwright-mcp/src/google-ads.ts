@@ -1,5 +1,8 @@
 const GOOGLE_ADS_API = "https://googleads.googleapis.com/v25";
 const DEFAULT_CUSTOMER_ID = "4603647788";
+const ALTA_INTENCAO_CAMPAIGN_ID = "24289443969";
+
+import { runAdsMutateJudgment } from "./judgment-gate";
 
 type GoogleAdsEnv = {
   GOOGLE_ADS_REFRESH_TOKEN?: string;
@@ -35,7 +38,7 @@ async function refreshAccessToken(env: GoogleAdsEnv) {
     }),
   });
   if (!response.ok) throw new Error(`Google Ads token refresh failed: ${response.status}`);
-  const token = await response.json() as { access_token?: string };
+  const token = (await response.json()) as { access_token?: string };
   if (!token.access_token) throw new Error("Google did not return an Ads access token.");
   return token.access_token;
 }
@@ -50,6 +53,7 @@ async function adsRequest(env: GoogleAdsEnv, path: string, body: unknown) {
   if (env.GOOGLE_ADS_LOGIN_CUSTOMER_ID) {
     headers["login-customer-id"] = env.GOOGLE_ADS_LOGIN_CUSTOMER_ID.replace(/-/g, "");
   }
+
   const response = await fetch(`${GOOGLE_ADS_API}/customers/${customerId}/${path}`, {
     method: "POST",
     headers,
@@ -71,14 +75,27 @@ export async function googleAdsAuthCheck(env: GoogleAdsEnv) {
     result: await adsRequest(env, "googleAds:search", {
       query: "SELECT customer.id, customer.descriptive_name FROM customer LIMIT 1",
     }),
-  }, { headers: { "cache-control": "no-store" } });
+  });
 }
 
 export async function googleAdsAudit(env: GoogleAdsEnv) {
   const queries = {
-    campaigns: `SELECT campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type, campaign.bidding_strategy_type, campaign.optimization_score, campaign_budget.amount_micros, metrics.impressions, metrics.clicks, metrics.ctr, metrics.average_cpc, metrics.cost_micros, metrics.conversions, metrics.cost_per_conversion FROM campaign WHERE segments.date DURING LAST_30_DAYS AND campaign.status != 'REMOVED' ORDER BY metrics.cost_micros DESC`,
-    keywords: `SELECT campaign.name, ad_group.name, ad_group_criterion.criterion_id, ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type, ad_group_criterion.status, ad_group_criterion.quality_info.quality_score, metrics.impressions, metrics.clicks, metrics.average_cpc, metrics.cost_micros, metrics.conversions FROM keyword_view WHERE segments.date DURING LAST_30_DAYS AND ad_group_criterion.status != 'REMOVED' ORDER BY metrics.cost_micros DESC LIMIT 500`,
-    conversions: `SELECT conversion_action.id, conversion_action.name, conversion_action.status, conversion_action.type, conversion_action.category, conversion_action.primary_for_goal, conversion_action.counting_type FROM conversion_action WHERE conversion_action.status != 'REMOVED' ORDER BY conversion_action.name`,
+    campaigns: `SELECT campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type,
+      campaign.bidding_strategy_type, campaign.optimization_score, campaign_budget.amount_micros,
+      metrics.impressions, metrics.clicks, metrics.ctr, metrics.average_cpc, metrics.cost_micros,
+      metrics.conversions, metrics.cost_per_conversion
+      FROM campaign WHERE segments.date DURING LAST_30_DAYS AND campaign.status != 'REMOVED'
+      ORDER BY metrics.cost_micros DESC`,
+    keywords: `SELECT campaign.name, ad_group.name, ad_group_criterion.criterion_id,
+      ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type,
+      ad_group_criterion.status, ad_group_criterion.quality_info.quality_score,
+      metrics.impressions, metrics.clicks, metrics.average_cpc, metrics.cost_micros, metrics.conversions
+      FROM keyword_view WHERE segments.date DURING LAST_30_DAYS
+      AND ad_group_criterion.status != 'REMOVED' ORDER BY metrics.cost_micros DESC LIMIT 500`,
+    conversions: `SELECT conversion_action.id, conversion_action.name, conversion_action.status,
+      conversion_action.type, conversion_action.category, conversion_action.primary_for_goal,
+      conversion_action.counting_type FROM conversion_action
+      WHERE conversion_action.status != 'REMOVED' ORDER BY conversion_action.name`,
   };
   const [campaigns, keywords, conversions] = await Promise.all([
     adsRequest(env, "googleAds:search", { query: queries.campaigns }),
@@ -91,26 +108,88 @@ export async function googleAdsAudit(env: GoogleAdsEnv) {
 }
 
 export async function googleAdsSearch(env: GoogleAdsEnv, query: string) {
-  if (!query || query.length < 10) throw new Error("Invalid GAQL query.");
+  if (!query || query.trim().length < 10) throw new Error("Invalid GAQL query.");
+  const normalized = query.trim().toLowerCase();
+  if (normalized.includes(":mutate") || normalized.startsWith("insert ") ||
+      normalized.startsWith("update ") || normalized.startsWith("delete ")) {
+    throw new Error("Only read-only GAQL is allowed.");
+  }
   return adsRequest(env, "googleAds:search", { query });
 }
 
-export async function googleAdsBatchMutate(env: GoogleAdsEnv, operations: unknown[], validateOnly = true, confirm = false) {
-  if (!operations.length || operations.length > 100) throw new Error("Batch mutation must contain 1-100 operations.");
-  if (!validateOnly && confirm !== true) throw new Error("Explicit confirmation required for live mutation.");
-  return adsRequest(env, "googleAds:mutate", { mutateOperations: operations, validateOnly });
+type MutationResource =
+  | "campaignBudgets" | "campaigns" | "adGroups" | "adGroupCriteria"
+  | "adGroupAds" | "campaignCriteria" | "userLists" | "remarketingActions";
+
+const MUTABLE_RESOURCES = new Set<MutationResource>([
+  "campaignBudgets", "campaigns", "adGroups", "adGroupCriteria",
+  "adGroupAds", "campaignCriteria", "userLists", "remarketingActions",
+]);
+
+function containsCampaignId(value: unknown): string | undefined {
+  const text = JSON.stringify(value ?? "");
+  const match = text.match(/campaigns[\\/](\\d+)/);
+  return match?.[1];
 }
 
-export async function googleAdsMutate(
+function assertMutationScope(resource: MutationResource, operations: unknown[]) {
+  if (!MUTABLE_RESOURCES.has(resource)) throw new Error(`Unsupported Google Ads resource: ${resource}`);
+  if (resource === "campaignBudgets") {
+    throw new Error("campaignBudgets mutation is permanently blocked by Control Tower policy.");
+  }
+  const campaignId = containsCampaignId(operations);
+  if (campaignId !== ALTA_INTENCAO_CAMPAIGN_ID) {
+    throw new Error("Live Ads mutation must explicitly target the approved campaign scope.");
+  }
+}
+
+export async function googleAdsBatchMutate(
   env: GoogleAdsEnv,
-  resource: "campaignBudgets" | "campaigns" | "adGroups" | "adGroupCriteria" | "adGroupAds" | "campaignCriteria" | "userLists" | "remarketingActions",
   operations: unknown[],
   validateOnly = true,
   confirm = false,
 ) {
-  if (!["campaignBudgets","campaigns","adGroups","adGroupCriteria","adGroupAds","campaignCriteria","userLists","remarketingActions"].includes(resource)) throw new Error(`Unsupported Google Ads resource: ${resource}`);
-  if (!operations.length || operations.length > 100) throw new Error("Mutation must contain 1-100 operations.");
-  if (!validateOnly && confirm !== true) throw new Error("Explicit confirmation required for live mutation.");
+  if (!Array.isArray(operations) || operations.length < 1 || operations.length > 100) {
+    throw new Error("Batch mutation must contain 1-100 operations.");
+  }
+  if (!validateOnly) assertMutationScope("campaigns", operations);
+
+  const gate = await runAdsMutateJudgment(env, {
+    action: "ads_batch_mutate",
+    campaignId: ALTA_INTENCAO_CAMPAIGN_ID,
+    validateOnly,
+    confirm,
+  });
+  if (gate.decision === "block") throw new Error(gate.reasons.join("; "));
+  if (!validateOnly && !confirm) throw new Error("confirm:true is required for live Ads mutation.");
+
+  return adsRequest(env, "googleAds:mutate", {
+    mutateOperations: operations,
+    validateOnly,
+  });
+}
+
+export async function googleAdsMutate(
+  env: GoogleAdsEnv,
+  resource: MutationResource,
+  operations: unknown[],
+  validateOnly = true,
+  confirm = false,
+) {
+  if (!Array.isArray(operations) || operations.length < 1 || operations.length > 100) {
+    throw new Error("Mutation must contain 1-100 operations.");
+  }
+  if (!validateOnly) assertMutationScope(resource, operations);
+
+  const gate = await runAdsMutateJudgment(env, {
+    action: `ads_mutate:${resource}`,
+    campaignId: ALTA_INTENCAO_CAMPAIGN_ID,
+    validateOnly,
+    confirm,
+  });
+  if (gate.decision === "block") throw new Error(gate.reasons.join("; "));
+  if (!validateOnly && !confirm) throw new Error("confirm:true is required for live Ads mutation.");
+
   return adsRequest(env, `${resource}:mutate`, { operations, validateOnly });
 }
 
@@ -158,24 +237,21 @@ export async function googleAdsOAuthCallback(request: Request, env: GoogleAdsEnv
   const code = url.searchParams.get("code");
   if (!state || !code) return new Response("Missing OAuth response.", { status: 400 });
 
-  const store = oauthStore(env);
-  const stateResponse = await store.fetch(`https://store.internal/state?state=${encodeURIComponent(state)}`);
-  const saved = await stateResponse.json() as { value?: string; expires?: number } | null;
-  if (!saved || saved.value !== state || !saved.expires || saved.expires < Date.now()) {
-    return new Response("Invalid or expired OAuth state.", { status: 400 });
-  }
-  await store.fetch(`https://store.internal/state?state=${encodeURIComponent(state)}`, { method: "DELETE" });
+  const stateResponse = await oauthStore(env).fetch(`https://store.internal/state?state=${encodeURIComponent(state)}`);
+  const saved = stateResponse.ok ? await stateResponse.json() as { state?: string } : null;
+  if (!saved || saved.state !== state) return new Response("Invalid or expired OAuth state.", { status: 400 });
+  await oauthStore(env).fetch(`https://store.internal/state?state=${encodeURIComponent(state)}`, { method: "DELETE" });
 
   const redirectUri = new URL("/google/ads/oauth/callback", request.url).toString();
   const tokens = await exchangeAdsCode(env, code, redirectUri);
-  if (!tokens.refresh_token) {
-    return new Response("Google did not return a refresh token.", { status: 400 });
-  }
-  await store.fetch("https://store.internal/ads-token", {
+  if (!tokens.refresh_token) return new Response("Google did not return a refresh token.", { status: 400 });
+
+  await oauthStore(env).fetch("https://store.internal/ads-token", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ refresh_token: tokens.refresh_token }),
   });
+
   return new Response("Google Ads autorizado no Control Tower. Você pode fechar esta página.", {
     status: 200,
     headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },
