@@ -424,3 +424,16 @@ Decisão: não promover nenhum candidato com base apenas no README. O próximo a
 - P2 dados: sitemap usa lastmod 2026-10-03 apesar de alterações posteriores no Git; revisar geração.
 - P1 integração: OpenSEO não está usando a conexão GSC apesar de a conexão Google Search Console estar ativa no Composio.
 - Nenhuma mutação foi executada.
+
+
+## 33. GAUNTLET LOOP — sitemap + supply chain
+
+- Search Console: sitemap não-www foi processado, sem erros, com 6 URLs enviadas e 0 URLs reportadas como indexadas pelo sitemap; o sitemap www antigo está pendente com 1 erro.
+- Isso não prova que nenhuma URL esteja indexada, pois a inspeção individual já comprovou homepage e aparelho como indexados. Indica, porém, que o caminho do sitemap não está sendo refletido como URLs indexadas no estado atual.
+- O host www continua servindo HTTP 200 e o Google o classifica como página alternativa com canonical adequado para o não-www. Não tratar como falha de canonicalização crítica.
+- GEO-SEO Claude: o instalador usa clone da branch principal sem pin de commit e copia skills/agentes/scripts diretamente para o diretório do Claude; hooks encontrados podem receber permissão de execução. Não há etapa de verificação por hash ou assinatura do conteúdo baixado.
+
+### Classificação
+- P1 GSC: sitemap/indexação precisa de investigação e reprocessamento controlado; não executar submissão automática nesta auditoria.
+- P1 supply chain: GEO-SEO não deve ser instalado no núcleo sem fixar revisão e revisar hooks/scripts.
+- PASSO seguinte: testar uma execução real do candidato GSC local/stdio; em paralelo, fechar a análise do código dos hooks do GEO-SEO antes de promoção.
