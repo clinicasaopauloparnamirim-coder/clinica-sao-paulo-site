@@ -11,6 +11,9 @@ type GoogleAdsEnv = {
   GOOGLE_ADS_CUSTOMER_ID?: string;
   GOOGLE_ADS_LOGIN_CUSTOMER_ID?: string;
   GOOGLE_OAUTH_STORE: DurableObjectNamespace;
+  TYPESAFE_API_KEY?: string;
+  LAYA_HTTP_URL?: string;
+  JUDGMENT_REQUIRED?: string;
 };
 
 function oauthStore(env: GoogleAdsEnv) {
