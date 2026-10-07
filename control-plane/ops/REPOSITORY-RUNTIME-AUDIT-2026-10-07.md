@@ -378,3 +378,32 @@ Não adicionar ao núcleo antes de testar contra um caso real da clínica e medi
 2. WebsiteProfiling — crawl/SEO semântico offline.
 3. GEO-SEO Claude — skill complementar, somente após os dois anteriores.
 OpenGSC permanece fora por decisão de custo.
+
+## 29. GAUNTLET LOOP — confronto runtime independente
+
+### mcp-gsc
+- README e código confirmam instalação local via uvx/clone, OAuth ou service account e modo read-only por padrão.
+- Teste de runtime dentro desta sessão: NÃO EXECUTADO. O ambiente disponível não expõe shell/container para iniciar o processo MCP local; portanto não registrar “operacional”.
+- Evidência atual: código verificável + instruções reproduzíveis; integração/runtime real ainda INCONCLUSIVO.
+- Gate: P1 / PRÉ-APROVADO PARA TESTE. Próximo teste deve chamar get_capabilities e list_properties com credencial real, sem GSC_ALLOW_DESTRUCTIVE.
+
+### WebsiteProfiling
+- README/documentação confirmam stack de crawl/report, integrações GSC/Analytics opcionais, BFF e Remote MCP com token/hostnames.
+- OPS recomenda TLS no reverse proxy e configuração de token/hostnames no Remote MCP.
+- Confronto crítico: não foi encontrada, via busca estática disponível, evidência suficiente para afirmar que todos os endpoints de criação/execução de pipeline estão protegidos por autorização no serviço; isso exige leitura dirigida dos handlers/middleware antes de qualquer deployment.
+- Teste independente do alvo real: scrape da homepage retornou HTTP 200 e conteúdo SEO coerente; isso valida acessibilidade externa do site, não a execução do WebsiteProfiling.
+- Classificação: SUPORTE/P1 até fechar autenticação dos endpoints e executar um crawl real reproduzível.
+
+### GEO-SEO Claude
+- README confirma instalação local isolada em ~/.claude/skills/geo/.venv e cinco subagentes paralelos.
+- Não há prova nesta sessão de execução do skill nem de que o Claude Code esteja disponível no runtime conectado ao Control Tower.
+- A instalação via curl | bash aumenta a necessidade de inspeção do instalador antes de adoção.
+- Classificação: SUPORTE / INCONCLUSIVO em runtime; não promover ainda.
+
+## 30. Resultado do ciclo
+
+PASSOU (evidência de código): mcp-gsc, WebsiteProfiling e GEO-SEO Claude existem e possuem escopo compatível com Brain 3.
+NÃO PASSOU (prova de runtime): nenhum dos três foi demonstrado executando dentro do Control Tower nesta sessão.
+CONFRONTO independente: o site da clínica respondeu HTTP 200 ao crawler externo e expôs homepage, páginas de serviços, CTA WhatsApp e dados locais; isso não substitui teste do candidato.
+
+Decisão: não promover nenhum candidato com base apenas no README. O próximo alvo lógico permanece mcp-gsc, mas a próxima etapa obrigatória é prova de execução/autenticação real; em paralelo, WebsiteProfiling deve passar pela leitura dirigida dos handlers de pipeline/auth antes de qualquer deployment.
