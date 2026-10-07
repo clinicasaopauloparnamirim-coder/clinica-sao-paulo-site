@@ -39,7 +39,8 @@ Classificação: P1.
 control-plane/playwright-mcp/wrangler.toml também descreve o Worker clinica-sao-paulo-site e repete AI, BROWSER e os quatro DOs.
 O pipeline oficial usa o root wrangler.jsonc.
 Risco: duas fontes de configuração podem divergir.
-Classificação: P1.
+Achado adicional: o wrangler.toml interno NÃO define assets, enquanto o root wrangler.jsonc define a binding ASSETS e run_worker_first. Um deploy manual a partir do diretório interno pode, portanto, divergir materialmente do pipeline oficial e é um risco de quebra do serving estático.
+Classificação: P1 alto.
 
 ## 7. Falhas de observabilidade
 Não há, nesta sessão, acesso administrativo verificável ao inventário da conta Cloudflare.
