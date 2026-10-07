@@ -437,3 +437,21 @@ Decisão: não promover nenhum candidato com base apenas no README. O próximo a
 - P1 GSC: sitemap/indexação precisa de investigação e reprocessamento controlado; não executar submissão automática nesta auditoria.
 - P1 supply chain: GEO-SEO não deve ser instalado no núcleo sem fixar revisão e revisar hooks/scripts.
 - PASSO seguinte: testar uma execução real do candidato GSC local/stdio; em paralelo, fechar a análise do código dos hooks do GEO-SEO antes de promoção.
+
+
+## 34. GAUNTLET LOOP — GEO final e correção de classificação
+
+- Correção: o repositório GEO-SEO não possui diretório hooks na branch main atual. O instalador apenas suporta copiar hooks caso existam na origem.
+- O risco confirmado permanece supply-chain: instalação por clone da branch principal sem pin de commit, sem verificação de hash ou assinatura, seguida de cópia de skills/agentes/scripts para o ambiente do Claude Code.
+- Os agentes do GEO-SEO declaram permissão para Bash e Write. Isso amplia o impacto de eventual código malicioso ou instrução comprometida e justifica gate de segurança antes de instalação.
+- O CRM web opcional em scripts/webapp/app.py não implementa autenticação própria; app.run usa o bind padrão local. Classificação: risco P2 quando restrito ao localhost; P1 se publicado externamente.
+- Produção da clínica: /llms.txt e /llms-full.txt retornam HTTP 404. Isso é lacuna GEO, não causa comprovada da indexação. Google recomenda inspeção/reindexação após publicação e observa que novos URLs podem levar dias para serem descobertos e rastreados.
+
+### Classificação final da rodada
+- P1: quatro das seis URLs principais ainda sem indexação/reconhecimento na inspeção GSC atual.
+- P1: sitemap www legado pendente com erro; sitemap não-www processado mas com 6 enviados e 0 reportados como indexados.
+- P1: mcp-gsc permanece candidato local/stdio; runtime real não comprovado.
+- P1: GEO-SEO supply-chain sem pin verificável; não instalar no núcleo ainda.
+- P2: ausência de llms.txt/llms-full.txt.
+- P2: CRM web do GEO-SEO se aberto fora do localhost.
+- Sem mutações, sem ressubmissão de sitemap e sem alteração no main.
