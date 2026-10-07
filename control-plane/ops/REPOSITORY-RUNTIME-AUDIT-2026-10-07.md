@@ -316,3 +316,13 @@ Não é candidato a cérebro nem a caminho de mutação.
 - SkillSpector ganha prioridade como gate de segurança antes da instalação de qualquer skill/plugin de terceiros.
 - DeepWiki fica como ferramenta de leitura/reconhecimento, sem autoridade.
 - Nenhuma dessas camadas foi promovida para produção nesta rodada.
+
+## 24. Decisão explícita — OpenGSC fora
+
+O usuário determinou que OpenGSC está fora por custo. Portanto:
+- não será promovido ao Brain 3;
+- não será usado como fallback pago;
+- não será conectado nem instalado como componente da arquitetura;
+- futuras comparações devem priorizar alternativas gratuitas/self-hosted.
+
+A partir desta decisão, OpenSEO e alternativas gratuitas/self-hosted passam a ser avaliados sem OpenGSC como referência operacional.
