@@ -170,15 +170,19 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
         "Se uma integração não estiver conectada, marque-a como blocker; não invente acesso. " +
         "Responda em JSON válido com: specialists (array de IDs), mode, blockers (array), plan (array).\\n" +
         JSON.stringify(specialistSnapshot());
-      const nvidia = await nvidiaChat(this.env, orchestrationSystem, "Solicitação: " + prompt + "\\nModo solicitado: " + mode);
-      if (nvidia) {
-        return Response.json({
-          ok: true,
-          agent: "ControlAgent",
-          provider: "nvidia-nim",
-          model: nvidia.model,
-          orchestration: nvidia.text.slice(0, 12000),
-        });
+      try {
+        const nvidia = await nvidiaChat(this.env, orchestrationSystem, "Solicitação: " + prompt + "\\nModo solicitado: " + mode);
+        if (nvidia) {
+          return Response.json({
+            ok: true,
+            agent: "ControlAgent",
+            provider: "nvidia-nim",
+            model: nvidia.model,
+            orchestration: nvidia.text.slice(0, 12000),
+          });
+        }
+      } catch (error) {
+        console.error("[ControlAgent] NVIDIA NIM failed; falling back to Workers AI:", error);
       }
       const workersai = createWorkersAI({ binding: this.env.AI });
       const result = await generateText({
