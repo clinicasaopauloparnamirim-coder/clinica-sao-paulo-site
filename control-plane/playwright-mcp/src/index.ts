@@ -7,6 +7,7 @@ import { googleGscAudit } from "./google-gsc";
 import { handleTowerMcp } from "./mcp-tower";
 import { specialistSnapshot } from "./agent-registry";
 import { autonomousFunctionSnapshot } from "./autonomous-functions";
+import { pairingSnapshot } from "./agent-pairing";
 import { googleAdsAuthCheck, googleAdsAudit, googleAdsBatchMutate, googleAdsMutate, googleAdsSearch, googleAdsOAuthStart, googleAdsOAuthCallback } from "./google-ads";
 
 interface WhatsAppEnv {
@@ -23,6 +24,11 @@ interface WhatsAppEnv {
   NVIDIA_API_KEY?: string;
   NVIDIA_BASE_URL?: string;
   NVIDIA_MODEL?: string;
+  TYPESAFE_API_KEY?: string;
+  LAYA_HTTP_URL?: string;
+  FREELLMAPI_URL?: string;
+  FREELLMAPI_API_KEY?: string;
+  FREELLMAPI_MODEL?: string;
 }
 
 export class WhatsAppLedger extends DurableObject {
@@ -139,6 +145,7 @@ export default {
         brain_count: specialistSnapshot().brainCount,
         capability_count: specialistSnapshot().capabilityCount,
         autonomous_function_count: autonomousFunctionSnapshot().count,
+        pairings: pairingSnapshot(env),
       }), {
         status: 200,
         headers: { "content-type": "application/json; charset=UTF-8", "cache-control": "no-store" },
@@ -223,6 +230,7 @@ ${authenticated ? `<p>Acesso autorizado</p>
           role: "ads-gsc-ga4",
         },
         whatsapp_ledger: { configured: true, role: "lead-attribution-memory" },
+        agent_pairings: pairingSnapshot(env),
         external_marketing_bridge: {
           role: "Composio",
           toolkits: ["Semrush", "Ahrefs", "OpenSEO", "Meta Ads", "Instagram", "Google Ads", "GSC", "GA4"],
