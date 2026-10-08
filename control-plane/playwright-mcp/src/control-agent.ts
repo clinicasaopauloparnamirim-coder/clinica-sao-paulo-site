@@ -11,12 +11,23 @@ type ControlEnv = Env & {
   NVIDIA_MODEL?: string;
 };
 
+type NvResult = {
+  model: string;
+  text: string;
+};
+
 export type ControlAgentState = {
   status: "ready" | "degraded";
-  version: 3;
+  version: 4;
   capabilities: string[];
   browser_mcp: "connected" | "disconnected";
   ai: "ready" | "error";
+  last_orchestration?: {
+    at: string;
+    provider: string;
+    model?: string;
+    verified: boolean;
+  };
 };
 
 const READ_ONLY_BROWSER_TOOLS = new Set([
@@ -32,7 +43,7 @@ const ALLOWED_NAVIGATION_HOSTS = new Set([
   "www.clinicasaopauloparnamirim.com.br",
 ]);
 
-async function nvidiaChat(env: ControlEnv, system: string, prompt: string) {
+async function nvidiaChat(env: ControlEnv, system: string, prompt: string): Promise<NvResult | null> {
   const apiKey = env.NVIDIA_API_KEY;
   if (!apiKey) return null;
   const configuredBaseUrl = env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1";
@@ -51,7 +62,7 @@ async function nvidiaChat(env: ControlEnv, system: string, prompt: string) {
         { role: "user", content: prompt },
       ],
       temperature: 0.2,
-      max_tokens: 2000,
+      max_tokens: 2200,
     }),
   });
   const raw = await response.text();
@@ -63,6 +74,23 @@ async function nvidiaChat(env: ControlEnv, system: string, prompt: string) {
     model,
     text: data.choices?.[0]?.message?.content || "",
   };
+}
+
+function tryJson(text: string): Record<string, any> | null {
+  try {
+    return JSON.parse(text) as Record<string, any>;
+  } catch {
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      try {
+        return JSON.parse(text.slice(start, end + 1)) as Record<string, any>;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
 }
 
 function getReadOnlyTools(tools: Record<string, any>) {
@@ -116,12 +144,18 @@ function getReadOnlyTools(tools: Record<string, any>) {
 export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
   initialState: ControlAgentState = {
     status: "ready",
-    version: 3,
+    version: 4,
     capabilities: [
       "mcp",
       "browser-readonly",
       "browser-domain-allowlist",
       "workers-ai",
+      "nvidia-nim",
+      "nvidia-fallback",
+      "8-brains",
+      "21-capabilities",
+      "gauntlet-loop",
+      "self-verification",
       "persistent-state",
     ],
     browser_mcp: "disconnected",
@@ -162,41 +196,102 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       if (!prompt || prompt.length > 4000) {
         return Response.json({ ok: false, error: "prompt_required_or_too_long" }, { status: 400 });
       }
+
       const mode = body.mode === "write" ? "write" : "read";
+      const snapshot = specialistSnapshot();
       const orchestrationSystem =
-        "Você é o orquestrador do Control Tower da Clínica São Paulo. " +
-        "Selecione especialistas da arquitetura abaixo para atender a solicitação. " +
+        "Você é o COMMANDER do Control Tower da Clínica São Paulo. " +
+        "Use a arquitetura de 8 cérebros e 21 capacidades abaixo. " +
+        "Decomponha a solicitação, escolha os cérebros/especialistas necessários, " +
+        "declare dependências e blockers e produza um plano que outro executor possa seguir. " +
         "Nunca permita ações financeiras, exposição de secrets ou ações destrutivas sem confirmação explícita. " +
         "Se uma integração não estiver conectada, marque-a como blocker; não invente acesso. " +
-        "Responda em JSON válido com: specialists (array de IDs), mode, blockers (array), plan (array).\\n" +
-        JSON.stringify(specialistSnapshot());
+        "A resposta deve ser JSON válido com: brains (array), specialists (array), mode, blockers (array), " +
+        "plan (array), verification_checks (array).\n" +
+        JSON.stringify(snapshot);
+
       try {
-        const nvidia = await nvidiaChat(this.env, orchestrationSystem, "Solicitação: " + prompt + "\\nModo solicitado: " + mode);
+        const nvidia = await nvidiaChat(
+          this.env,
+          orchestrationSystem,
+          "Solicitação: " + prompt + "\nModo solicitado: " + mode,
+        );
+
         if (nvidia) {
+          const initial = tryJson(nvidia.text);
+          let verified = false;
+          let verification: Record<string, any> | null = null;
+
+          if (initial) {
+            const verifierSystem =
+              "Você é o JUDGE/RED TEAM do Control Tower. " +
+              "Audite o plano JSON recebido contra a arquitetura e política fornecidas. " +
+              "Tente encontrar uma falha, integração inventada, dependência ausente, ação perigosa ou conclusão sem evidência. " +
+              "Responda somente JSON com: pass (boolean), findings (array), required_changes (array).\n" +
+              JSON.stringify(snapshot);
+
+            const verifier = await nvidiaChat(
+              this.env,
+              verifierSystem,
+              "PLANO PARA VERIFICAÇÃO:\n" + JSON.stringify(initial),
+            );
+            verification = verifier ? tryJson(verifier.text) : null;
+            verified = verification?.pass === true;
+          }
+
+          this.setState({
+            ...this.state,
+            ai: "ready",
+            last_orchestration: {
+              at: new Date().toISOString(),
+              provider: "nvidia-nim",
+              model: nvidia.model,
+              verified,
+            },
+          });
+
           return Response.json({
             ok: true,
             agent: "ControlAgent",
             provider: "nvidia-nim",
             model: nvidia.model,
-            orchestration: nvidia.text.slice(0, 12000),
+            verified,
+            orchestration: initial ?? { raw: nvidia.text },
+            verification,
           });
         }
       } catch (error) {
         console.error("[ControlAgent] NVIDIA NIM failed; falling back to Workers AI:", error);
       }
+
       const workersai = createWorkersAI({ binding: this.env.AI });
       const result = await generateText({
         model: workersai("@cf/zai-org/glm-4.7-flash"),
         system: orchestrationSystem,
-        prompt: "Solicitação: " + prompt + "\\nModo solicitado: " + mode,
+        prompt: "Solicitação: " + prompt + "\nModo solicitado: " + mode,
         stopWhen: stepCountIs(3),
       });
+      const fallbackJson = tryJson(result.text);
+
+      this.setState({
+        ...this.state,
+        ai: "ready",
+        last_orchestration: {
+          at: new Date().toISOString(),
+          provider: "cloudflare-workers-ai",
+          model: "@cf/zai-org/glm-4.7-flash",
+          verified: false,
+        },
+      });
+
       return Response.json({
         ok: true,
         agent: "ControlAgent",
         provider: "cloudflare-workers-ai",
         model: "@cf/zai-org/glm-4.7-flash",
-        orchestration: result.text.slice(0, 12000),
+        verified: false,
+        orchestration: fallbackJson ?? { raw: result.text },
+        verification: null,
       });
     }
 
@@ -268,6 +363,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       ok: this.state.status === "ready" && this.state.browser_mcp === "connected",
       agent: "ControlAgent",
       state: this.state,
+      architecture: specialistSnapshot(),
       mcp: {
         servers: this.getMcpServers().servers,
         tool_count: this.getMcpServers().tools.length,
