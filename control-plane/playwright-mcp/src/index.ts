@@ -21,6 +21,7 @@ interface WhatsAppEnv {
   GOOGLE_ADS_LOGIN_CUSTOMER_ID?: string;
   NVIDIA_API_KEY?: string;
   NVIDIA_BASE_URL?: string;
+  NVIDIA_MODEL?: string;
 }
 
 export class WhatsAppLedger extends DurableObject {
