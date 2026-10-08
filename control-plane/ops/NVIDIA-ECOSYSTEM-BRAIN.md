@@ -52,3 +52,34 @@ Brain 09
 -> promotion
 
 This keeps the NVIDIA ecosystem modular and prevents a second competing Control Tower.
+
+
+## GAUNTLET evidence — 2026-10-08
+
+Static forensic pass completed for the P0 queue.
+
+- OpenShell: identity/license/CI/security-policy evidence PASS; runtime NOT EXECUTED here.
+- NemoClaw: identity/license/code-scanning/compatibility workflow evidence PASS; runtime NOT EXECUTED; alpha gate remains.
+- NeMo Agent Toolkit: identity/license/CI evidence PASS; runtime NOT EXECUTED.
+- NeMo Relay: identity/license/multi-language CI/license-diff evidence PASS; runtime NOT EXECUTED.
+- NVIDIA/skills: official catalog identity PASS; every individual skill remains subject to SkillSpector.
+- SkillSpector: identity/license/CI/Scorecard/release evidence PASS; local execution NOT EXECUTED here.
+- SkillEvaluator: identity/license/CI/security workflow evidence PASS; live tier evaluation NOT EXECUTED here.
+- ToolOrchestra: project identity and orchestration artifacts verified; isolated model/runtime experiment NOT EXECUTED here.
+
+### Runtime truth
+
+The connected environment available to this Control Plane session does not provide a supported isolated Linux/Docker/GPU runtime for executing arbitrary NVIDIA runtimes. Therefore no component is falsely promoted to production.
+
+Runtime gate sequence:
+1. SkillSpector
+2. SkillEvaluator Tier 1/2
+3. OpenShell sandbox smoke test
+4. NeMo Relay telemetry/trajectory test
+5. NeMo Agent Toolkit minimal agent
+6. ToolOrchestra isolated routing
+7. NemoClaw only after OpenShell passes
+
+Static evidence = AUDITED.
+Runtime evidence = INTEGRATION-APPROVED.
+Production evidence = PROMOTED.
