@@ -19,6 +19,8 @@ interface WhatsAppEnv {
   GOOGLE_ADS_REFRESH_TOKEN?: string;
   GOOGLE_ADS_CUSTOMER_ID?: string;
   GOOGLE_ADS_LOGIN_CUSTOMER_ID?: string;
+  NVIDIA_API_KEY?: string;
+  NVIDIA_BASE_URL?: string;
 }
 
 export class WhatsAppLedger extends DurableObject {
@@ -129,6 +131,8 @@ export default {
         browser_binding: true,
         auth_configured: Boolean(env.MCP_AUTH_TOKEN),
         google_oauth_configured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+        nvidia_nim_configured: Boolean(env.NVIDIA_API_KEY),
+        nvidia_base_url: env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1",
       }), {
         status: 200,
         headers: { "content-type": "application/json; charset=UTF-8", "cache-control": "no-store" },
