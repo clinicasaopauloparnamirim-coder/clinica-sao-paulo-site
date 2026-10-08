@@ -1,4 +1,5 @@
 import { autonomousFunctionSnapshot } from "./autonomous-functions";
+import { externalAgentSnapshot } from "./external-agents";
 export type SpecialistId =
   | "orchestrator"
   | "google-ads"
@@ -112,7 +113,7 @@ export const BRAINS: BrainDefinition[] = [
     id: "commander",
     name: "COMMANDER",
     mission: "Receber o objetivo, decompor o trabalho, escolher cérebros, coordenar dependências e manter o estado do ciclo.",
-    toolFamilies: ["Control Tower", "MCP", "Durable State", "OpenAI-compatible inference"],
+    toolFamilies: ["Control Tower", "MCP", "Durable State", "OpenAI-compatible inference", "Hermes", "Jev", "Laya"],
     connectedToolSlugs: ["CUSTOM_CONTROL_TOWER_ADS_AUDIT", "CUSTOM_CONTROL_TOWER_GSC_AUDIT", "CUSTOM_CONTROL_TOWER_GA4_AUDIT"],
   },
   {
@@ -127,7 +128,7 @@ export const BRAINS: BrainDefinition[] = [
     name: "ENGINEER",
     mission: "Inspecionar código, alterar arquitetura com segurança, validar tipos, CI/CD e deploy.",
     toolFamilies: ["GitHub", "Cloudflare Workers", "Playwright MCP"],
-    connectedToolSlugs: [],
+    connectedToolSlugs: ["HERMES_AGENT", "JEV_DECISION_GATE", "LAYA_LOCAL_DECISION_ENGINE"],
   },
   {
     id: "seo",
@@ -238,5 +239,6 @@ export function specialistSnapshot() {
     },
     specialists: SPECIALISTS,
     autonomousFunctions: autonomousFunctionSnapshot(),
+    externalAgents: externalAgentSnapshot(),
   };
 }
