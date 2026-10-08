@@ -35,7 +35,7 @@ const ALLOWED_NAVIGATION_HOSTS = new Set([
 async function nvidiaChat(env: ControlEnv, system: string, prompt: string) {
   const apiKey = env.NVIDIA_API_KEY;
   if (!apiKey) return null;
-  const baseUrl = (env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1").replace(/\\/$/, "");
+  const baseUrl = (env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1").replace(/\/$/, "");
   const model = env.NVIDIA_MODEL || "nvidia/nemotron-3-nano-30b-a3b";
   const response = await fetch(baseUrl + "/chat/completions", {
     method: "POST",
