@@ -6,6 +6,7 @@ import { GoogleOAuthStore, googleGa4Audit, googleGa4Cleanup, googleOAuthCallback
 import { googleGscAudit } from "./google-gsc";
 import { handleTowerMcp } from "./mcp-tower";
 import { specialistSnapshot } from "./agent-registry";
+import { autonomousFunctionSnapshot } from "./autonomous-functions";
 import { googleAdsAuthCheck, googleAdsAudit, googleAdsBatchMutate, googleAdsMutate, googleAdsSearch, googleAdsOAuthStart, googleAdsOAuthCallback } from "./google-ads";
 
 interface WhatsAppEnv {
@@ -137,6 +138,7 @@ export default {
         nvidia_model: env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b",
         brain_count: specialistSnapshot().brainCount,
         capability_count: specialistSnapshot().capabilityCount,
+        autonomous_function_count: autonomousFunctionSnapshot().count,
       }), {
         status: 200,
         headers: { "content-type": "application/json; charset=UTF-8", "cache-control": "no-store" },
