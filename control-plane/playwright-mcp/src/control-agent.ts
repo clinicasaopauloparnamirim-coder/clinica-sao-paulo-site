@@ -37,7 +37,7 @@ async function nvidiaChat(env: ControlEnv, system: string, prompt: string) {
   if (!apiKey) return null;
   const configuredBaseUrl = env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1";
   const baseUrl = configuredBaseUrl.endsWith("/") ? configuredBaseUrl.slice(0, -1) : configuredBaseUrl;
-  const model = env.NVIDIA_MODEL || "nvidia/nemotron-3-nano-30b-a3b";
+  const model = env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b";
   const response = await fetch(baseUrl + "/chat/completions", {
     method: "POST",
     headers: {
