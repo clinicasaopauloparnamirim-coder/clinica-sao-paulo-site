@@ -165,7 +165,7 @@ async function callTool(env: TowerEnv, name: string, args: Record<string, unknow
         nvidia: {
           configured: Boolean(env.NVIDIA_API_KEY),
           base_url: env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1",
-          model: env.NVIDIA_MODEL || "nvidia/nemotron-3-nano-30b-a3b",
+          model: env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b",
         },
         judgment: {
           laya_configured: Boolean(env.LAYA_HTTP_URL),
@@ -244,7 +244,7 @@ async function callTool(env: TowerEnv, name: string, args: Record<string, unknow
       const apiKey = env.NVIDIA_API_KEY;
       const configuredBaseUrl = env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1";
       const baseUrl = configuredBaseUrl.endsWith("/") ? configuredBaseUrl.slice(0, -1) : configuredBaseUrl;
-      const model = env.NVIDIA_MODEL || "nvidia/nemotron-3-nano-30b-a3b";
+      const model = env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b";
       if (!apiKey) {
         return { ok: false, provider: "nvidia-nim", configured: false, error: "NVIDIA_API_KEY not configured in Worker" };
       }
