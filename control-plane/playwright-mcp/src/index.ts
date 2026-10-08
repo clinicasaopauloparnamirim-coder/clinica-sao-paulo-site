@@ -134,7 +134,7 @@ export default {
         google_oauth_configured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
         nvidia_nim_configured: Boolean(env.NVIDIA_API_KEY),
         nvidia_base_url: env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1",
-        nvidia_model: env.NVIDIA_MODEL || "nvidia/nemotron-3-nano-30b-a3b",
+        nvidia_model: env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b",
       }), {
         status: 200,
         headers: { "content-type": "application/json; charset=UTF-8", "cache-control": "no-store" },
@@ -146,7 +146,7 @@ export default {
       const apiKey = env.NVIDIA_API_KEY;
       const configuredBaseUrl = env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1";
       const baseUrl = configuredBaseUrl.endsWith("/") ? configuredBaseUrl.slice(0, -1) : configuredBaseUrl;
-      const model = env.NVIDIA_MODEL || "nvidia/nemotron-3-nano-30b-a3b";
+      const model = env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b";
       if (!apiKey) return Response.json({ ok: false, configured: false, provider: "nvidia-nim" }, { status: 503 });
       const started = Date.now();
       try {
