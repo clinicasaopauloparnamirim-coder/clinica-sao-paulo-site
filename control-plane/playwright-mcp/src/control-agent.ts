@@ -2,6 +2,7 @@ import { Agent } from "agents";
 import { generateText, stepCountIs } from "ai";
 import { createWorkersAI } from "workers-ai-provider";
 import { specialistSnapshot } from "./agent-registry";
+import { autonomousFunctionSnapshot } from "./autonomous-functions";
 
 type ControlEnv = Env & {
   AI: Ai;
@@ -18,7 +19,7 @@ type NvResult = {
 
 export type ControlAgentState = {
   status: "ready" | "degraded";
-  version: 4;
+  version: 5;
   capabilities: string[];
   browser_mcp: "connected" | "disconnected";
   ai: "ready" | "error";
@@ -144,7 +145,7 @@ function getReadOnlyTools(tools: Record<string, any>) {
 export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
   initialState: ControlAgentState = {
     status: "ready",
-    version: 4,
+    version: 5,
     capabilities: [
       "mcp",
       "browser-readonly",
@@ -154,6 +155,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       "nvidia-fallback",
       "8-brains",
       "21-capabilities",
+      "20-autonomous-functions",
       "gauntlet-loop",
       "self-verification",
       "persistent-state",
@@ -201,14 +203,14 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       const snapshot = specialistSnapshot();
       const orchestrationSystem =
         "Você é o COMMANDER do Control Tower da Clínica São Paulo. " +
-        "Use a arquitetura de 8 cérebros e 21 capacidades abaixo. " +
+        "Use a arquitetura de 8 cérebros, 21 capacidades e 20 funções autônomas abaixo. " +
         "Decomponha a solicitação, escolha os cérebros/especialistas necessários, " +
         "declare dependências e blockers e produza um plano que outro executor possa seguir. " +
         "Nunca permita ações financeiras, exposição de secrets ou ações destrutivas sem confirmação explícita. " +
         "Se uma integração não estiver conectada, marque-a como blocker; não invente acesso. " +
         "A resposta deve ser JSON válido com: brains (array), specialists (array), mode, blockers (array), " +
         "plan (array), verification_checks (array).\n" +
-        JSON.stringify(snapshot);
+        JSON.stringify({ ...snapshot, autonomousFunctions: autonomousFunctionSnapshot() });
 
       try {
         const nvidia = await nvidiaChat(
@@ -257,6 +259,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
             model: nvidia.model,
             verified,
             orchestration: initial ?? { raw: nvidia.text },
+            autonomous_functions: autonomousFunctionSnapshot(),
             verification,
           });
         }
@@ -291,6 +294,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
         model: "@cf/zai-org/glm-4.7-flash",
         verified: false,
         orchestration: fallbackJson ?? { raw: result.text },
+        autonomous_functions: autonomousFunctionSnapshot(),
         verification: null,
       });
     }
