@@ -1,4 +1,4 @@
-import { autonomousFunctionSnapshot, AUTONOMOUS_FUNCTIONS } from "./autonomous-functions";
+import { autonomousFunctionSnapshot } from "./autonomous-functions";
 export type SpecialistId =
   | "orchestrator"
   | "google-ads"
@@ -230,7 +230,6 @@ export function specialistSnapshot() {
     capabilityCount: CAPABILITIES.length,
     brains: BRAINS,
     capabilities: CAPABILITIES,
-    autonomousFunctions: AUTONOMOUS_FUNCTIONS,
     policy: {
       financialActions: "blocked",
       secretsInChat: "blocked",
