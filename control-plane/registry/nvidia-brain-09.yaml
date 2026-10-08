@@ -1,0 +1,48 @@
+brain:
+  id: 09
+  name: NVIDIA Ecosystem Intelligence
+  status: active-candidate
+  scope:
+    - NVIDIA
+    - NVlabs
+    - official NVIDIA AI ecosystem repositories
+  mission:
+    - discovery
+    - forensic-audit
+    - architecture-mapping
+    - security-review
+    - license-review
+    - overlap-detection
+    - controlled-promotion
+  production_access: denied-by-default
+  money_path_access: false
+  routes:
+    commander: orchestration
+    control_tower: runtime-observability-governance
+    researcher: research-rag-retrieval
+    engineer: coding-runtime-performance
+    seo: search-data-capabilities
+    ads: decision-support-only
+    marketing: multimodal-content
+    red_team_judge: security-evaluation
+  initial_watchlist:
+    - NVIDIA/OpenShell
+    - NVIDIA/NemoClaw
+    - NVIDIA/NeMo-Agent-Toolkit
+    - NVIDIA/NeMo-Relay
+    - NVIDIA/skills
+    - NVIDIA/SkillSpector
+    - NVIDIA/SkillEvaluator
+    - NVIDIA/NeMo-Retriever
+    - NVIDIA/context-aware-rag
+    - NVIDIA/garak
+    - NVIDIA/TensorRT-LLM
+    - NVlabs/ToolOrchestra
+    - NVlabs/SoL-Pi
+    - NVlabs/Skill2Env
+    - NVIDIA/Nemotron
+  gates:
+    new_skill: SkillSpector
+    runtime: sandbox-first
+    license: required
+    money_path: prohibited
