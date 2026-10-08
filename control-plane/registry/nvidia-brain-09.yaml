@@ -1,48 +1,135 @@
 brain:
   id: 09
   name: NVIDIA Ecosystem Intelligence
-  status: active-candidate
-  scope:
-    - NVIDIA
-    - NVlabs
-    - official NVIDIA AI ecosystem repositories
-  mission:
-    - discovery
-    - forensic-audit
-    - architecture-mapping
-    - security-review
-    - license-review
-    - overlap-detection
-    - controlled-promotion
+  status: ready-for-use
+  scope: [NVIDIA, NVlabs, official NVIDIA AI ecosystem]
   production_access: denied-by-default
   money_path_access: false
-  routes:
-    commander: orchestration
-    control_tower: runtime-observability-governance
-    researcher: research-rag-retrieval
-    engineer: coding-runtime-performance
-    seo: search-data-capabilities
-    ads: decision-support-only
-    marketing: multimodal-content
-    red_team_judge: security-evaluation
-  initial_watchlist:
+
+  mission:
+    - discover
+    - audit
+    - compare
+    - security-gate
+    - license-gate
+    - architecture-route
+    - controlled-promotion
+    - continuous-watch
+
+  readiness:
+    catalog: incorporated
+    routing: incorporated
+    governance: incorporated
+    security_gates: defined
+    runtime_installation: sandbox-first
+    production_promotion: gated
+
+  routing:
+    COMMANDER: [NVIDIA/NeMo-Agent-Toolkit, NVlabs/ToolOrchestra]
+    CONTROL_TOWER: [NVIDIA/NeMo-Relay, NVIDIA/OpenShell]
+    RESEARCHER: [NVIDIA/NeMo-Retriever, NVIDIA/context-aware-rag, NVlabs/UniversalDeepResearch]
+    ENGINEER: [NVIDIA/NemoClaw, NVIDIA/TensorRT-LLM, NVlabs/SoL-Pi, NVlabs/kda]
+    SEO: [NVIDIA/context-aware-rag, NVIDIA/NeMo-Retriever]
+    ADS: [NVIDIA/context-aware-rag]
+    MARKETING: [NVIDIA/Nemotron, NVIDIA/NeMo ecosystem]
+    RED_TEAM_JUDGE: [NVIDIA/SkillSpector, NVIDIA/SkillEvaluator, NVIDIA/garak, NVlabs/Skill2Env]
+
+  shared_infrastructure:
     - NVIDIA/OpenShell
-    - NVIDIA/NemoClaw
-    - NVIDIA/NeMo-Agent-Toolkit
     - NVIDIA/NeMo-Relay
-    - NVIDIA/skills
-    - NVIDIA/SkillSpector
-    - NVIDIA/SkillEvaluator
-    - NVIDIA/NeMo-Retriever
-    - NVIDIA/context-aware-rag
-    - NVIDIA/garak
     - NVIDIA/TensorRT-LLM
-    - NVlabs/ToolOrchestra
-    - NVlabs/SoL-Pi
-    - NVlabs/Skill2Env
-    - NVIDIA/Nemotron
+    - NVIDIA/skills
+
+  catalog:
+    - repo: NVIDIA/OpenShell
+      role: agent-sandbox-policy-runtime
+      status: integration-test
+      priority: P0
+      gate: sandbox-only
+    - repo: NVIDIA/NemoClaw
+      role: agent-stack
+      status: integration-test
+      priority: P0
+      gate: alpha-review
+    - repo: NVIDIA/NeMo-Agent-Toolkit
+      role: agent-orchestration-instrumentation
+      status: integration-test
+      priority: P0
+    - repo: NVIDIA/NeMo-Relay
+      role: runtime-events-observability
+      status: integration-test
+      priority: P0
+    - repo: NVIDIA/skills
+      role: official-agent-skills-catalog
+      status: approved-catalog
+      priority: P0
+      gate: every_skill_scanned
+    - repo: NVIDIA/SkillSpector
+      role: skill-security-gate
+      status: approved-gate-candidate
+      priority: P0
+    - repo: NVIDIA/SkillEvaluator
+      role: skill-evaluation-gate
+      status: integration-test
+      priority: P0
+    - repo: NVIDIA/NeMo-Retriever
+      role: retrieval-ingestion
+      status: integration-test
+      priority: P1
+    - repo: NVIDIA/context-aware-rag
+      role: graph-rag-retrieval
+      status: integration-test
+      priority: P1
+    - repo: NVIDIA/garak
+      role: llm-red-team
+      status: integration-test
+      priority: P1
+    - repo: NVIDIA/TensorRT-LLM
+      role: inference-runtime
+      status: deferred-install
+      priority: P1
+    - repo: NVIDIA/Nemotron
+      role: model-family-and-recipes
+      status: approved-model-candidate
+      priority: P1
+    - repo: NVlabs/ToolOrchestra
+      role: model-tool-orchestration
+      status: integration-test
+      priority: P0
+    - repo: NVlabs/SoL-Pi
+      role: long-horizon-context-efficiency
+      status: integration-test
+      priority: P1
+    - repo: NVlabs/Skill2Env
+      role: skill-to-eval-environment
+      status: integration-test
+      priority: P1
+    - repo: NVlabs/UniversalDeepResearch
+      role: research-agent-reference
+      status: deferred-research
+      priority: P2
+    - repo: NVlabs/kda
+      role: coding-agent-research-reference
+      status: deferred-research
+      priority: P2
+
   gates:
-    new_skill: SkillSpector
-    runtime: sandbox-first
-    license: required
+    new_skill: "SkillSpector -> SkillEvaluator -> sandbox test"
+    new_runtime: "license -> dependency -> security -> sandbox -> evidence"
+    production: "Control Tower Constitution + PR + explicit gate"
     money_path: prohibited
+    secrets: prohibited-in-lab
+
+  gauntlet:
+    sequence:
+      - buscar
+      - confrontar
+      - testar_revisar
+      - identificar_falhas
+      - cruzar_arquitetura
+      - classificar
+      - registrar_decisao
+      - repetir
+
+  rule:
+    "Ready-for-use means the Brain 09 governance and routing are operational; individual NVIDIA projects remain gated until their own runtime test passes."
