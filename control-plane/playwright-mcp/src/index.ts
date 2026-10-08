@@ -141,60 +141,6 @@ export default {
       });
     }
 
-    // Temporary one-shot NVIDIA NIM probe. Removed after verification.
-    if (pathname === "/__nvidia_probe_20261008") {
-      const apiKey = env.NVIDIA_API_KEY;
-      const configuredBaseUrl = env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1";
-      const baseUrl = configuredBaseUrl.endsWith("/") ? configuredBaseUrl.slice(0, -1) : configuredBaseUrl;
-      const model = env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b";
-      if (!apiKey) return Response.json({ ok: false, configured: false, provider: "nvidia-nim" }, { status: 503 });
-      const started = Date.now();
-      try {
-        const response = await fetch(baseUrl + "/chat/completions", {
-          method: "POST",
-          headers: { "content-type": "application/json", "authorization": "Bearer " + apiKey },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: "system", content: "Health check. Reply exactly NIM_OK." },
-              { role: "user", content: "NIM health check" }
-            ],
-            temperature: 0,
-            max_tokens: 8
-          })
-        });
-        const raw = await response.text();
-        let data: any = null;
-        try { data = JSON.parse(raw); } catch {}
-        const message = data?.choices?.[0]?.message || {};
-        const output = String(message?.content || "");
-        const reasoning = String(message?.reasoning_content || "");
-        const responseCheck = response.ok && (Boolean(output) || Boolean(reasoning));
-        return Response.json({
-          ok: responseCheck,
-          provider: "nvidia-nim",
-          configured: true,
-          model,
-          http_status: response.status,
-          latency_ms: Date.now() - started,
-          response_check: responseCheck,
-          content_present: Boolean(output),
-          reasoning_present: Boolean(reasoning),
-          content_prefix: output.slice(0, 120),
-          reasoning_prefix: reasoning.slice(0, 120)
-        }, { status: responseCheck ? 200 : 502 });
-      } catch (error) {
-        return Response.json({
-          ok: false,
-          provider: "nvidia-nim",
-          configured: true,
-          model,
-          latency_ms: Date.now() - started,
-          error: error instanceof Error ? error.message : "request_failed"
-        }, { status: 502 });
-      }
-    }
-
     if (pathname === "/control/login" && request.method === "POST") {
       const form = await request.formData();
       const token = String(form.get("token") || "");
