@@ -1,6 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 
-const GOOGLE_SCOPE = "https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/webmasters.readonly";
+const GOOGLE_SCOPE = "https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/webmasters.readonly https://www.googleapis.com/auth/business.manage";
 
 type GoogleEnv = {
   GOOGLE_CLIENT_ID?: string;
@@ -100,7 +100,7 @@ async function exchangeCode(env: GoogleEnv, code: string, redirectUri: string) {
   return await response.json() as { access_token?: string; refresh_token?: string };
 }
 
-async function accessToken(env: GoogleEnv) {
+export async function googleAccessToken(env: GoogleEnv) {
   const response = await store(env).fetch("https://store.internal/access-token", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -168,7 +168,7 @@ export async function googleOAuthCallback(request: Request, env: GoogleEnv) {
 }
 
 export async function googleGa4Cleanup(env: GoogleEnv) {
-  const token = await accessToken(env);
+  const token = await googleAccessToken(env);
   const listResponse = await fetch("https://analyticsadmin.googleapis.com/v1beta/properties/552216899/keyEvents", {
     headers: { authorization: `Bearer ${token}` },
   });
@@ -200,7 +200,7 @@ export async function googleGa4Cleanup(env: GoogleEnv) {
 }
 
 export async function googleGa4Audit(env: GoogleEnv) {
-  const token = await accessToken(env);
+  const token = await googleAccessToken(env);
 
   const summaryResponse = await fetch("https://analyticsadmin.googleapis.com/v1beta/accountSummaries", {
     headers: { authorization: `Bearer ${token}` },
