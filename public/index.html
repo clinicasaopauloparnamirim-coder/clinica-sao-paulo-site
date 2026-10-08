@@ -120,4 +120,88 @@
   });
   </script>
   <script src="/hero-photo.js" defer></script>
+  <script>
+  (function(){
+    var KEY='csp_attribution_v1';
+    function params(){return new URLSearchParams(location.search)}
+    function newToken(){return 'CP-'+Math.random().toString(36).slice(2,8).toUpperCase()+'-'+Date.now().toString(36).slice(-4).toUpperCase()}
+    function load(){
+      var p=params(), saved={};
+      try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+      var first=saved.first||{}, last=saved.last||{};
+      var now={
+        source:p.get('utm_source')||last.source||'',
+        medium:p.get('utm_medium')||last.medium||'',
+        campaign:p.get('utm_campaign')||last.campaign||'',
+        term:p.get('utm_term')||last.term||'',
+        content:p.get('utm_content')||last.content||'',
+        gclid:p.get('gclid')||last.gclid||'',
+        fbclid:p.get('fbclid')||last.fbclid||'',
+        referrer:document.referrer||last.referrer||'',
+        page:location.pathname
+      };
+      if(now.gclid){now.source='google';now.medium=now.medium||'cpc'}
+      if(!now.source&&/google\./i.test(now.referrer||'')){now.source='google';now.medium='organic'}
+      if(!first.session_id){
+        first=Object.assign({},now,{
+          session_id:(crypto.randomUUID?crypto.randomUUID():String(Date.now())),
+          lead_token:newToken(),
+          first_at:new Date().toISOString()
+        });
+      }
+      var state={first:first,last:now,session_id:first.session_id,lead_token:first.lead_token};
+      try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}
+      return state;
+    }
+    function send(eventType,extra){
+      var s=load();
+      var payload=Object.assign({
+        event_type:eventType,
+        event_id:(crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random()),
+        at:new Date().toISOString(),
+        session_id:s.session_id,
+        lead_token:s.lead_token,
+        page:location.pathname,
+        referrer:s.last.referrer||s.first.referrer||'',
+        source:s.last.source||s.first.source||'',
+        medium:s.last.medium||s.first.medium||'',
+        campaign:s.last.campaign||s.first.campaign||'',
+        term:s.last.term||s.first.term||'',
+        content:s.last.content||s.first.content||'',
+        gclid:s.first.gclid||s.last.gclid||'',
+        fbclid:s.first.fbclid||s.last.fbclid||'',
+        user_agent:navigator.userAgent
+      },extra||{});
+      try{
+        navigator.sendBeacon('/track',new Blob([JSON.stringify(payload)],{type:'application/json'}));
+      }catch(e){
+        fetch('/track',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload),keepalive:true}).catch(function(){});
+      }
+      return s;
+    }
+    var s=load();
+    send('page_view');
+
+    document.querySelectorAll('a[href*="wa.me/"]').forEach(function(link){
+      var u;
+      try{u=new URL(link.href)}catch(e){return}
+      var message=u.searchParams.get('text')||'Olá! Quero agendar uma avaliação.';
+      if(!/Código:/i.test(message)){
+        u.searchParams.set('text',message+' Código: '+s.lead_token);
+        link.href=u.toString();
+      }
+      link.addEventListener('click',function(){
+        send('whatsapp_click',{link_location:link.className||'whatsapp_link'});
+      });
+    });
+
+    document.querySelectorAll('a[href*="maps.app.goo.gl"],a[href*="google.com/maps"]').forEach(function(link){
+      link.addEventListener('click',function(){send('maps_click',{link_location:'maps'})});
+    });
+
+    document.querySelectorAll('a[href^="tel:"]').forEach(function(link){
+      link.addEventListener('click',function(){send('phone_click',{link_location:'phone'})});
+    });
+  })();
+  </script>
 </body></html>
