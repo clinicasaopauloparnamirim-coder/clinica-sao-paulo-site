@@ -27,6 +27,9 @@ type TowerEnv = {
   TYPESAFE_API_KEY?: string;
   LAYA_HTTP_URL?: string;
   JUDGMENT_REQUIRED?: string;
+  NVIDIA_API_KEY?: string;
+  NVIDIA_BASE_URL?: string;
+  NVIDIA_MODEL?: string;
 };
 
 const SERVER_INFO = {
@@ -120,6 +123,11 @@ const TOOLS = [
     description: "Performance Search Console (queries, paginas, dispositivos).",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
   },
+  {
+    name: "nvidia_test",
+    description: "Teste ponta a ponta de inferencia NVIDIA NIM usando a chave privada do Worker. Nao retorna secrets.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
 ];
 
 function jsonRpcResult(id: unknown, result: unknown) {
@@ -154,6 +162,11 @@ async function callTool(env: TowerEnv, name: string, args: Record<string, unknow
         auth_configured: Boolean(env.MCP_AUTH_TOKEN),
         google_oauth_configured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
         customer_id: (env.GOOGLE_ADS_CUSTOMER_ID || "4603647788").replace(/-/g, ""),
+        nvidia: {
+          configured: Boolean(env.NVIDIA_API_KEY),
+          base_url: env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1",
+          model: env.NVIDIA_MODEL || "nvidia/nemotron-3-nano-30b-a3b",
+        },
         judgment: {
           laya_configured: Boolean(env.LAYA_HTTP_URL),
           jev_configured: Boolean(env.TYPESAFE_API_KEY),
@@ -227,6 +240,63 @@ async function callTool(env: TowerEnv, name: string, args: Record<string, unknow
       return responseToJson(await googleGa4Audit(env));
     case "gsc_audit":
       return responseToJson(await googleGscAudit(env));
+    case "nvidia_test": {
+      const apiKey = env.NVIDIA_API_KEY;
+      const configuredBaseUrl = env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1";
+      const baseUrl = configuredBaseUrl.endsWith("/") ? configuredBaseUrl.slice(0, -1) : configuredBaseUrl;
+      const model = env.NVIDIA_MODEL || "nvidia/nemotron-3-nano-30b-a3b";
+      if (!apiKey) {
+        return { ok: false, provider: "nvidia-nim", configured: false, error: "NVIDIA_API_KEY not configured in Worker" };
+      }
+      const started = Date.now();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+      try {
+        const response = await fetch(baseUrl + "/chat/completions", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: "Bearer " + apiKey,
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "system", content: "You are a health check. Reply with exactly NIM_OK." },
+              { role: "user", content: "NIM health check" },
+            ],
+            temperature: 0,
+            max_tokens: 8,
+          }),
+          signal: controller.signal,
+        });
+        const raw = await response.text();
+        let data: any = null;
+        try { data = raw ? JSON.parse(raw) : null; } catch {}
+        const output = data?.choices?.[0]?.message?.content ?? "";
+        const responseCheck = /NIM_OK/i.test(String(output));
+        return {
+          ok: response.ok && responseCheck,
+          provider: "nvidia-nim",
+          configured: true,
+          model,
+          http_status: response.status,
+          latency_ms: Date.now() - started,
+          response_check: responseCheck,
+          error: response.ok ? undefined : "NVIDIA NIM returned HTTP " + response.status,
+        };
+      } catch (error) {
+        return {
+          ok: false,
+          provider: "nvidia-nim",
+          configured: true,
+          model,
+          latency_ms: Date.now() - started,
+          error: error instanceof Error ? error.message : "NVIDIA NIM request failed",
+        };
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
     default:
       throw new Error(`Tool desconhecida: ${name}`);
   }
