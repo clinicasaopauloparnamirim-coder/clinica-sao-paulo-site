@@ -1,119 +1,54 @@
-# NVIDIA Ecosystem Brain — Operating Protocol
+# Brain 09 — NVIDIA Ready-for-Use Protocol
 
-Brain: 09
-Status: ACTIVE-CANDIDATE
-Owner layer: Control Plane
-Access class: Research / Audit / Governance
+## Operating state
 
-## Operating rule
+Brain 09 is ready to receive NVIDIA candidates and route them through the Control Plane. "Ready-for-use" does not mean every NVIDIA repository is installed.
 
-Brain 09 investigates NVIDIA broadly and independently, but it does not own the production path.
+## P0 execution queue
 
-## Canonical flow
+1. SkillSpector — security gate.
+2. SkillEvaluator — efficacy gate.
+3. OpenShell — sandbox/runtime test.
+4. NeMo Relay — runtime/observability test.
+5. NeMo Agent Toolkit — orchestration test.
+6. ToolOrchestra — routing experiment.
 
-NVIDIA GitHub universe
-→ discovery
-→ candidate normalization
-→ forensic audit
-→ GAUNTLET LOOP
-→ architecture fit
-→ security/license gate
-→ integration test
-→ promotion decision
-→ registry / evidence
+## P1 queue
 
-## Candidate scoring
+NeMo Retriever, Context-Aware RAG, garak, SoL-Pi, Skill2Env, TensorRT-LLM, Nemotron.
 
-Score 0–10 for:
-- strategic fit
-- orchestration value
-- research value
-- engineering value
-- security value
-- observability value
-- integration quality
-- project activity
-- license compatibility
-- operational cost/risk
+## P2 queue
 
-Final status must explain both value and blockers.
+UniversalDeepResearch, KDA and specialized NVIDIA research projects.
 
-## Required evidence
+## Promotion contract
 
-At minimum:
-- official repository identity
-- current default branch / release state
-- recent activity
-- license
-- README / architecture evidence
-- dependency surface
-- test / CI evidence
-- security policy where available
-- integration interfaces
-- relationship to existing project candidates
+A repository can move from integration-test to approved only after:
+- identity is verified;
+- license is recorded;
+- dependencies are known;
+- security scan passes;
+- isolated runtime test succeeds;
+- overlap is documented;
+- target brain is explicit;
+- rollback path exists.
 
-## Promotion rules
+## No silent promotion
 
-APPROVE:
-Evidence is strong and no critical blocker exists.
+Brain 09 never silently installs or grants production access. Production promotion remains under Control Tower governance.
 
-INTEGRATION-TEST:
-Strong fit, but runtime/dependency/security or overlap needs a contained test.
+## First practical stack
 
-DEFER:
-Potential value but timing, maturity or cost is unfavorable.
+The intended first stack is:
 
-DUPLICATE:
-Existing component already provides the capability with equal or better fit.
+Brain 09
+-> SkillSpector
+-> SkillEvaluator
+-> OpenShell
+-> NeMo Relay
+-> selected agent/tool
+-> evidence
+-> Judge
+-> promotion
 
-REJECT:
-Poor fit, abandoned, unsafe, incompatible or unnecessary.
-
-## Installation discipline
-
-Brain 09 can recommend installation but must not silently install into production.
-Any sandboxed test must:
-- run outside the money-path,
-- use no clinical secrets,
-- preserve audit evidence,
-- be reversible.
-
-## Interaction with RED TEAM/JUDGE
-
-Brain 09 sends all candidate skills, MCP extensions and agent artifacts through the skill/security gate before promotion.
-
-Preferred sequence:
-SkillSpector
-→ SkillEvaluator
-→ runtime test
-→ Judge decision.
-
-## Interaction with Control Tower
-
-Brain 09 may read Control Plane architecture and registries.
-Brain 09 must not mutate Ads, analytics or production website state.
-
-## Interaction with 8 brains
-
-A candidate is assigned to an existing brain or shared infrastructure.
-No candidate can create Brain 10 merely because it is NVIDIA-specific.
-
-## Initial execution queue
-
-P0:
-OpenShell, NemoClaw, NeMo-Agent-Toolkit, NeMo-Relay, NVIDIA/skills, SkillSpector, SkillEvaluator.
-
-P1:
-NeMo-Retriever, context-aware-rag, garak, TensorRT-LLM, ToolOrchestra, SoL-Pi, Skill2Env, Nemotron.
-
-P2:
-UniversalDeepResearch, KDA, RAFT and other specialized projects.
-
-## Exit condition
-
-The audit is not considered complete until all material NVIDIA candidates discovered by search are either:
-- classified and recorded,
-- merged into an equivalent candidate,
-- deferred with reason,
-- rejected with reason,
-- or placed in a defined future queue.
+This keeps the NVIDIA ecosystem modular and prevents a second competing Control Tower.
