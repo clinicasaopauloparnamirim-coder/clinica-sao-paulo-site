@@ -133,6 +133,7 @@ export default {
         google_oauth_configured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
         nvidia_nim_configured: Boolean(env.NVIDIA_API_KEY),
         nvidia_base_url: env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1",
+        nvidia_model: env.NVIDIA_MODEL || "nvidia/nemotron-3-nano-30b-a3b",
       }), {
         status: 200,
         headers: { "content-type": "application/json; charset=UTF-8", "cache-control": "no-store" },
