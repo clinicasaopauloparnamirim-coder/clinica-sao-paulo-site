@@ -1,7 +1,7 @@
 export type ExternalAgentStatus = "integrated" | "requires-host-runtime" | "not-runtime-proven";
 
 export type ExternalAgentDefinition = {
-  id: "hermes" | "jev" | "laya";
+  id: "hermes" | "jev" | "laya" | "freellmapi";
   name: string;
   role: string;
   repository: string;
@@ -26,21 +26,31 @@ export const EXTERNAL_AGENTS: ExternalAgentDefinition[] = [
     id: "jev",
     name: "Jev",
     role: "System 1 de decisões tipadas, usado para julgamento bounded e roteamento.",
-    repository: "ourines/hermes-jev / bojansandhaus/jev-decisions-hermes",
-    integrationPath: "Hermes plugin -> Jev backend (TypeSafe/Cloudflare/OpenRouter) -> Control Tower decision gate",
+    repository: "browser-use/jev-ultrafast / TypeSafe Jev backend",
+    integrationPath: "TypeSafe System One -> Control Tower judgment gate; optional Jev Ultrafast host runtime",
     status: "requires-host-runtime",
-    controlTowerRole: "camada de decisão/verificação antes de ações e como apoio ao JUDGE",
-    runtimeRequirement: "Credencial/backend Jev configurado no host Hermes; nenhuma credencial será gravada no repositório.",
+    controlTowerRole: "camada de decisão/verificação antes de ações e parceiro do LLM no par JEV + GLM",
+    runtimeRequirement: "TYPESAFE_API_KEY para o backend de decisão; Jev Ultrafast exige host Python/uv quando usado localmente.",
   },
   {
     id: "laya",
     name: "Laya",
     role: "Modelo System 1 local de decisões tipadas, multilingual e sem geração de texto.",
-    repository: "he-jev/laya / pavlealeksic/laya-hermes",
-    integrationPath: "Hermes plugin -> Laya local/torch (ou backend compatível) -> Control Tower decision gate",
+    repository: "he-jev/laya",
+    integrationPath: "Laya HTTP /decide -> Control Tower judgment gate",
     status: "requires-host-runtime",
-    controlTowerRole: "fallback/local decision engine para reduzir dependência de APIs externas",
-    runtimeRequirement: "Host com Python e recursos para carregar o checkpoint Laya; opcionalmente laya-serve para expor /v1/systemone.",
+    controlTowerRole: "decision engine rápido e parceiro do LLM no par Laya + LLM",
+    runtimeRequirement: "LAYA_HTTP_URL apontando para um serviço Laya; checkpoint pode ser self-hosted.",
+  },
+  {
+    id: "freellmapi",
+    name: "FreeLLMAPI",
+    role: "Barramento OpenAI-compatible para modelos e fallback/routing de LLMs.",
+    repository: "tashfeenahmed/freellmapi",
+    integrationPath: "Control Tower -> /v1/chat/completions -> selected LLM",
+    status: "requires-host-runtime",
+    controlTowerRole: "infraestrutura de inferência; nunca recebe autoridade de execução",
+    runtimeRequirement: "FREELLMAPI_URL + FREELLMAPI_API_KEY; o servidor FreeLLMAPI precisa estar acessível ao Worker.",
   },
 ];
 
@@ -52,6 +62,10 @@ export function externalAgentSnapshot() {
       secretsInRepository: "blocked",
       externalRuntimeRequired: true,
       runtimeProof: "must-be-tested-on-host",
+      pairing: {
+        "jev-glm": "Jev decides; FreeLLMAPI-provided LLM analyzes",
+        "laya-llm": "Laya decides; FreeLLMAPI-provided LLM analyzes",
+      },
     },
   };
 }

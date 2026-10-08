@@ -3,6 +3,7 @@ import { generateText, stepCountIs } from "ai";
 import { createWorkersAI } from "workers-ai-provider";
 import { specialistSnapshot } from "./agent-registry";
 import { autonomousFunctionSnapshot } from "./autonomous-functions";
+import { pairingSnapshot, runAgentPair } from "./agent-pairing";
 
 type ControlEnv = Env & {
   AI: Ai;
@@ -10,6 +11,11 @@ type ControlEnv = Env & {
   NVIDIA_API_KEY?: string;
   NVIDIA_BASE_URL?: string;
   NVIDIA_MODEL?: string;
+  TYPESAFE_API_KEY?: string;
+  LAYA_HTTP_URL?: string;
+  FREELLMAPI_URL?: string;
+  FREELLMAPI_API_KEY?: string;
+  FREELLMAPI_MODEL?: string;
 };
 
 type NvResult = {
@@ -159,6 +165,9 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       "gauntlet-loop",
       "self-verification",
       "persistent-state",
+      "jev-glm-pair",
+      "laya-llm-pair",
+      "freellmapi-routing",
     ],
     browser_mcp: "disconnected",
     ai: "ready",
@@ -299,6 +308,23 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       });
     }
 
+    if (url.pathname.endsWith("/pairs/test") && request.method === "POST") {
+      let body: { pair?: "jev-glm" | "laya-llm"; state?: string } = {};
+      try { body = await request.json(); } catch {
+        return Response.json({ ok: false, error: "invalid_json" }, { status: 400 });
+      }
+      const pair = body.pair === "laya-llm" ? "laya-llm" : "jev-glm";
+      const state = typeof body.state === "string" ? body.state.trim() : "";
+      if (!state || state.length > 4000) {
+        return Response.json({ ok: false, error: "state_required_or_too_long", pairing: pairingSnapshot(this.env) }, { status: 400 });
+      }
+      const result = await runAgentPair(this.env, pair, state);
+      return Response.json({ ok: result.ok, ...result, pairing: pairingSnapshot(this.env) }, {
+        status: result.ok ? 200 : 503,
+        headers: { "cache-control": "no-store" },
+      });
+    }
+
     if (url.pathname.endsWith("/inspect") && request.method === "POST") {
       if (this.state.browser_mcp !== "connected") {
         return Response.json(
@@ -368,6 +394,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       agent: "ControlAgent",
       state: this.state,
       architecture: specialistSnapshot(),
+      pairings: pairingSnapshot(this.env),
       mcp: {
         servers: this.getMcpServers().servers,
         tool_count: this.getMcpServers().tools.length,
