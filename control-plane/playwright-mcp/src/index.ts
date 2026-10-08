@@ -135,6 +135,8 @@ export default {
         nvidia_nim_configured: Boolean(env.NVIDIA_API_KEY),
         nvidia_base_url: env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1",
         nvidia_model: env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b",
+        brain_count: specialistSnapshot().brainCount,
+        capability_count: specialistSnapshot().capabilityCount,
       }), {
         status: 200,
         headers: { "content-type": "application/json; charset=UTF-8", "cache-control": "no-store" },
@@ -200,6 +202,36 @@ ${authenticated ? `<p>Acesso autorizado</p>
     if (pathname === "/control/agents") {
       if (!authorized(request, env)) return unauthorized();
       return Response.json({ ok: true, ...specialistSnapshot() }, { headers: { "cache-control": "no-store" } });
+    }
+
+    if (pathname === "/control/architecture") {
+      if (!authorized(request, env)) return unauthorized();
+      const snapshot = specialistSnapshot();
+      const integrations = {
+        nvidia_nim: {
+          configured: Boolean(env.NVIDIA_API_KEY),
+          model: env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b",
+          base_url: env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1",
+          role: "primary-reasoning",
+        },
+        cloudflare_workers_ai: { configured: true, role: "fallback-reasoning" },
+        playwright_mcp: { configured: true, role: "browser-tools" },
+        google_stack: {
+          configured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+          role: "ads-gsc-ga4",
+        },
+        whatsapp_ledger: { configured: true, role: "lead-attribution-memory" },
+        external_marketing_bridge: {
+          role: "Composio",
+          toolkits: ["Semrush", "Ahrefs", "OpenSEO", "Meta Ads", "Instagram", "Google Ads", "GSC", "GA4"],
+        },
+      };
+      return Response.json({
+        ok: true,
+        ...snapshot,
+        integrations,
+        execution_policy: "read-first; write requires explicit confirmation for financial, secret, or destructive effects",
+      }, { headers: { "cache-control": "no-store" } });
     }
 
     if (pathname === "/google/ads/oauth/start") {
