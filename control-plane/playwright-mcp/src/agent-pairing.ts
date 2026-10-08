@@ -3,6 +3,7 @@ export type PairId = "jev-glm" | "laya-llm";
 export type PairEnv = {
   TYPESAFE_API_KEY?: string;
   LAYA_HTTP_URL?: string;
+  LAYA_API_KEY?: string;
   FREELLMAPI_URL?: string;
   FREELLMAPI_API_KEY?: string;
   FREELLMAPI_MODEL?: string;
@@ -80,15 +81,25 @@ async function jevDecision(env: PairEnv, state: string) {
   const raw = await res.text();
   if (!res.ok) throw new Error("JEV " + res.status + ": " + raw.slice(0, 300));
   const data = JSON.parse(raw) as any;
-  return String(data?.answers?.decision?.value || data?.decision || "confirm").toLowerCase();
+  return String(
+    data?.answers?.decision?.choice ??
+    data?.answers?.decision?.value ??
+    data?.decision?.choice ??
+    data?.decision?.value ??
+    data?.decision ??
+    "confirm",
+  ).toLowerCase();
 }
 
 async function layaDecision(env: PairEnv, state: string) {
   if (!env.LAYA_HTTP_URL) throw new Error("Laya HTTP endpoint not configured");
-  const res = await fetch(baseUrl(env.LAYA_HTTP_URL) + "/decide", {
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  if (env.LAYA_API_KEY) headers.authorization = "Bearer " + env.LAYA_API_KEY;
+  const res = await fetch(baseUrl(env.LAYA_HTTP_URL) + "/v1/systemone", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers,
     body: JSON.stringify({
+      model: "laya",
       state,
       questions: {
         decision: {
@@ -102,7 +113,14 @@ async function layaDecision(env: PairEnv, state: string) {
   const raw = await res.text();
   if (!res.ok) throw new Error("Laya " + res.status + ": " + raw.slice(0, 300));
   const data = JSON.parse(raw) as any;
-  return String(data?.answers?.decision?.value || data?.answers?.decision || data?.decision || "confirm").toLowerCase();
+  return String(
+    data?.answers?.decision?.choice ??
+    data?.answers?.decision?.value ??
+    data?.decision?.choice ??
+    data?.decision?.value ??
+    data?.decision ??
+    "confirm",
+  ).toLowerCase();
 }
 
 export async function runAgentPair(env: PairEnv, pair: PairId, state: string): Promise<PairResult> {
@@ -144,6 +162,7 @@ export function pairingSnapshot(env: PairEnv) {
     },
     laya_llm: {
       decision_engine_configured: Boolean(env.LAYA_HTTP_URL),
+      api_key_configured: Boolean(env.LAYA_API_KEY),
       llm_partner: "FreeLLMAPI",
     },
     policy: "decision engine remains authoritative; LLM is analysis partner, never an execution authority",
