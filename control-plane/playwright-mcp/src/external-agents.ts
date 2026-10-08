@@ -69,3 +69,5 @@ export function externalAgentSnapshot() {
     },
   };
 }
+
+// Runtime note: deployment must pass CI before being treated as live.
