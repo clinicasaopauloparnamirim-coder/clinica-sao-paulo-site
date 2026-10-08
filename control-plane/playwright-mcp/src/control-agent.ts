@@ -6,6 +6,9 @@ import { specialistSnapshot } from "./agent-registry";
 type ControlEnv = Env & {
   AI: Ai;
   MCP_OBJECT: DurableObjectNamespace<any>;
+  NVIDIA_API_KEY?: string;
+  NVIDIA_BASE_URL?: string;
+  NVIDIA_MODEL?: string;
 };
 
 export type ControlAgentState = {
@@ -28,6 +31,38 @@ const ALLOWED_NAVIGATION_HOSTS = new Set([
   "clinicasaopauloparnamirim.com.br",
   "www.clinicasaopauloparnamirim.com.br",
 ]);
+
+async function nvidiaChat(env: ControlEnv, system: string, prompt: string) {
+  const apiKey = env.NVIDIA_API_KEY;
+  if (!apiKey) return null;
+  const baseUrl = (env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1").replace(/\\/$/, "");
+  const model = env.NVIDIA_MODEL || "nvidia/nemotron-3-nano-30b-a3b";
+  const response = await fetch(baseUrl + "/chat/completions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: "Bearer " + apiKey,
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.2,
+      max_tokens: 2000,
+    }),
+  });
+  const raw = await response.text();
+  if (!response.ok) {
+    throw new Error("NVIDIA NIM request failed (" + response.status + "): " + raw.slice(0, 500));
+  }
+  const data = JSON.parse(raw) as { choices?: Array<{ message?: { content?: string } }> };
+  return {
+    model,
+    text: data.choices?.[0]?.message?.content || "",
+  };
+}
 
 function getReadOnlyTools(tools: Record<string, any>) {
   return Object.fromEntries(
@@ -127,22 +162,34 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
         return Response.json({ ok: false, error: "prompt_required_or_too_long" }, { status: 400 });
       }
       const mode = body.mode === "write" ? "write" : "read";
+      const orchestrationSystem =
+        "Você é o orquestrador do Control Tower da Clínica São Paulo. " +
+        "Selecione especialistas da arquitetura abaixo para atender a solicitação. " +
+        "Nunca permita ações financeiras, exposição de secrets ou ações destrutivas sem confirmação explícita. " +
+        "Se uma integração não estiver conectada, marque-a como blocker; não invente acesso. " +
+        "Responda em JSON válido com: specialists (array de IDs), mode, blockers (array), plan (array).\\n" +
+        JSON.stringify(specialistSnapshot());
+      const nvidia = await nvidiaChat(this.env, orchestrationSystem, "Solicitação: " + prompt + "\\nModo solicitado: " + mode);
+      if (nvidia) {
+        return Response.json({
+          ok: true,
+          agent: "ControlAgent",
+          provider: "nvidia-nim",
+          model: nvidia.model,
+          orchestration: nvidia.text.slice(0, 12000),
+        });
+      }
       const workersai = createWorkersAI({ binding: this.env.AI });
       const result = await generateText({
         model: workersai("@cf/zai-org/glm-4.7-flash"),
-        system:
-          "Você é o orquestrador do Control Tower da Clínica São Paulo. " +
-          "Selecione especialistas da arquitetura abaixo para atender a solicitação. " +
-          "Nunca permita ações financeiras, exposição de secrets ou ações destrutivas sem confirmação explícita. " +
-          "Se uma integração não estiver conectada, marque-a como blocker; não invente acesso. " +
-          "Responda em JSON válido com: specialists (array de IDs), mode, blockers (array), plan (array).\\n" +
-          JSON.stringify(specialistSnapshot()),
+        system: orchestrationSystem,
         prompt: "Solicitação: " + prompt + "\\nModo solicitado: " + mode,
         stopWhen: stepCountIs(3),
       });
       return Response.json({
         ok: true,
         agent: "ControlAgent",
+        provider: "cloudflare-workers-ai",
         model: "@cf/zai-org/glm-4.7-flash",
         orchestration: result.text.slice(0, 12000),
       });
