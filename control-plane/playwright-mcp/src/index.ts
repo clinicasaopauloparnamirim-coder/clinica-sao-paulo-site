@@ -166,17 +166,23 @@ export default {
         const raw = await response.text();
         let data: any = null;
         try { data = JSON.parse(raw); } catch {}
-        const output = String(data?.choices?.[0]?.message?.content || "");
-        const responseCheck = /NIM_OK/i.test(output);
+        const message = data?.choices?.[0]?.message || {};
+        const output = String(message?.content || "");
+        const reasoning = String(message?.reasoning_content || "");
+        const responseCheck = response.ok && (Boolean(output) || Boolean(reasoning));
         return Response.json({
-          ok: response.ok && responseCheck,
+          ok: responseCheck,
           provider: "nvidia-nim",
           configured: true,
           model,
           http_status: response.status,
           latency_ms: Date.now() - started,
-          response_check: responseCheck
-        }, { status: response.ok && responseCheck ? 200 : 502 });
+          response_check: responseCheck,
+          content_present: Boolean(output),
+          reasoning_present: Boolean(reasoning),
+          content_prefix: output.slice(0, 120),
+          reasoning_prefix: reasoning.slice(0, 120)
+        }, { status: responseCheck ? 200 : 502 });
       } catch (error) {
         return Response.json({
           ok: false,
