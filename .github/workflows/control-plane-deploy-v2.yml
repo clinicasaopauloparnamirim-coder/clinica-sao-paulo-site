@@ -40,6 +40,8 @@ jobs:
           body="$(curl -sS --retry 5 --retry-delay 2 --connect-timeout 10 --max-time 30 "https://clinica-sao-paulo-site.clinicasaopauloparnamirim.workers.dev/health")"
           echo "$body"
           echo "$body" | grep -q '"ok":true'
+          echo "$body" | grep -q '"brain_count":8'
+          echo "$body" | grep -q '"capability_count":21'
       - name: Verify public HTML has no dual Zaraz
         run: |
           set -euo pipefail
@@ -55,7 +57,7 @@ jobs:
         run: |
           set -euo pipefail
           base="https://clinica-sao-paulo-site.clinicasaopauloparnamirim.workers.dev"
-          for path in /mcp/tower /google/ads/oauth/start /google/oauth/start /google/ads/audit /google/ga4/audit /google/gsc/audit; do
+          for path in /mcp/tower /control/architecture /google/ads/oauth/start /google/oauth/start /google/ads/audit /google/ga4/audit /google/gsc/audit; do
             code="$(curl -sS -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 2 --connect-timeout 10 --max-time 30 "$base$path")"
             echo "$path -> HTTP $code"
             test "$code" = "401"
