@@ -26,6 +26,8 @@ type TowerEnv = {
   MCP_AUTH_TOKEN?: string;
   TYPESAFE_API_KEY?: string;
   LAYA_HTTP_URL?: string;
+  LAYA_API_KEY?: string;
+  CONTROL_TOWER?: string;
   JUDGMENT_REQUIRED?: string;
   NVIDIA_API_KEY?: string;
   NVIDIA_BASE_URL?: string;
@@ -168,7 +170,8 @@ async function callTool(env: TowerEnv, name: string, args: Record<string, unknow
           model: env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b",
         },
         judgment: {
-          laya_configured: Boolean(env.LAYA_HTTP_URL),
+          laya_configured: Boolean(env.LAYA_API_KEY || env.CONTROL_TOWER),
+          laya_http_url: env.LAYA_HTTP_URL || "https://api.laya-ai.com",
           jev_configured: Boolean(env.TYPESAFE_API_KEY),
           required: String(env.JUDGMENT_REQUIRED || "").toLowerCase() === "true",
         },

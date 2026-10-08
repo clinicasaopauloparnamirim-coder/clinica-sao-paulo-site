@@ -26,6 +26,8 @@ interface WhatsAppEnv {
   NVIDIA_MODEL?: string;
   TYPESAFE_API_KEY?: string;
   LAYA_HTTP_URL?: string;
+  LAYA_API_KEY?: string;
+  CONTROL_TOWER?: string;
   FREELLMAPI_URL?: string;
   FREELLMAPI_API_KEY?: string;
   FREELLMAPI_MODEL?: string;
@@ -142,6 +144,8 @@ export default {
         nvidia_nim_configured: Boolean(env.NVIDIA_API_KEY),
         nvidia_base_url: env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1",
         nvidia_model: env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b",
+        laya_configured: Boolean(env.LAYA_API_KEY || env.CONTROL_TOWER),
+        laya_http_url: env.LAYA_HTTP_URL || "https://api.laya-ai.com",
         brain_count: specialistSnapshot().brainCount,
         capability_count: specialistSnapshot().capabilityCount,
         autonomous_function_count: autonomousFunctionSnapshot().count,

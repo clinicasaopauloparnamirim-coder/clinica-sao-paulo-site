@@ -24,8 +24,20 @@ export type JudgmentResult = {
 type JudgmentEnv = {
   TYPESAFE_API_KEY?: string;
   LAYA_HTTP_URL?: string;
+  LAYA_API_KEY?: string;
+  CONTROL_TOWER?: string;
   JUDGMENT_REQUIRED?: string;
 };
+
+const DEFAULT_LAYA_HTTP_URL = "https://api.laya-ai.com";
+
+function layaBaseUrl(env: JudgmentEnv) {
+  return (env.LAYA_HTTP_URL || DEFAULT_LAYA_HTTP_URL).replace(/\/$/, "");
+}
+
+function layaApiKey(env: JudgmentEnv) {
+  return env.LAYA_API_KEY || env.CONTROL_TOWER || "";
+}
 
 const ALTA_INTENCAO = "24289443969";
 
@@ -112,27 +124,43 @@ async function callJev(env: JudgmentEnv, state: string): Promise<JudgmentResult 
 }
 
 async function callLaya(env: JudgmentEnv, state: string): Promise<JudgmentResult | null> {
-  if (!env.LAYA_HTTP_URL) return null;
+  const apiKey = layaApiKey(env);
+  if (!apiKey) return null;
   try {
-    const res = await fetch(env.LAYA_HTTP_URL.replace(/\/$/, "") + "/decide", {
+    const headers: Record<string, string> = { "content-type": "application/json" };
+    headers.authorization = "Bearer " + apiKey;
+    const res = await fetch(layaBaseUrl(env) + "/v1/systemone", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers,
       body: JSON.stringify({
+        model: "laya",
         state,
         questions: {
           decision: {
             type: "choice",
-            criteria: { allow: "safe", confirm: "human", block: "deny" },
+            instructions: "Gate for Google Ads Control Tower mutate",
+            criteria: {
+              allow: "safe",
+              confirm: "human",
+              block: "deny",
+            },
           },
         },
       }),
     });
     if (!res.ok) return null;
     const data = (await res.json()) as any;
-    const choice = String(data?.decision || data?.answers?.decision || "confirm").toLowerCase();
+    const choice = String(
+      data?.answers?.decision?.choice ??
+      data?.answers?.decision?.value ??
+      data?.decision?.choice ??
+      data?.decision?.value ??
+      data?.decision ??
+      "confirm",
+    ).toLowerCase();
     const decision: GateDecision =
       choice === "allow" || choice === "block" || choice === "confirm" ? choice : "confirm";
-    return { decision, provider: "laya", reasons: ["laya http response"], scores: data };
+    return { decision, provider: "laya", reasons: ["laya /v1/systemone response"], scores: data };
   } catch {
     return null;
   }
