@@ -4,6 +4,7 @@ This directory tracks agent roles, capabilities, permissions and verification re
 
 ## Current candidates
 
+- Brain 09 — NVIDIA Ecosystem Intelligence — dedicated NVIDIA discovery, forensic audit, security/license review and controlled promotion layer.
 - Hermes Agent — candidate autonomous execution layer.
 - Composio — candidate integration/auth/tool layer.
 
