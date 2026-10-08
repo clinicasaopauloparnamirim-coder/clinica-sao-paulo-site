@@ -4,6 +4,8 @@ import { createMcpAgent } from "@cloudflare/playwright-mcp";
 import { ControlAgent } from "./control-agent";
 import { GoogleOAuthStore, googleGa4Audit, googleGa4Cleanup, googleOAuthCallback, googleOAuthStart } from "./google-ga4";
 import { googleGscAudit } from "./google-gsc";
+import { trackAttributionEvent, getAttributionReport, investigateAttribution, setContactStatus } from "./attribution";
+import { googleBusinessAudit } from "./google-business-profile";
 import { handleTowerMcp } from "./mcp-tower";
 import { specialistSnapshot } from "./agent-registry";
 import { autonomousFunctionSnapshot } from "./autonomous-functions";
@@ -31,10 +33,157 @@ interface WhatsAppEnv {
   FREELLMAPI_URL?: string;
   FREELLMAPI_API_KEY?: string;
   FREELLMAPI_MODEL?: string;
+  INVESTIGATOR_MODEL?: string;
 }
 
 export class WhatsAppLedger extends DurableObject {
   async fetch(request: Request) {
+    const url = new URL(request.url);
+    const dayOf = (iso: string) => new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Fortaleza", year: "numeric", month: "2-digit", day: "2-digit"
+    }).format(new Date(iso));
+    const inRange = (iso: string, start?: string | null, end?: string | null) => {
+      const day = dayOf(iso);
+      return (!start || day >= start) && (!end || day <= end);
+    };
+
+    if (request.method === "POST" && url.pathname === "/track") {
+      const payload: any = await request.json();
+      if (payload?.kind !== "attribution_event" || !payload?.event) return new Response("Bad Request", { status: 400 });
+      const event = payload.event;
+      await this.ctx.storage.put("touch:" + Date.now() + ":" + (event.event_id || crypto.randomUUID()), event);
+      return Response.json({ ok: true });
+    }
+
+    if (request.method === "POST" && url.pathname === "/contact") {
+      const payload: any = await request.json();
+      const phone = typeof payload?.phone === "string" ? payload.phone.replace(/\D/g, "") : "";
+      if (!phone || phone.length < 8) return new Response("Bad Request", { status: 400 });
+      await this.ctx.storage.put("contact:" + phone, {
+        phone, status: payload?.status || "unknown", note: payload?.note || null,
+        updated_at: payload?.updated_at || new Date().toISOString()
+      });
+      return Response.json({ ok: true });
+    }
+
+    if (request.method === "GET" && url.pathname === "/report") {
+      const start = url.searchParams.get("start");
+      const end = url.searchParams.get("end");
+      const touchValues = await this.ctx.storage.list<any>({ prefix: "touch:" });
+      const messageValues = await this.ctx.storage.list<any>({ prefix: "message:" });
+      const contactValues = await this.ctx.storage.list<any>({ prefix: "contact:" });
+
+      const touches = [...touchValues.values()].filter((x: any) => x?.at && inRange(x.at, start, end));
+      const messages = [...messageValues.values()].filter((x: any) => x?.received_at && inRange(x.received_at, start, end));
+      const statusByPhone = new Map<string, any>();
+      for (const value of contactValues.values()) if (value?.phone) statusByPhone.set(value.phone, value);
+
+      const tokenTouch = new Map<string, any>();
+      for (const touch of touches) {
+        if (touch?.lead_token && !tokenTouch.has(String(touch.lead_token))) tokenTouch.set(String(touch.lead_token), touch);
+      }
+
+      const tokenFromText = (value: unknown) => {
+        const m = typeof value === "string" ? value.match(/(?:Código|Codigo):\s*([A-Z0-9-]{4,40})/i) : null;
+        return m ? m[1].toUpperCase() : null;
+      };
+
+      const contactMap = new Map<string, any>();
+      for (const msg of messages) {
+        const phone = typeof msg?.from === "string" ? msg.from.replace(/\D/g, "") : "";
+        if (!phone) continue;
+        let item = contactMap.get(phone);
+        if (!item) {
+          item = { phone, first_contact_at: msg.received_at, last_contact_at: msg.received_at, message_count: 0, lead_token: null, touch: null };
+          contactMap.set(phone, item);
+        }
+        item.message_count++;
+        if (msg.received_at < item.first_contact_at) item.first_contact_at = msg.received_at;
+        if (msg.received_at > item.last_contact_at) item.last_contact_at = msg.received_at;
+        const token = msg?.lead_token || tokenFromText(msg?.text);
+        if (token && tokenTouch.has(String(token).toUpperCase()) && !item.touch) {
+          item.lead_token = String(token).toUpperCase();
+          item.touch = tokenTouch.get(item.lead_token);
+        }
+      }
+
+      const allMessageList = [...messageValues.values()];
+      const allCountByPhone = new Map<string, number>();
+      for (const msg of allMessageList) {
+        const phone = typeof msg?.from === "string" ? msg.from.replace(/\D/g, "") : "";
+        if (phone) allCountByPhone.set(phone, (allCountByPhone.get(phone) || 0) + 1);
+      }
+
+      const byDay = new Map<string, any>();
+      const getDay = (day: string) => {
+        if (!byDay.has(day)) byDay.set(day, {
+          date: day, page_views: 0, whatsapp_clicks: 0, maps_clicks: 0, phone_clicks: 0,
+          unique_sessions: new Set<string>(), unique_lead_tokens: new Set<string>(),
+          whatsapp_contacts: new Set<string>(), whatsapp_messages: 0
+        });
+        return byDay.get(day);
+      };
+      for (const touch of touches) {
+        const d = getDay(dayOf(touch.at));
+        if (touch.event_type === "page_view") d.page_views++;
+        if (touch.event_type === "whatsapp_click") d.whatsapp_clicks++;
+        if (touch.event_type === "maps_click") d.maps_clicks++;
+        if (touch.event_type === "phone_click") d.phone_clicks++;
+        if (touch.session_id) d.unique_sessions.add(String(touch.session_id));
+        if (touch.lead_token) d.unique_lead_tokens.add(String(touch.lead_token));
+      }
+      for (const msg of messages) {
+        const d = getDay(dayOf(msg.received_at));
+        d.whatsapp_messages++;
+        if (msg.from) d.whatsapp_contacts.add(String(msg.from).replace(/\D/g, ""));
+      }
+
+      const contacts = [...contactMap.values()].map((item: any) => {
+        const touch = item.touch;
+        return {
+          phone: item.phone,
+          first_contact_at: item.first_contact_at,
+          last_contact_at: item.last_contact_at,
+          message_count_in_range: item.message_count,
+          message_count_all_time: allCountByPhone.get(item.phone) || item.message_count,
+          returning_whatsapp_contact: (allCountByPhone.get(item.phone) || 0) > 1,
+          patient_status: statusByPhone.get(item.phone)?.status || "unknown",
+          source: touch?.source || null,
+          medium: touch?.medium || null,
+          campaign: touch?.campaign || null,
+          term: touch?.term || null,
+          content: touch?.content || null,
+          gclid: touch?.gclid || null,
+          fbclid: touch?.fbclid || null,
+          landing_page: touch?.page || null,
+          lead_token: item.lead_token,
+          referrer: touch?.referrer || null
+        };
+      }).sort((a,b) => String(a.first_contact_at).localeCompare(String(b.first_contact_at)));
+
+      return Response.json({
+        ok: true,
+        range: { start, end },
+        totals: {
+          tracked_events: touches.length,
+          page_views: touches.filter((x:any) => x.event_type === "page_view").length,
+          whatsapp_clicks: touches.filter((x:any) => x.event_type === "whatsapp_click").length,
+          maps_clicks: touches.filter((x:any) => x.event_type === "maps_click").length,
+          phone_clicks: touches.filter((x:any) => x.event_type === "phone_click").length,
+          whatsapp_messages: messages.length,
+          unique_whatsapp_contacts: new Set(messages.map((x:any) => String(x?.from || "").replace(/\D/g, "")).filter(Boolean)).size,
+          attributed_whatsapp_contacts: contacts.filter((x:any) => Boolean(x.lead_token || x.gclid || x.source)).length
+        },
+        by_day: [...byDay.values()].map((d:any) => ({
+          date:d.date, page_views:d.page_views, whatsapp_clicks:d.whatsapp_clicks,
+          maps_clicks:d.maps_clicks, phone_clicks:d.phone_clicks,
+          unique_sessions:d.unique_sessions.size, unique_lead_tokens:d.unique_lead_tokens.size,
+          whatsapp_contacts:d.whatsapp_contacts.size, whatsapp_messages:d.whatsapp_messages
+        })).sort((a,b)=>a.date.localeCompare(b.date)),
+        contacts
+      }, { headers: { "cache-control": "no-store" } });
+    }
+
     if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
     const payload: any = await request.json();
     const receivedAt = new Date().toISOString();
@@ -42,14 +191,14 @@ export class WhatsAppLedger extends DurableObject {
       ? payload.entry.flatMap((entry: any) =>
           Array.isArray(entry?.changes)
             ? entry.changes.flatMap((change: any) =>
-                Array.isArray(change?.value?.messages) ? change.value.messages : [],
-              )
-            : [],
-        )
-      : [];
+                Array.isArray(change?.value?.messages) ? change.value.messages : []
+              ) : []
+        ) : [];
+
     for (const message of messages) {
       const referral = message?.referral ?? message?.context?.referral ?? null;
-      const record = {
+      const leadToken = String(message?.text?.body || "").match(/(?:Código|Codigo):\s*([A-Z0-9-]{4,40})/i)?.[1] || null;
+      await this.ctx.storage.put("message:" + (message?.id ?? crypto.randomUUID()), {
         received_at: receivedAt,
         message_id: message?.id ?? null,
         from: message?.from ?? null,
@@ -60,24 +209,13 @@ export class WhatsAppLedger extends DurableObject {
         source_url: referral?.source_url ?? referral?.sourceUrl ?? null,
         headline: referral?.headline ?? null,
         ctwa_clid: referral?.ctwa_clid ?? referral?.ctwaClid ?? null,
-        raw: message,
-      };
-      await this.ctx.storage.put(`message:${message?.id ?? crypto.randomUUID()}`, record);
+        lead_token: leadToken,
+        raw: message
+      });
     }
     const id = crypto.randomUUID();
-    await this.ctx.storage.put(`event:${Date.now()}:${id}`, {
-      received_at: receivedAt,
-      message_count: messages.length,
-      raw: payload,
-    });
-    return Response.json({
-      ok: true,
-      id,
-      message_count: messages.length,
-      attributed_messages: messages.filter((message: any) =>
-        Boolean(message?.referral ?? message?.context?.referral),
-      ).length,
-    });
+    await this.ctx.storage.put("event:" + Date.now() + ":" + id, { received_at: receivedAt, message_count: messages.length, raw: payload });
+    return Response.json({ ok:true, id, message_count:messages.length, attributed_messages:messages.filter((m:any)=>Boolean(m?.referral ?? m?.context?.referral)).length });
   }
 }
 
@@ -146,6 +284,9 @@ export default {
         nvidia_model: env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b",
         laya_configured: Boolean(env.LAYA_API_KEY || env.CONTROL_TOWER),
         laya_http_url: env.LAYA_HTTP_URL || "https://api.laya-ai.com",
+        investigator_model: env.INVESTIGATOR_MODEL || "z-ai/glm-5.3",
+        whatsapp_ledger: true,
+        google_business_profile: true,
         brain_count: specialistSnapshot().brainCount,
         capability_count: specialistSnapshot().capabilityCount,
         autonomous_function_count: autonomousFunctionSnapshot().count,
@@ -324,6 +465,56 @@ ${authenticated ? `<p>Acesso autorizado</p>
       if (!authorized(request, env)) return unauthorized();
       try { return await googleGscAudit(env); }
       catch (error) { return new Response(error instanceof Error ? error.message : "Search Console audit failed", { status: 502 }); }
+    }
+
+    if (pathname === "/track" && request.method === "POST") {
+      return trackAttributionEvent(env, request);
+    }
+
+    if (pathname === "/attribution/report" && request.method === "GET") {
+      if (!authorized(request, env)) return unauthorized();
+      const url = new URL(request.url);
+      try {
+        return Response.json(await getAttributionReport(env, url.searchParams.get("start") || undefined, url.searchParams.get("end") || undefined), { headers: { "cache-control": "no-store" } });
+      } catch (error) {
+        return new Response(error instanceof Error ? error.message : "Attribution report failed", { status: 502 });
+      }
+    }
+
+    if (pathname === "/attribution/investigate" && request.method === "GET") {
+      if (!authorized(request, env)) return unauthorized();
+      const url = new URL(request.url);
+      try {
+        return Response.json(await investigateAttribution(env, url.searchParams.get("start") || undefined, url.searchParams.get("end") || undefined), { headers: { "cache-control": "no-store" } });
+      } catch (error) {
+        return new Response(error instanceof Error ? error.message : "Attribution investigation failed", { status: 502 });
+      }
+    }
+
+    if (pathname === "/attribution/contact" && request.method === "POST") {
+      if (!authorized(request, env)) return unauthorized();
+      try {
+        const body = await request.json() as { phone?: string; status?: string; note?: string };
+        if (!body.phone || !body.status) return new Response("phone and status are required", { status: 400 });
+        return await setContactStatus(env, body.phone, body.status, body.note);
+      } catch (error) {
+        return new Response(error instanceof Error ? error.message : "Contact status update failed", { status: 400 });
+      }
+    }
+
+    if (pathname === "/google/business/audit" && request.method === "GET") {
+      if (!authorized(request, env)) return unauthorized();
+      try {
+        const days = Math.max(1, Math.min(365, Number(new URL(request.url).searchParams.get("days") || "28")));
+        return Response.json(await googleBusinessAudit(env, days), { headers: { "cache-control": "no-store" } });
+      } catch (error) {
+        return new Response(error instanceof Error ? error.message : "Google Business Profile audit failed", { status: 502 });
+      }
+    }
+
+    if (pathname === "/google/business/oauth/start") {
+      if (!authorized(request, env)) return unauthorized();
+      return googleOAuthStart(request, env);
     }
 
     if (pathname === "/webhooks/whatsapp") {
