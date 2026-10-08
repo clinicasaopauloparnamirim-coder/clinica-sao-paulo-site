@@ -40,6 +40,15 @@ jobs:
           body="$(curl -sS --retry 5 --retry-delay 2 --connect-timeout 10 --max-time 30 "https://clinica-sao-paulo-site.clinicasaopauloparnamirim.workers.dev/health")"
           echo "$body"
           echo "$body" | grep -q '"ok":true'
+      - name: NVIDIA NIM end-to-end smoke test
+        run: |
+          set -euo pipefail
+          body="$(curl -sS --retry 5 --retry-delay 2 --connect-timeout 10 --max-time 60 "https://clinica-sao-paulo-site.clinicasaopauloparnamirim.workers.dev/__nvidia_probe_20261008")"
+          echo "$body"
+          echo "$body" | grep -q '"ok":true'
+          echo "$body" | grep -q '"provider":"nvidia-nim"'
+          echo "NVIDIA NIM end-to-end test PASSED"
+
       - name: Verify public HTML has no dual Zaraz
         run: |
           set -euo pipefail
