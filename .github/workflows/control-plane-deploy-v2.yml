@@ -42,6 +42,7 @@ jobs:
           echo "$body" | grep -q '"ok":true'
           echo "$body" | grep -q '"brain_count":8'
           echo "$body" | grep -q '"capability_count":21'
+          echo "$body" | grep -q '"autonomous_function_count":20'
       - name: Verify public HTML has no dual Zaraz
         run: |
           set -euo pipefail
