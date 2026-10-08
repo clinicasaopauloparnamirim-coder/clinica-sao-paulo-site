@@ -1,3 +1,4 @@
+import { autonomousFunctionSnapshot, AUTONOMOUS_FUNCTIONS } from "./autonomous-functions";
 export type SpecialistId =
   | "orchestrator"
   | "google-ads"
@@ -167,7 +168,6 @@ export const BRAINS: BrainDefinition[] = [
       "Google Ads",
       "Meta Ads",
       "Instagram",
-      "Canva",
       "Google Business Profile",
       "GA4",
       "GSC",
@@ -230,6 +230,7 @@ export function specialistSnapshot() {
     capabilityCount: CAPABILITIES.length,
     brains: BRAINS,
     capabilities: CAPABILITIES,
+    autonomousFunctions: AUTONOMOUS_FUNCTIONS,
     policy: {
       financialActions: "blocked",
       secretsInChat: "blocked",
@@ -237,5 +238,6 @@ export function specialistSnapshot() {
       preferredCost: "free-tier-first",
     },
     specialists: SPECIALISTS,
+    autonomousFunctions: autonomousFunctionSnapshot(),
   };
 }
