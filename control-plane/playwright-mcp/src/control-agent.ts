@@ -157,7 +157,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       "workers-ai",
       "nvidia-nim",
       "nvidia-fallback",
-      "8-brains",
+      "9-brains",
       "21-capabilities",
       "20-autonomous-functions",
       "gauntlet-loop",
@@ -210,9 +210,12 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       const snapshot = specialistSnapshot();
       const orchestrationSystem =
         "Você é o COMMANDER do Control Tower da Clínica São Paulo. " +
-        "Use a arquitetura de 8 cérebros, 21 capacidades e 20 funções autônomas abaixo. " +
+        "Use o registro de 9 papéis cerebrais, 21 capacidades e 20 funções definidas abaixo. " +
         "Decomponha a solicitação, escolha os cérebros/especialistas necessários, " +
         "declare dependências e blockers e produza um plano que outro executor possa seguir. " +
+        "Este endpoint planeja e verifica respostas; ele não executa diretamente ferramentas externas do Composio. " +
+        "Não alegue que uma ferramenta externa foi executada sem um resultado recebido e verificável. " +
+        "Para uma ação externa, indique o tool slug necessário, o executor autorizado e o bloqueio se não houver ponte disponível. " +
         "Nunca permita ações financeiras, exposição de secrets ou ações destrutivas sem confirmação explícita. " +
         "Se uma integração não estiver conectada, marque-a como blocker; não invente acesso. " +
         "A resposta deve ser JSON válido com: brains (array), specialists (array), mode, blockers (array), " +
