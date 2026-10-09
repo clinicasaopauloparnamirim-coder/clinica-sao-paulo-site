@@ -13,7 +13,7 @@ import {
   googleAdsBatchMutate,
   containsCampaignId,
 } from "./google-ads";
-import { googleGa4Audit } from "./google-ga4";
+import { googleGa4Audit, googleOAuthStart } from "./google-ga4";
 import { googleGscAudit } from "./google-gsc";
 import { runAdsMutateJudgment } from "./judgment-gate";
 
@@ -30,6 +30,7 @@ type TowerEnv = {
   LAYA_HTTP_URL?: string;
   LAYA_API_KEY?: string;
   CONTROL_TOWER?: string;
+  control_tower?: string;
   JUDGMENT_REQUIRED?: string;
   NVIDIA_API_KEY?: string;
   NVIDIA_BASE_URL?: string;
@@ -123,6 +124,11 @@ const TOOLS = [
     },
   },
   {
+    name: "google_oauth_start",
+    description: "Gera link OAuth para autorizar GA4, Search Console e Business Profile no Control Tower. Exige consentimento humano; não muda dados.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
     name: "ga4_audit",
     description: "Lista key events da property GA4 da clinica.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
@@ -148,6 +154,19 @@ const TOOLS = [
           items: { type: "string", enum: ["instagram_stories", "instagram_reels", "instagram_feed", "google_search", "whatsapp", "landing_page"] },
         },
         approvedOffer: { type: "string", maxLength: 300, description: "Only a price/promotion actually approved by the clinic; omit if none." },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "agent_pair_test",
+    description: "Testa um par decisor real (Jev+Nemotron ou Laya+Nemotron). Use apenas estado sintético, sem PII. Não executa ações de produção.",
+    inputSchema: {
+      type: "object",
+      required: ["pair", "state"],
+      properties: {
+        pair: { type: "string", enum: ["jev-nemotron", "laya-llm"] },
+        state: { type: "string", minLength: 1, maxLength: 4000, description: "Somente estado de teste não sensível." },
       },
       additionalProperties: false,
     },
@@ -197,7 +216,7 @@ async function callTool(request: Request, env: TowerEnv, name: string, args: Rec
           model: env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b",
         },
         judgment: {
-          laya_configured: Boolean(env.LAYA_API_KEY || env.CONTROL_TOWER),
+          laya_configured: Boolean(env.LAYA_API_KEY || env.control_tower || env.CONTROL_TOWER),
           laya_http_url: env.LAYA_HTTP_URL || "https://api.laya-ai.com",
           jev_configured: Boolean(env.TYPESAFE_API_KEY),
           required: String(env.JUDGMENT_REQUIRED || "").toLowerCase() === "true",
@@ -303,6 +322,22 @@ async function callTool(request: Request, env: TowerEnv, name: string, args: Rec
       }
       return await googleAdsBatchMutate(env, operations, validateOnly, confirm);
     }
+    case "google_oauth_start": {
+      const startUrl = new URL("/google/oauth/start", request.url);
+      const response = await googleOAuthStart(new Request(startUrl.toString(), { method: "GET" }), env);
+      const authorizationUrl = response.headers.get("location");
+      if (response.status !== 302 || !authorizationUrl) {
+        return { ok: false, status: response.status, error: (await response.text()).slice(0, 300) };
+      }
+      return {
+        ok: true,
+        authorization_url: authorizationUrl,
+        redirect_uri: new URL("/google/oauth/callback", request.url).toString(),
+        state_ttl_minutes: 10,
+        scope: "Analytics readonly; Search Console readonly; Business Profile manage",
+        note: "Open authorization_url, approve Google access, then rerun ga4_audit and gsc_audit. The link is short-lived.",
+      };
+    }
     case "ga4_audit":
       return responseToJson(await googleGa4Audit(env));
     case "gsc_audit":
@@ -315,6 +350,18 @@ async function callTool(request: Request, env: TowerEnv, name: string, args: Rec
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(args),
+      });
+      return responseToJson(response);
+    }
+    case "agent_pair_test": {
+      const pair = args.pair === "laya-llm" ? "laya-llm" : "jev-nemotron";
+      const state = typeof args.state === "string" ? args.state.trim() : "";
+      if (!state || state.length > 4000) throw new Error("state is required (max 4000 characters)");
+      const agent = env.CONTROL_AGENT.get(env.CONTROL_AGENT.idFromName("agent-pair-test"));
+      const response = await agent.fetch("https://control-agent/pairs/test", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ pair, state }),
       });
       return responseToJson(response);
     }
