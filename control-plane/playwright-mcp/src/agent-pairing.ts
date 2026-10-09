@@ -92,10 +92,10 @@ async function jevDecision(env: PairEnv, state: string) {
 }
 
 async function layaDecision(env: PairEnv, state: string) {
-  if (!env.LAYA_HTTP_URL) throw new Error("Laya HTTP endpoint not configured");
+  const endpoint = baseUrl(env.LAYA_HTTP_URL || "https://api.laya.studio");
   const headers: Record<string, string> = { "content-type": "application/json" };
   if (env.LAYA_API_KEY) headers.authorization = "Bearer " + env.LAYA_API_KEY;
-  const res = await fetch(baseUrl(env.LAYA_HTTP_URL) + "/v1/systemone", {
+  const res = await fetch(endpoint + "/v1/systemone", {
     method: "POST",
     headers,
     body: JSON.stringify({
@@ -165,7 +165,8 @@ export function pairingSnapshot(env: PairEnv) {
       analysis_partner: "NVIDIA NIM / Nemotron",
     },
     laya_llm: {
-      decision_engine_configured: Boolean(env.LAYA_HTTP_URL),
+      decision_engine_configured: true,
+      endpoint: env.LAYA_HTTP_URL || "https://api.laya.studio",
       api_key_configured: Boolean(env.LAYA_API_KEY),
       analysis_partner: "NVIDIA NIM / Nemotron",
     },
