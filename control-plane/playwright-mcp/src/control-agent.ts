@@ -26,7 +26,7 @@ export type ControlAgentState = {
   version: 5;
   capabilities: string[];
   browser_mcp: "connected" | "disconnected";
-  ai: "ready" | "error";
+  ai: "ready" | "error" | "unverified";
   last_orchestration?: {
     at: string;
     provider: string;
@@ -158,6 +158,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       "nvidia-nim",
       "nvidia-fallback",
       "9-brains",
+      "marketing-growth-draft-generation",
       "21-capabilities",
       "20-autonomous-functions",
       "gauntlet-loop",
@@ -168,7 +169,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       "nvidia-pair-analysis",
     ],
     browser_mcp: "disconnected",
-    ai: "ready",
+    ai: "unverified",
   };
 
   async onStart() {
