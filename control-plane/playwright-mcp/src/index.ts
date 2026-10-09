@@ -30,9 +30,6 @@ interface WhatsAppEnv {
   LAYA_HTTP_URL?: string;
   LAYA_API_KEY?: string;
   CONTROL_TOWER?: string;
-  FREELLMAPI_URL?: string;
-  FREELLMAPI_API_KEY?: string;
-  FREELLMAPI_MODEL?: string;
   INVESTIGATOR_MODEL?: string;
 }
 
