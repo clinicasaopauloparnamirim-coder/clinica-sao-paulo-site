@@ -93,7 +93,7 @@ async function jevDecision(env: PairEnv, state: string) {
 }
 
 async function layaDecision(env: PairEnv, state: string) {
-  const endpoint = baseUrl(env.LAYA_HTTP_URL || "https://api.laya.studio");
+  const endpoint = baseUrl(env.LAYA_HTTP_URL || "https://api.laya-ai.com");
   const headers: Record<string, string> = { "content-type": "application/json" };
   const layaApiKey = env.LAYA_API_KEY || env.control_tower;
   if (layaApiKey) headers.authorization = "Bearer " + layaApiKey;
@@ -168,7 +168,7 @@ export function pairingSnapshot(env: PairEnv) {
     },
     laya_llm: {
       decision_engine_configured: Boolean(env.LAYA_API_KEY || env.control_tower),
-      endpoint: env.LAYA_HTTP_URL || "https://api.laya.studio",
+      endpoint: env.LAYA_HTTP_URL || "https://api.laya-ai.com",
       api_key_configured: Boolean(env.LAYA_API_KEY || env.control_tower),
       analysis_partner: "NVIDIA NIM / Nemotron",
     },
