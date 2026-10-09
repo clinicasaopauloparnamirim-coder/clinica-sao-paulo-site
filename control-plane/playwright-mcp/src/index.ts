@@ -17,6 +17,7 @@ interface WhatsAppEnv {
   WHATSAPP_VERIFY_TOKEN?: string;
   WHATSAPP_APP_SECRET?: string;
   WHATSAPP_LEDGER: DurableObjectNamespace;
+  CONTROL_AGENT: DurableObjectNamespace;
   GOOGLE_OAUTH_STORE: DurableObjectNamespace;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
