@@ -13,9 +13,6 @@ type ControlEnv = Env & {
   NVIDIA_MODEL?: string;
   TYPESAFE_API_KEY?: string;
   LAYA_HTTP_URL?: string;
-  FREELLMAPI_URL?: string;
-  FREELLMAPI_API_KEY?: string;
-  FREELLMAPI_MODEL?: string;
 };
 
 type NvResult = {
@@ -167,7 +164,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       "persistent-state",
       "jev-glm-pair",
       "laya-llm-pair",
-      "freellmapi-routing",
+      "nvidia-pair-analysis",
     ],
     browser_mcp: "disconnected",
     ai: "ready",
