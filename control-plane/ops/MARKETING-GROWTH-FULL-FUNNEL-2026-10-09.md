@@ -21,6 +21,10 @@ O cérebro de marketing não promete resultado clínico, não inventa depoimento
 - OpenSEO: acesso aos projetos e ferramentas de SEO; a integração GA4 dentro dos dois projetos não está conectada.
 - GitHub: código, versões e CI/CD.
 
+### Geração de briefing na branch de correção
+
+A branch `audit/brain-09-marketing-full-funnel-20261009` adiciona a ferramenta MCP `marketing_brief`. Ela solicita ao ControlAgent um briefing completo e duas variantes de copy, primeiro via NVIDIA NIM e depois via Workers AI como fallback; a saída passa por validação estrutural de JSON e exige revisão humana. Retorna explicitamente `published: false` e `media_assets_generated: false`. **A ferramenta ainda não foi implantada nem testada em runtime real**: o CI precisa passar e o deploy precisa ser verificado antes de usá-la como operacional.
+
 ### Bloqueadas ou não validadas
 - Control Tower Ads/GA4/GSC: as chamadas internas falham por OAuth/token Google.
 - Meta Ads e Instagram: conector iniciado, sem conta ativa.
