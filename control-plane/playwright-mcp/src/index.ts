@@ -396,7 +396,28 @@ ${authenticated ? `<p>Acesso autorizado</p>
     if (pathname === "/google/ads/auth-check") {
       if (!authorized(request, env)) return unauthorized();
       try { return await googleAdsAuthCheck(env); }
-      catch (error) { return new Response(error instanceof Error ? error.message : "Google Ads auth check failed", { status: 502 }); }
+      catch (error) {
+        const message = error instanceof Error ? error.message : "Google Ads auth check failed";
+        if (/invalid_grant|expired or revoked/i.test(message)) {
+          // Reuse the authenticated auth-check route to issue a short-lived,
+          // single-use Google consent URL without exposing an unauthenticated OAuth start.
+          const startRequest = new Request(new URL("/google/ads/oauth/start", request.url).toString(), { method: "GET" });
+          const startResponse = await googleAdsOAuthStart(startRequest, env);
+          const authorizationUrl = startResponse.headers.get("location");
+          if (startResponse.status === 302 && authorizationUrl) {
+            return Response.json({
+              ok: false,
+              authorization_required: true,
+              error: message,
+              authorization_url: authorizationUrl,
+              redirect_uri: new URL("/google/ads/oauth/callback", request.url).toString(),
+              state_ttl_minutes: 10,
+              next_step: "Open authorization_url, approve Google Ads access, then run ads_auth_check again.",
+            }, { headers: { "cache-control": "no-store" } });
+          }
+        }
+        return new Response(message, { status: 502 });
+      }
     }
 
     if (pathname === "/google/ads/audit") {
