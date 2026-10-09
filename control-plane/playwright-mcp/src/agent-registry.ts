@@ -119,7 +119,7 @@ export const BRAINS: BrainDefinition[] = [
     id: "commander",
     name: "COMMANDER",
     readiness: "partial",
-    readinessReason: "Genera planos no endpoint /orchestrate, mas o runtime não despacha diretamente as ferramentas externas do Composio."
+    readinessReason: "Genera planos no endpoint /orchestrate, mas o runtime não despacha diretamente as ferramentas externas do Composio.",
     mission: "Receber o objetivo, decompor o trabalho, escolher cérebros, coordenar dependências e manter o estado do ciclo.",
     toolFamilies: ["Control Tower", "MCP", "Durable State", "OpenAI-compatible inference", "Hermes", "Jev", "Laya"],
     connectedToolSlugs: ["CUSTOM_CONTROL_TOWER_ADS_AUDIT", "CUSTOM_CONTROL_TOWER_GSC_AUDIT", "CUSTOM_CONTROL_TOWER_GA4_AUDIT"],
@@ -128,7 +128,7 @@ export const BRAINS: BrainDefinition[] = [
     id: "researcher",
     name: "RESEARCHER",
     readiness: "partial",
-    readinessReason: "OpenSEO e GSC têm acesso externo validado; a execução automática de pesquisa cruzada pelo Worker não está comprovada."
+    readinessReason: "OpenSEO e GSC têm acesso externo validado; a execução automática de pesquisa cruzada pelo Worker não está comprovada.",
     mission: "Pesquisar o ambiente externo, concorrentes, mercado e evidências de busca sem confiar em uma única fonte.",
     toolFamilies: ["Semrush", "Ahrefs", "OpenSEO", "web research"],
     connectedToolSlugs: ["SEMRUSH_BACKLINKS_OVERVIEW", "SEMRUSH_PAID_RESULTS", "AHREFS_RETRIEVE_SITE_EXPLORER_METRICS", "AHREFS_RETRIEVE_ORGANIC_KEYWORDS"],
@@ -137,7 +137,7 @@ export const BRAINS: BrainDefinition[] = [
     id: "engineer",
     name: "ENGINEER",
     readiness: "partial",
-    readinessReason: "GitHub e CI/CD funcionam; um agente de código autônomo dentro do Worker não está comprovado."
+    readinessReason: "GitHub e CI/CD funcionam; um agente de código autônomo dentro do Worker não está comprovado.",
     mission: "Inspecionar código, alterar arquitetura com segurança, validar tipos, CI/CD e deploy.",
     toolFamilies: ["GitHub", "Cloudflare Workers", "Playwright MCP"],
     connectedToolSlugs: ["GITHUB_LIST_REPOSITORY_WORKFLOWS"],
@@ -147,7 +147,7 @@ export const BRAINS: BrainDefinition[] = [
     id: "seo",
     name: "SEO",
     readiness: "partial",
-    readinessReason: "OpenSEO lista os projetos e GSC lista as propriedades; os projetos OpenSEO retornam ga4_not_connected."
+    readinessReason: "OpenSEO lista os projetos e GSC lista as propriedades; os projetos OpenSEO retornam ga4_not_connected.",
     mission: "Unificar SEO técnico, semântico, indexação, local SEO, intenção e oportunidades de conteúdo.",
     toolFamilies: ["OpenSEO", "GSC", "Ahrefs", "Semrush", "GBP"],
     connectedToolSlugs: ["CUSTOM_OPENSEO_RUN_SITE_AUDIT", "CUSTOM_OPENSEO_GET_AUDIT_ISSUES", "CUSTOM_OPENSEO_GET_RANKED_KEYWORDS", "CUSTOM_OPENSEO_GET_LOCAL_SERP_RESULTS"],
@@ -156,7 +156,7 @@ export const BRAINS: BrainDefinition[] = [
     id: "ads",
     name: "ADS",
     readiness: "partial",
-    readinessReason: "Google Ads direto responde; o OAuth Google Ads nas rotas internas do Control Tower retorna invalid_grant."
+    readinessReason: "Google Ads direto responde; o OAuth Google Ads nas rotas internas do Control Tower retorna invalid_grant.",
     mission: "Auditar performance de mídia paga, termos, qualidade, atribuição e governança de mudanças.",
     toolFamilies: ["Google Ads", "Meta Ads", "Semrush paid search"],
     connectedToolSlugs: ["CUSTOM_CONTROL_TOWER_ADS_AUDIT", "CUSTOM_CONTROL_TOWER_ADS_SEARCH", "GOOGLEADS_GET_RMF_REPORT", "SEMRUSH_PAID_RESULTS"],
@@ -165,7 +165,7 @@ export const BRAINS: BrainDefinition[] = [
     id: "red-team",
     name: "RED TEAM",
     readiness: "blocked",
-    readinessReason: "Não há verificação red-team independente executada e registrada como parte do runtime atual."
+    readinessReason: "Não há verificação red-team independente executada e registrada como parte do runtime atual.",
     mission: "Tentar provar que o diagnóstico está errado, encontrar contradições, vazamentos, regressões e falsos positivos.",
     toolFamilies: ["Cross-source comparison", "Playwright", "GitHub CI"],
     connectedToolSlugs: [],
@@ -183,7 +183,7 @@ export const BRAINS: BrainDefinition[] = [
     id: "marketing-growth",
     name: "MARKETING / GROWTH",
     readiness: "partial",
-    readinessReason: "Há dados de Ads, GA4, GSC e SEO por conectores, mas Meta Ads/Instagram não estão conectados e o ciclo lead-agendamento-venda-retenção não foi validado de ponta a ponta."
+    readinessReason: "Há dados de Ads, GA4, GSC e SEO por conectores, mas Meta Ads/Instagram não estão conectados e o ciclo lead-agendamento-venda-retenção não foi validado de ponta a ponta.",
     mission: "Transformar inteligência de SEO, Ads e social em aquisição local: criatividade, conteúdo, mídia, WhatsApp, atribuição e CRO.",
     toolFamilies: [
       "Semrush",
@@ -228,6 +228,7 @@ export const BRAINS: BrainDefinition[] = [
     toolFamilies: ["NVIDIA NIM / Nemotron", "NeMo Agent Toolkit", "OpenShell", "NeMo-Relay", "SkillSpector / SkillEvaluator", "GitHub NVIDIA repositories"],
     connectedToolSlugs: [],
     plannedToolSlugs: ["NVIDIA NIM inference test", "GitHub NVIDIA repository audit", "SkillSpector security gate", "NeMo evaluation harness"],
+  },
 ];
 
 export const CAPABILITIES: CapabilityDefinition[] = [
