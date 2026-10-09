@@ -219,6 +219,7 @@ export const BRAINS: BrainDefinition[] = [
       "CUSTOM_CONTROL_TOWER_ADS_AUDIT",
       "CUSTOM_CONTROL_TOWER_GSC_AUDIT",
       "CUSTOM_CONTROL_TOWER_GA4_AUDIT",
+      "marketing_brief",
     ],
     plannedToolSlugs: [
       "METAADS_GET_INSIGHTS",
