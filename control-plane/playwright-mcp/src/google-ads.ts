@@ -40,7 +40,19 @@ async function refreshAccessToken(env: GoogleAdsEnv) {
       grant_type: "refresh_token",
     }),
   });
-  if (!response.ok) throw new Error(`Google Ads token refresh failed: ${response.status}`);
+  if (!response.ok) {
+    const rawError = await response.text();
+    let oauthError = "unknown_oauth_error";
+    let oauthDescription = "";
+    try {
+      const parsed = JSON.parse(rawError) as { error?: string; error_description?: string };
+      oauthError = String(parsed.error || oauthError).slice(0, 100);
+      oauthDescription = String(parsed.error_description || "").slice(0, 240);
+    } catch {
+      // Do not include the raw response body or credentials in the error.
+    }
+    throw new Error(`Google Ads token refresh failed: ${response.status} ${oauthError}${oauthDescription ? " — " + oauthDescription : ""}`);
+  }
   const token = (await response.json()) as { access_token?: string };
   if (!token.access_token) throw new Error("Google did not return an Ads access token.");
   return token.access_token;
