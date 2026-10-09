@@ -101,3 +101,9 @@ enabled = true
 A ferramenta `marketing_brief` gera um rascunho estruturado por meio de NVIDIA NIM, com fallback Workers AI. Ela cobre atenção, desejo/confiança, consumo, intenção/CTA, conversão/qualificação, retenção e eventos de mensuração. A resposta marca `published: false` e `media_assets_generated: false`: publicar anúncios/posts, gerar arquivos de imagem/vídeo e ligar o CRM continuam sendo passos distintos que exigem ferramentas/autorizações próprias e testes reais.
 
 O runtime não deve marcar NIM como pronto só porque a chave existe; usar `nvidia_test` e exigir resposta válida. O comando `health` mostra configuração, não prova inferência.
+
+## Ferramentas adicionais da branch de correção (não operacional até deploy e teste)
+
+- `google_oauth_start`: gera um link separado para o consentimento OAuth conjunto de Analytics readonly, Search Console readonly e Business Profile manage. Requer ação do titular da conta.
+- `agent_pair_test`: teste sintético de Jev+Nemotron ou Laya+Nemotron. Não executa mutações de produção.
+- O callback Ads foi corrigido para validar a mesma estrutura de `state` que o Durable Object realmente armazena e exigir que o estado não esteja expirado.
