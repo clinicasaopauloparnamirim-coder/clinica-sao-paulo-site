@@ -7,6 +7,7 @@
 import {
   googleAdsAuthCheck,
   googleAdsAudit,
+  googleAdsOAuthStart,
   googleAdsSearch,
   googleAdsMutate,
   googleAdsBatchMutate,
@@ -48,6 +49,11 @@ const TOOLS = [
   {
     name: "ads_auth_check",
     description: "Valida OAuth Google Ads e retorna customer id.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "ads_oauth_start",
+    description: "Gera link de consentimento Google Ads para reautorizar a conexão quebrada. Requer consentimento humano; não lê nem altera campanhas.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -155,7 +161,7 @@ async function responseToJson(res: Response) {
   }
 }
 
-async function callTool(env: TowerEnv, name: string, args: Record<string, unknown>) {
+async function callTool(request: Request, env: TowerEnv, name: string, args: Record<string, unknown>) {
   switch (name) {
     case "health":
       return {
@@ -178,6 +184,21 @@ async function callTool(env: TowerEnv, name: string, args: Record<string, unknow
       };
     case "ads_auth_check":
       return responseToJson(await googleAdsAuthCheck(env));
+    case "ads_oauth_start": {
+      const startUrl = new URL("/google/ads/oauth/start", request.url);
+      const response = await googleAdsOAuthStart(new Request(startUrl.toString(), { method: "GET" }), env);
+      const authorizationUrl = response.headers.get("location");
+      if (response.status !== 302 || !authorizationUrl) {
+        return { ok: false, status: response.status, error: (await response.text()).slice(0, 300) };
+      }
+      return {
+        ok: true,
+        authorization_url: authorizationUrl,
+        redirect_uri: new URL("/google/ads/oauth/callback", request.url).toString(),
+        state_ttl_minutes: 10,
+        note: "Open authorization_url, approve Google Ads access, then rerun ads_auth_check. This link is for the account owner only.",
+      };
+    }
     case "ads_audit":
       return responseToJson(await googleAdsAudit(env));
     case "ads_search": {
@@ -359,7 +380,7 @@ export async function handleTowerMcp(request: Request, env: TowerEnv): Promise<R
           ? (params.arguments as Record<string, unknown>)
           : {};
       if (!name) return jsonRpcError(id, -32602, "name obrigatorio");
-      const result = await callTool(env, name, args);
+      const result = await callTool(request, env, name, args);
       return jsonRpcResult(id, {
         content: [{ type: "text", text: JSON.stringify(result, null, 2).slice(0, 100000) }],
         structuredContent: result,
