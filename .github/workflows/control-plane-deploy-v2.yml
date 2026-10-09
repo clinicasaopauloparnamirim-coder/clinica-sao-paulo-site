@@ -40,7 +40,7 @@ jobs:
           body="$(curl -sS --retry 5 --retry-delay 2 --connect-timeout 10 --max-time 30 "https://clinica-sao-paulo-site.clinicasaopauloparnamirim.workers.dev/health")"
           echo "$body"
           echo "$body" | grep -q '"ok":true'
-          echo "$body" | grep -q '"brain_count":8'
+          echo "$body" | grep -q '"brain_count":9'
           echo "$body" | grep -q '"capability_count":21'
           echo "$body" | grep -q '"autonomous_function_count":20'
       - name: Verify public HTML has no dual Zaraz
