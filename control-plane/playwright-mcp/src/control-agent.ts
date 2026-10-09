@@ -13,6 +13,7 @@ type ControlEnv = Env & {
   NVIDIA_MODEL?: string;
   TYPESAFE_API_KEY?: string;
   LAYA_HTTP_URL?: string;
+  control_tower?: string;
 };
 
 type NvResult = {
