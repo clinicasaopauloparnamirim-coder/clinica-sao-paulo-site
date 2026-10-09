@@ -63,7 +63,7 @@ export function externalAgentSnapshot() {
       externalRuntimeRequired: true,
       runtimeProof: "must-be-tested-on-host",
       pairing: {
-        "jev-glm": "JEV decides; NVIDIA NIM / Nemotron analyzes",
+        "jev-nemotron": "JEV decides; NVIDIA NIM / Nemotron analyzes",
         "laya-llm": "Laya decides; NVIDIA NIM / Nemotron analyzes",
       },
     },
