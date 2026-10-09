@@ -167,7 +167,7 @@ export function pairingSnapshot(env: PairEnv) {
       analysis_partner: "NVIDIA NIM / Nemotron",
     },
     laya_llm: {
-      decision_engine_configured: true,
+      decision_engine_configured: Boolean(env.LAYA_API_KEY || env.control_tower),
       endpoint: env.LAYA_HTTP_URL || "https://api.laya.studio",
       api_key_configured: Boolean(env.LAYA_API_KEY || env.control_tower),
       analysis_partner: "NVIDIA NIM / Nemotron",
