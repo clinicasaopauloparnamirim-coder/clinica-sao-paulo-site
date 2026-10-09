@@ -162,7 +162,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       "gauntlet-loop",
       "self-verification",
       "persistent-state",
-      "jev-glm-pair",
+      "jev-nemotron-pair",
       "laya-llm-pair",
       "nvidia-pair-analysis",
     ],
@@ -306,11 +306,11 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
     }
 
     if (url.pathname.endsWith("/pairs/test") && request.method === "POST") {
-      let body: { pair?: "jev-glm" | "laya-llm"; state?: string } = {};
+      let body: { pair?: "jev-nemotron" | "laya-llm"; state?: string } = {};
       try { body = await request.json(); } catch {
         return Response.json({ ok: false, error: "invalid_json" }, { status: 400 });
       }
-      const pair = body.pair === "laya-llm" ? "laya-llm" : "jev-glm";
+      const pair = body.pair === "laya-llm" ? "laya-llm" : "jev-nemotron";
       const state = typeof body.state === "string" ? body.state.trim() : "";
       if (!state || state.length > 4000) {
         return Response.json({ ok: false, error: "state_required_or_too_long", pairing: pairingSnapshot(this.env) }, { status: 400 });
