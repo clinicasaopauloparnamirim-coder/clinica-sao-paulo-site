@@ -201,6 +201,44 @@ async function responseToJson(res: Response) {
   }
 }
 
+async function googleOAuthRecovery(
+  request: Request,
+  env: TowerEnv,
+  provider: "ga4" | "gsc",
+  error: unknown,
+) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (!/Google token refresh failed: (401|502)|Google Analytics is not authorized yet/i.test(message)) {
+    return null;
+  }
+
+  const startUrl = new URL("/google/oauth/start", request.url);
+  const response = await googleOAuthStart(new Request(startUrl.toString(), { method: "GET" }), env);
+  const authorizationUrl = response.headers.get("location");
+  if (response.status !== 302 || !authorizationUrl) {
+    return {
+      ok: false,
+      authorization_required: true,
+      provider,
+      error: message,
+      link_generation_failed: true,
+      status: response.status,
+      note: "Google authorization is required, but the consent link could not be generated.",
+    };
+  }
+
+  return {
+    ok: false,
+    authorization_required: true,
+    provider,
+    error: message,
+    authorization_url: authorizationUrl,
+    redirect_uri: new URL("/google/oauth/callback", request.url).toString(),
+    state_ttl_minutes: 10,
+    next_step: "Open authorization_url, approve Google Analytics/Search Console access, then rerun the failed audit.",
+  };
+}
+
 async function callTool(request: Request, env: TowerEnv, name: string, args: Record<string, unknown>) {
   switch (name) {
     case "health":
@@ -338,10 +376,24 @@ async function callTool(request: Request, env: TowerEnv, name: string, args: Rec
         note: "Open authorization_url, approve Google access, then rerun ga4_audit and gsc_audit. The link is short-lived.",
       };
     }
-    case "ga4_audit":
-      return responseToJson(await googleGa4Audit(env));
-    case "gsc_audit":
-      return responseToJson(await googleGscAudit(env));
+    case "ga4_audit": {
+      try {
+        return responseToJson(await googleGa4Audit(env));
+      } catch (error) {
+        const recovery = await googleOAuthRecovery(request, env, "ga4", error);
+        if (recovery) return recovery;
+        throw error;
+      }
+    }
+    case "gsc_audit": {
+      try {
+        return responseToJson(await googleGscAudit(env));
+      } catch (error) {
+        const recovery = await googleOAuthRecovery(request, env, "gsc", error);
+        if (recovery) return recovery;
+        throw error;
+      }
+    }
     case "marketing_brief": {
       const treatment = typeof args.treatment === "string" ? args.treatment.trim() : "";
       if (!treatment || treatment.length > 160) throw new Error("treatment is required (max 160 characters)");
