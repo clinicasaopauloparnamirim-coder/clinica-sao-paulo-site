@@ -69,3 +69,12 @@ Para qualquer cérebro:
 Nenhuma publicação de código em produção e nenhuma mutação de campanhas devem ser aprovadas apenas porque um teste unitário passou. Merge/deploy requer review do diff e CI verde; mudança de Ads requer escopo explícito, simulação quando disponível, autorização do usuário e verificação de leitura após a mudança.
 
 Campanha aprovada de Ads: `24289443969` (ALTA INTENÇÃO). Campanha `Search-2` permanece fora do escopo de análise e mutação.
+
+## Novos testes necessários após deploy autorizado
+
+1. Gerar link via `google_oauth_start`, concluir consentimento do titular e validar `ga4_audit` + `gsc_audit` sem HTTP 502.
+2. Gerar link via `ads_oauth_start`, concluir consentimento e confirmar que callback valida o `state` guardado e rejeita estado expirado/alterado. Não alterar campanhas durante o teste.
+3. Executar `nvidia_test` e exigir HTTP 2xx + conteúdo `NIM_OK`; chave configurada não basta.
+4. Executar `agent_pair_test` com estado sintético e registrar qual provedor respondeu. Se Jev/Laya falhar, não promover o cérebro para verde.
+5. Executar `marketing_brief` para tema sintético e validar duas variantes, todos os estágios do funil, `published=false`, `media_assets_generated=false` e revisão humana requerida.
+6. Confirmar que o toolkit Composio sincroniza as novas tools MCP. Tool no servidor que não aparece no cliente deve continuar marcada como indisponível nesse caminho.
