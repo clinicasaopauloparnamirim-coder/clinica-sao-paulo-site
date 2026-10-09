@@ -271,8 +271,12 @@ export async function googleAdsOAuthCallback(request: Request, env: GoogleAdsEnv
   if (!state || !code) return new Response("Missing OAuth response.", { status: 400 });
 
   const stateResponse = await oauthStore(env).fetch(`https://store.internal/state?state=${encodeURIComponent(state)}`);
-  const saved = stateResponse.ok ? await stateResponse.json() as { state?: string } : null;
-  if (!saved || saved.state !== state) return new Response("Invalid or expired OAuth state.", { status: 400 });
+  const saved = stateResponse.ok
+    ? await stateResponse.json() as { value?: string; expires?: number }
+    : null;
+  if (!saved || saved.value !== state || !saved.expires || saved.expires < Date.now()) {
+    return new Response("Invalid or expired OAuth state.", { status: 400 });
+  }
   await oauthStore(env).fetch(`https://store.internal/state?state=${encodeURIComponent(state)}`, { method: "DELETE" });
 
   const redirectUri = new URL("/google/ads/oauth/callback", request.url).toString();
