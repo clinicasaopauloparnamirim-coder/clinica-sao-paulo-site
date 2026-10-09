@@ -39,6 +39,7 @@ export type BrainDefinition = {
   mission: string;
   readiness: BrainReadiness;
   readinessReason: string;
+  toolExecutionPath: "plan-only" | "worker-native" | "external-tool-runner" | "mixed" | "catalog-only";
   toolFamilies: string[];
   connectedToolSlugs: string[];
   plannedToolSlugs?: string[];
@@ -119,6 +120,7 @@ export const BRAINS: BrainDefinition[] = [
     id: "commander",
     name: "COMMANDER",
     readiness: "partial",
+    toolExecutionPath: "plan-only",
     readinessReason: "Genera planos no endpoint /orchestrate, mas o runtime não despacha diretamente as ferramentas externas do Composio.",
     mission: "Receber o objetivo, decompor o trabalho, escolher cérebros, coordenar dependências e manter o estado do ciclo.",
     toolFamilies: ["Control Tower", "MCP", "Durable State", "OpenAI-compatible inference", "Hermes", "Jev", "Laya"],
@@ -128,6 +130,7 @@ export const BRAINS: BrainDefinition[] = [
     id: "researcher",
     name: "RESEARCHER",
     readiness: "partial",
+    toolExecutionPath: "external-tool-runner",
     readinessReason: "OpenSEO e GSC têm acesso externo validado; a execução automática de pesquisa cruzada pelo Worker não está comprovada.",
     mission: "Pesquisar o ambiente externo, concorrentes, mercado e evidências de busca sem confiar em uma única fonte.",
     toolFamilies: ["Semrush", "Ahrefs", "OpenSEO", "web research"],
@@ -137,6 +140,7 @@ export const BRAINS: BrainDefinition[] = [
     id: "engineer",
     name: "ENGINEER",
     readiness: "partial",
+    toolExecutionPath: "external-tool-runner",
     readinessReason: "GitHub e CI/CD funcionam; um agente de código autônomo dentro do Worker não está comprovado.",
     mission: "Inspecionar código, alterar arquitetura com segurança, validar tipos, CI/CD e deploy.",
     toolFamilies: ["GitHub", "Cloudflare Workers", "Playwright MCP"],
@@ -147,6 +151,7 @@ export const BRAINS: BrainDefinition[] = [
     id: "seo",
     name: "SEO",
     readiness: "partial",
+    toolExecutionPath: "external-tool-runner",
     readinessReason: "OpenSEO lista os projetos e GSC lista as propriedades; os projetos OpenSEO retornam ga4_not_connected.",
     mission: "Unificar SEO técnico, semântico, indexação, local SEO, intenção e oportunidades de conteúdo.",
     toolFamilies: ["OpenSEO", "GSC", "Ahrefs", "Semrush", "GBP"],
@@ -156,6 +161,7 @@ export const BRAINS: BrainDefinition[] = [
     id: "ads",
     name: "ADS",
     readiness: "partial",
+    toolExecutionPath: "mixed",
     readinessReason: "Google Ads direto responde; o OAuth Google Ads nas rotas internas do Control Tower retorna invalid_grant.",
     mission: "Auditar performance de mídia paga, termos, qualidade, atribuição e governança de mudanças.",
     toolFamilies: ["Google Ads", "Meta Ads", "Semrush paid search"],
@@ -165,6 +171,7 @@ export const BRAINS: BrainDefinition[] = [
     id: "red-team",
     name: "RED TEAM",
     readiness: "blocked",
+    toolExecutionPath: "plan-only",
     readinessReason: "Não há verificação red-team independente executada e registrada como parte do runtime atual.",
     mission: "Tentar provar que o diagnóstico está errado, encontrar contradições, vazamentos, regressões e falsos positivos.",
     toolFamilies: ["Cross-source comparison", "Playwright", "GitHub CI"],
@@ -174,6 +181,7 @@ export const BRAINS: BrainDefinition[] = [
     id: "judge",
     name: "JUDGE",
     readiness: "partial",
+    toolExecutionPath: "mixed",
     readinessReason: "Regras locais de bloqueio existem; Jev e Laya não estão configurados como provedores ativos no Worker.",
     mission: "Validar evidências, classificar riscos, impedir ações destrutivas e exigir prova antes de declarar vitória.",
     toolFamilies: ["Evidence ledger", "Policy gate", "NIM reasoning"],
@@ -183,6 +191,7 @@ export const BRAINS: BrainDefinition[] = [
     id: "marketing-growth",
     name: "MARKETING / GROWTH",
     readiness: "partial",
+    toolExecutionPath: "mixed",
     readinessReason: "Há dados de Ads, GA4, GSC e SEO por conectores, mas Meta Ads/Instagram não estão conectados e o ciclo lead-agendamento-venda-retenção não foi validado de ponta a ponta.",
     mission: "Transformar inteligência de SEO, Ads e social em aquisição local: criatividade, conteúdo, mídia, WhatsApp, atribuição e CRO.",
     toolFamilies: [
@@ -223,6 +232,7 @@ export const BRAINS: BrainDefinition[] = [
     id: "nvidia-ecosystem",
     name: "NVIDIA ECOSYSTEM INTELLIGENCE",
     readiness: "configured-unverified",
+    toolExecutionPath: "catalog-only",
     readinessReason: "O registro e o roteamento existem e o Worker reporta NIM configurado; ainda falta uma inferência real com resposta validada e uma execução de ferramenta sob este cérebro.",
     mission: "Descobrir, auditar e avaliar componentes oficiais NVIDIA/NVlabs; verificar licença, segurança, evidências e encaixe nos oito papéis existentes sem ganhar autoridade sobre o caminho financeiro.",
     toolFamilies: ["NVIDIA NIM / Nemotron", "NeMo Agent Toolkit", "OpenShell", "NeMo-Relay", "SkillSpector / SkillEvaluator", "GitHub NVIDIA repositories"],
