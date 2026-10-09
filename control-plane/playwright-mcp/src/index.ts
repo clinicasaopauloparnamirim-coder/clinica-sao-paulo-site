@@ -387,8 +387,9 @@ ${authenticated ? `<p>Acesso autorizado</p>
       }, { headers: { "cache-control": "no-store" } });
     }
 
-    if (pathname === "/google/ads/oauth/start") {
-      if (!authorized(request, env)) return unauthorized();
+    // OAuth initiation only redirects to Google's consent screen; the callback
+    // validates a one-time state. All Ads data and mutation routes remain protected.
+    if (pathname === "/google/ads/oauth/start" && request.method === "GET") {
       return googleAdsOAuthStart(request, env);
     }
     if (pathname === "/google/ads/oauth/callback") return googleAdsOAuthCallback(request, env);
