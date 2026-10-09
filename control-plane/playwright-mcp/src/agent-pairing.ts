@@ -4,6 +4,7 @@ export type PairEnv = {
   TYPESAFE_API_KEY?: string;
   LAYA_HTTP_URL?: string;
   LAYA_API_KEY?: string;
+  control_tower?: string;
   NVIDIA_API_KEY?: string;
   NVIDIA_BASE_URL?: string;
   NVIDIA_MODEL?: string;
@@ -94,7 +95,8 @@ async function jevDecision(env: PairEnv, state: string) {
 async function layaDecision(env: PairEnv, state: string) {
   const endpoint = baseUrl(env.LAYA_HTTP_URL || "https://api.laya.studio");
   const headers: Record<string, string> = { "content-type": "application/json" };
-  if (env.LAYA_API_KEY) headers.authorization = "Bearer " + env.LAYA_API_KEY;
+  const layaApiKey = env.LAYA_API_KEY || env.control_tower;
+  if (layaApiKey) headers.authorization = "Bearer " + layaApiKey;
   const res = await fetch(endpoint + "/v1/systemone", {
     method: "POST",
     headers,
@@ -167,7 +169,7 @@ export function pairingSnapshot(env: PairEnv) {
     laya_llm: {
       decision_engine_configured: true,
       endpoint: env.LAYA_HTTP_URL || "https://api.laya.studio",
-      api_key_configured: Boolean(env.LAYA_API_KEY),
+      api_key_configured: Boolean(env.LAYA_API_KEY || env.control_tower),
       analysis_partner: "NVIDIA NIM / Nemotron",
     },
     policy: "JEV/Laya remain authoritative decision engines; NVIDIA NIM analyzes evidence but never receives execution authority",
