@@ -1,4 +1,4 @@
-export type PairId = "jev-glm" | "laya-llm";
+export type PairId = "jev-nemotron" | "laya-llm";
 
 export type PairEnv = {
   TYPESAFE_API_KEY?: string;
@@ -126,7 +126,7 @@ async function layaDecision(env: PairEnv, state: string) {
 export async function runAgentPair(env: PairEnv, pair: PairId, state: string): Promise<PairResult> {
   const errors: string[] = [];
   try {
-    const isJev = pair === "jev-glm";
+    const isJev = pair === "jev-nemotron";
     const decision = isJev
       ? await jevDecision(env, state)
       : await layaDecision(env, state);
@@ -160,7 +160,7 @@ export function pairingSnapshot(env: PairEnv) {
       model: env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b",
       role: "analysis partner; never overrides JEV/Laya decision",
     },
-    jev_glm: {
+    jev_nemotron: {
       decision_engine_configured: Boolean(env.TYPESAFE_API_KEY),
       analysis_partner: "NVIDIA NIM / Nemotron",
     },
