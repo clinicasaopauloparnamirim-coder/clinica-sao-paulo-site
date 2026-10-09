@@ -182,8 +182,30 @@ async function callTool(request: Request, env: TowerEnv, name: string, args: Rec
           required: String(env.JUDGMENT_REQUIRED || "").toLowerCase() === "true",
         },
       };
-    case "ads_auth_check":
-      return responseToJson(await googleAdsAuthCheck(env));
+    case "ads_auth_check": {
+      try {
+        return responseToJson(await googleAdsAuthCheck(env));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Google Ads auth check failed";
+        if (/invalid_grant|expired or revoked/i.test(message)) {
+          const startUrl = new URL("/google/ads/oauth/start", request.url);
+          const response = await googleAdsOAuthStart(new Request(startUrl.toString(), { method: "GET" }), env);
+          const authorizationUrl = response.headers.get("location");
+          if (response.status === 302 && authorizationUrl) {
+            return {
+              ok: false,
+              authorization_required: true,
+              error: message,
+              authorization_url: authorizationUrl,
+              redirect_uri: new URL("/google/ads/oauth/callback", request.url).toString(),
+              state_ttl_minutes: 10,
+              next_step: "Open authorization_url, approve Google Ads access, then run ads_auth_check again.",
+            };
+          }
+        }
+        throw error;
+      }
+    }
     case "ads_oauth_start": {
       const startUrl = new URL("/google/ads/oauth/start", request.url);
       const response = await googleAdsOAuthStart(new Request(startUrl.toString(), { method: "GET" }), env);
