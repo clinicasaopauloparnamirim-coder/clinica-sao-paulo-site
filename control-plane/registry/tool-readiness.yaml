@@ -1,0 +1,111 @@
+version: 1
+updated_at: "2026-10-09"
+repository: "clinicasaopauloparnamirim-coder/clinica-sao-paulo-site"
+branch: "audit/tool-readiness-inventory-2026-10-09"
+policy:
+  evidence_required_for_runtime_ready: true
+  require_positive_and_negative_tests: true
+  require_readback: true
+  max_failures_per_route: 2
+  ads_mutations_allowed: false
+  retired_campaign_search_2_allowed: false
+  secrets_in_logs_allowed: false
+  paid_crawls_without_necessity: false
+  excluded:
+    - OpenGSC
+    - Canva
+    - Zernio
+    - FreeLLMAPI
+    - Hermes-Bot-Mode
+macro_brains:
+  - id: 1
+    name: "Hermes / Control Plane"
+    status: "partial"
+    readiness: "ready-attach"
+    blockers: ["Hermes runtime not proven", "Commander does not dispatch external Composio tools directly"]
+  - id: 2
+    name: "Ruflo + JEV/Laya orchestration and judgment"
+    status: "partial"
+    readiness: "ready-attach"
+    blockers: ["JEV has no verified active Composio account", "Laya runtime inference not proven", "Ruflo adoption not approved"]
+  - id: 3
+    name: "OpenSEO / SEO and search data"
+    status: "partial"
+    readiness: "ready-read"
+    blockers: ["Project-level GA4/GSC links need readback", "Avoid paid crawl unless required"]
+nvidia_brain_09:
+  status: "catalog-incorporated"
+  production_access: "denied-by-default"
+  projects:
+    - {repo: "NVIDIA/OpenShell", priority: "P0", state: "sandbox-test"}
+    - {repo: "NVIDIA/NemoClaw", priority: "P0", state: "security-review"}
+    - {repo: "NVIDIA/NeMo-Agent-Toolkit", priority: "P0", state: "integration-test"}
+    - {repo: "NVIDIA/NeMo-Relay", priority: "P0", state: "integration-test"}
+    - {repo: "NVIDIA/skills", priority: "P0", state: "scan-each-skill"}
+    - {repo: "NVIDIA/SkillSpector", priority: "P0", state: "gate-candidate"}
+    - {repo: "NVIDIA/SkillEvaluator", priority: "P0", state: "integration-test"}
+    - {repo: "NVlabs/ToolOrchestra", priority: "P0", state: "benchmark-required"}
+    - {repo: "NVIDIA/NeMo-Retriever", priority: "P1", state: "candidate"}
+    - {repo: "NVIDIA/context-aware-rag", priority: "P1", state: "candidate"}
+    - {repo: "NVIDIA/garak", priority: "P1", state: "sandbox-test"}
+    - {repo: "NVIDIA/TensorRT-LLM", priority: "P1", state: "deferred-install"}
+    - {repo: "NVIDIA/Nemotron", priority: "P1", state: "inference-test-required"}
+    - {repo: "NVlabs/SoL-Pi", priority: "P1", state: "candidate"}
+    - {repo: "NVlabs/Skill2Env", priority: "P1", state: "candidate"}
+    - {repo: "NVlabs/UniversalDeepResearch", priority: "P2", state: "deferred"}
+    - {repo: "NVlabs/kda", priority: "P2", state: "deferred"}
+connectors:
+  control_tower: "ready-read-health"
+  google_ads_composio: "ready-read"
+  google_search_console_composio: "ready-read"
+  ga4_composio: "ready-read"
+  control_tower_gsc: "read-tested-2026-10-09"
+  control_tower_ga4: "read-tested-2026-10-09"
+  openseo: "ready-read"
+  github: "ready-read"
+  semrush: "connected-read-capability-verify-per-tool"
+  ahrefs: "partial-limited-tools"
+  cloudflare_mcp: "partial-read"
+  cloudflare_direct_connector: "blocked-http-400-auth-header-format"
+  meta_ads: "not-connected"
+  instagram: "not-connected"
+  jev: "blocked-runtime-unverified"
+  laya: "blocked-runtime-unverified"
+  nvidia_nim: "configured-unverified"
+  workers_ai_fallback: "configured-unverified"
+  whatsapp_ledger: "partial-end-to-end-test-required"
+  commander_dispatch_bridge: "partial-not-implemented-end-to-end"
+  marketing_brief_tool: "implemented-in-worker-catalog-not-exposed-in-composio-search"
+  agent_pair_test_tool: "implemented-in-worker-catalog-not-exposed-in-composio-search"
+  nvidia_test_tool: "implemented-in-worker-catalog-not-exposed-in-composio-search"
+repositories:
+  verified:
+    - "clinicasaopauloparnamirim-coder/clinica-sao-paulo-site"
+  identity_verified_runtime_unverified:
+    - "NousResearch/hermes-agent"
+    - "ComposioHQ/composio"
+  candidates:
+    - "malevrigns/agent-jev"
+    - "vishalmysore/layaAgent"
+    - "chaitin/MonkeyCode"
+    - "every-app/open-seo"
+    - "browser-use/browser-harness"
+    - "ruvnet/ruflo"
+    - "obra/superpowers"
+    - "composio-community/open-dot"
+  excluded:
+    - "tashfeenahmed/freellmapi"
+    - "OpenGSC"
+    - "Canva"
+    - "Zernio"
+    - "Hermes-Bot-Mode"
+next_execution_order:
+  - "Commander external-tool dispatcher"
+  - "NVIDIA NIM inference smoke test"
+  - "JEV + Nemotron synthetic pair test"
+  - "Laya + Nemotron synthetic pair test"
+  - "Marketing brief schema test; no publishing"
+  - "OpenSEO GSC/GA4 project link readback"
+  - "Tool catalog and schema map"
+  - "NVIDIA P0 sandbox/security gates"
+  - "Candidate repository license and identity review"
