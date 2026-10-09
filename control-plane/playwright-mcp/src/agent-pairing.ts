@@ -4,16 +4,16 @@ export type PairEnv = {
   TYPESAFE_API_KEY?: string;
   LAYA_HTTP_URL?: string;
   LAYA_API_KEY?: string;
-  FREELLMAPI_URL?: string;
-  FREELLMAPI_API_KEY?: string;
-  FREELLMAPI_MODEL?: string;
+  NVIDIA_API_KEY?: string;
+  NVIDIA_BASE_URL?: string;
+  NVIDIA_MODEL?: string;
 };
 
 export type PairResult = {
   pair: PairId;
   ok: boolean;
   decision_provider?: "jev" | "laya";
-  llm_provider?: "freellmapi";
+  analysis_provider?: "nvidia-nim";
   model?: string;
   decision?: string;
   text?: string;
@@ -24,15 +24,16 @@ function baseUrl(value: string) {
   return value.replace(/\/$/, "");
 }
 
-async function freeLlmChat(env: PairEnv, system: string, prompt: string) {
-  if (!env.FREELLMAPI_URL || !env.FREELLMAPI_API_KEY) {
-    throw new Error("FreeLLMAPI credentials not configured");
+async function nvidiaAnalysis(env: PairEnv, system: string, prompt: string) {
+  if (!env.NVIDIA_API_KEY) {
+    throw new Error("NVIDIA_API_KEY not configured; Nemotron analysis unavailable");
   }
-  const model = env.FREELLMAPI_MODEL || "auto";
-  const res = await fetch(baseUrl(env.FREELLMAPI_URL) + "/v1/chat/completions", {
+  const endpoint = baseUrl(env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1");
+  const model = env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b";
+  const res = await fetch(endpoint + "/chat/completions", {
     method: "POST",
     headers: {
-      authorization: "Bearer " + env.FREELLMAPI_API_KEY,
+      authorization: "Bearer " + env.NVIDIA_API_KEY,
       "content-type": "application/json",
     },
     body: JSON.stringify({
@@ -46,16 +47,15 @@ async function freeLlmChat(env: PairEnv, system: string, prompt: string) {
     }),
   });
   const raw = await res.text();
-  if (!res.ok) throw new Error("FreeLLMAPI " + res.status + ": " + raw.slice(0, 300));
+  if (!res.ok) throw new Error("NVIDIA NIM " + res.status + ": " + raw.slice(0, 300));
   const data = JSON.parse(raw) as any;
-  return {
-    model: String(data?.model || model),
-    text: String(data?.choices?.[0]?.message?.content || ""),
-  };
+  const text = String(data?.choices?.[0]?.message?.content || "");
+  if (!text) throw new Error("NVIDIA NIM returned an empty analysis");
+  return { model: String(data?.model || model), text };
 }
 
 async function jevDecision(env: PairEnv, state: string) {
-  if (!env.TYPESAFE_API_KEY) throw new Error("JEV/TypeSafe credentials not configured");
+  if (!env.TYPESAFE_API_KEY) throw new Error("JEV/TypeSafe credentials not configured in Worker");
   const res = await fetch("https://api.typesafe.ai/v1/systemone", {
     method: "POST",
     headers: {
@@ -126,23 +126,27 @@ async function layaDecision(env: PairEnv, state: string) {
 export async function runAgentPair(env: PairEnv, pair: PairId, state: string): Promise<PairResult> {
   const errors: string[] = [];
   try {
-    if (pair === "jev-glm") {
-      const decision = await jevDecision(env, state);
-      const llm = await freeLlmChat(
-        env,
-        "Você é o parceiro de raciocínio do JEV. Não substitua o juiz. Analise somente as evidências fornecidas e a decisão recebida. Retorne uma recomendação curta e verificável.",
-        "ESTADO:\n" + state + "\nDECISÃO JEV: " + decision,
-      );
-      return { pair, ok: true, decision_provider: "jev", llm_provider: "freellmapi", model: llm.model, decision, text: llm.text, errors };
-    }
-
-    const decision = await layaDecision(env, state);
-    const llm = await freeLlmChat(
+    const isJev = pair === "jev-glm";
+    const decision = isJev
+      ? await jevDecision(env, state)
+      : await layaDecision(env, state);
+    const analysis = await nvidiaAnalysis(
       env,
-      "Você é o parceiro de raciocínio do Laya. Laya produz a decisão tipada; você interpreta, encontra riscos e explica a decisão sem alterá-la.",
-      "ESTADO:\n" + state + "\nDECISÃO LAYA: " + decision,
+      isJev
+        ? "Você é o parceiro analítico do JEV no Control Tower. JEV é a autoridade de decisão. Não altere a decisão; analise as evidências fornecidas, identifique riscos e recomende verificações concretas."
+        : "Você é o parceiro analítico do Laya no Control Tower. Laya é a autoridade de decisão. Não altere a decisão; analise as evidências fornecidas, identifique riscos e recomende verificações concretas.",
+      "ESTADO:\n" + state + "\nDECISÃO " + (isJev ? "JEV" : "LAYA") + ": " + decision,
     );
-    return { pair, ok: true, decision_provider: "laya", llm_provider: "freellmapi", model: llm.model, decision, text: llm.text, errors };
+    return {
+      pair,
+      ok: true,
+      decision_provider: isJev ? "jev" : "laya",
+      analysis_provider: "nvidia-nim",
+      model: analysis.model,
+      decision,
+      text: analysis.text,
+      errors,
+    };
   } catch (error) {
     errors.push(error instanceof Error ? error.message : String(error));
     return { pair, ok: false, errors };
@@ -151,20 +155,20 @@ export async function runAgentPair(env: PairEnv, pair: PairId, state: string): P
 
 export function pairingSnapshot(env: PairEnv) {
   return {
-    freellmapi: {
-      configured: Boolean(env.FREELLMAPI_URL && env.FREELLMAPI_API_KEY),
-      url_configured: Boolean(env.FREELLMAPI_URL),
-      model: env.FREELLMAPI_MODEL || "auto",
+    nvidia_nim: {
+      configured: Boolean(env.NVIDIA_API_KEY),
+      model: env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b",
+      role: "analysis partner; never overrides JEV/Laya decision",
     },
     jev_glm: {
       decision_engine_configured: Boolean(env.TYPESAFE_API_KEY),
-      llm_partner: "FreeLLMAPI",
+      analysis_partner: "NVIDIA NIM / Nemotron",
     },
     laya_llm: {
       decision_engine_configured: Boolean(env.LAYA_HTTP_URL),
       api_key_configured: Boolean(env.LAYA_API_KEY),
-      llm_partner: "FreeLLMAPI",
+      analysis_partner: "NVIDIA NIM / Nemotron",
     },
-    policy: "decision engine remains authoritative; LLM is analysis partner, never an execution authority",
+    policy: "JEV/Laya remain authoritative decision engines; NVIDIA NIM analyzes evidence but never receives execution authority",
   };
 }
