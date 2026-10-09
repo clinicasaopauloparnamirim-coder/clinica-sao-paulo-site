@@ -280,7 +280,7 @@ export default {
         nvidia_base_url: env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1",
         nvidia_model: env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b",
         laya_configured: Boolean(env.LAYA_API_KEY || env.CONTROL_TOWER),
-        laya_http_url: env.LAYA_HTTP_URL || "https://api.laya-ai.com",
+        laya_http_url: env.LAYA_HTTP_URL || "https://api.laya.studio",
         investigator_model: env.INVESTIGATOR_MODEL || "z-ai/glm-5.3",
         whatsapp_ledger: true,
         google_business_profile: true,
