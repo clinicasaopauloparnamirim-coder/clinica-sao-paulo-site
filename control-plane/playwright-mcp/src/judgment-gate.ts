@@ -26,6 +26,7 @@ type JudgmentEnv = {
   LAYA_HTTP_URL?: string;
   LAYA_API_KEY?: string;
   CONTROL_TOWER?: string;
+  control_tower?: string;
   JUDGMENT_REQUIRED?: string;
 };
 
@@ -36,7 +37,7 @@ function layaBaseUrl(env: JudgmentEnv) {
 }
 
 function layaApiKey(env: JudgmentEnv) {
-  return env.LAYA_API_KEY || env.CONTROL_TOWER || "";
+  return env.LAYA_API_KEY || env.control_tower || env.CONTROL_TOWER || "";
 }
 
 const ALTA_INTENCAO = "24289443969";
