@@ -1,7 +1,7 @@
 export type ExternalAgentStatus = "integrated" | "requires-host-runtime" | "not-runtime-proven";
 
 export type ExternalAgentDefinition = {
-  id: "hermes" | "jev" | "laya" | "freellmapi";
+  id: "hermes" | "jev" | "laya" | "nvidia-nim";
   name: string;
   role: string;
   repository: string;
@@ -27,30 +27,30 @@ export const EXTERNAL_AGENTS: ExternalAgentDefinition[] = [
     name: "Jev",
     role: "System 1 de decisões tipadas, usado para julgamento bounded e roteamento.",
     repository: "browser-use/jev-ultrafast / TypeSafe Jev backend",
-    integrationPath: "Composio JEV connection -> Control Tower/Hermes decision path; optional direct TypeSafe API from Worker",
+    integrationPath: "Composio JEV connection -> Control Tower decision path; optional direct TypeSafe API from Worker",
     status: "integrated",
-    controlTowerRole: "camada de decisão/verificação antes de ações e parceiro do LLM no par JEV + GLM",
-    runtimeRequirement: "A conexão JEV do Control Tower está ativa e já executou avaliações. O Worker, quando chamar TypeSafe diretamente, ainda requer TYPESAFE_API_KEY.",
+    controlTowerRole: "autoridade de decisão/verificação antes de ações; NVIDIA NIM analisa sem substituir a decisão",
+    runtimeRequirement: "A conexão JEV via Composio foi executada com sucesso. A rota direta no Worker ainda exige TYPESAFE_API_KEY.",
   },
   {
     id: "laya",
     name: "Laya",
-    role: "Modelo System 1 local de decisões tipadas, multilingual e sem geração de texto.",
+    role: "Modelo System 1 de decisões tipadas, multilingual e sem geração de texto.",
     repository: "he-jev/laya",
-    integrationPath: "Laya HTTP /v1/systemone -> Control Tower judgment gate",
+    integrationPath: "Laya HTTP /v1/systemone -> Control Tower judgment gate; NVIDIA NIM analysis partner",
     status: "requires-host-runtime",
-    controlTowerRole: "decision engine rápido e parceiro do LLM no par Laya + LLM",
+    controlTowerRole: "decision engine; NVIDIA NIM analisa riscos sem alterar a decisão tipada",
     runtimeRequirement: "LAYA_HTTP_URL apontando para um serviço Laya; LAYA_API_KEY é opcional conforme a configuração do servidor.",
   },
   {
-    id: "freellmapi",
-    name: "FreeLLMAPI",
-    role: "Barramento OpenAI-compatible para modelos e fallback/routing de LLMs.",
-    repository: "tashfeenahmed/freellmapi",
-    integrationPath: "Control Tower -> /v1/chat/completions -> selected LLM",
-    status: "requires-host-runtime",
-    controlTowerRole: "infraestrutura de inferência; nunca recebe autoridade de execução",
-    runtimeRequirement: "FREELLMAPI_URL + FREELLMAPI_API_KEY; o servidor FreeLLMAPI precisa estar acessível ao Worker.",
+    id: "nvidia-nim",
+    name: "NVIDIA NIM / Nemotron",
+    role: "Inferência e análise secundária no Control Tower.",
+    repository: "NVIDIA Nemotron / NVIDIA NIM",
+    integrationPath: "Control Tower -> NVIDIA NIM /chat/completions",
+    status: "integrated",
+    controlTowerRole: "COMMANDER e parceiro analítico de JEV/Laya; não recebe autoridade de execução",
+    runtimeRequirement: "NVIDIA_API_KEY configurada no Worker; inferência específica do pareamento precisa ser validada pela rota protegida /pairs/test.",
   },
 ];
 
@@ -63,8 +63,8 @@ export function externalAgentSnapshot() {
       externalRuntimeRequired: true,
       runtimeProof: "must-be-tested-on-host",
       pairing: {
-        "jev-glm": "Jev decides; FreeLLMAPI-provided LLM analyzes",
-        "laya-llm": "Laya decides; FreeLLMAPI-provided LLM analyzes",
+        "jev-glm": "JEV decides; NVIDIA NIM / Nemotron analyzes",
+        "laya-llm": "Laya decides; NVIDIA NIM / Nemotron analyzes",
       },
     },
   };
