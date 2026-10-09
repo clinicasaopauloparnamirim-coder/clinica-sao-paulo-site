@@ -21,11 +21,12 @@ function oauthStore(env: GoogleAdsEnv) {
 }
 
 async function refreshAccessToken(env: GoogleAdsEnv) {
-  let refreshToken = env.GOOGLE_ADS_REFRESH_TOKEN || "";
-  if (!refreshToken) {
-    const response = await oauthStore(env).fetch("https://store.internal/ads-refresh-token");
-    if (response.ok) refreshToken = await response.text();
-  }
+  // The most recently consented token in Durable Object storage takes precedence over
+  // a legacy environment token, which may have been revoked and caused invalid_grant.
+  let refreshToken = "";
+  const stored = await oauthStore(env).fetch("https://store.internal/ads-refresh-token");
+  if (stored.ok) refreshToken = (await stored.text()).trim();
+  if (!refreshToken) refreshToken = env.GOOGLE_ADS_REFRESH_TOKEN || "";
   if (!refreshToken || !env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
     throw new Error("Google Ads OAuth is not configured.");
   }
