@@ -21,11 +21,12 @@ function oauthStore(env: GoogleAdsEnv) {
 }
 
 async function refreshAccessToken(env: GoogleAdsEnv) {
-  let refreshToken = env.GOOGLE_ADS_REFRESH_TOKEN || "";
-  if (!refreshToken) {
-    const response = await oauthStore(env).fetch("https://store.internal/ads-refresh-token");
-    if (response.ok) refreshToken = await response.text();
-  }
+  // The most recently consented token in Durable Object storage takes precedence over
+  // a legacy environment token, which may have been revoked and caused invalid_grant.
+  let refreshToken = "";
+  const stored = await oauthStore(env).fetch("https://store.internal/ads-refresh-token");
+  if (stored.ok) refreshToken = (await stored.text()).trim();
+  if (!refreshToken) refreshToken = env.GOOGLE_ADS_REFRESH_TOKEN || "";
   if (!refreshToken || !env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
     throw new Error("Google Ads OAuth is not configured.");
   }
@@ -271,8 +272,12 @@ export async function googleAdsOAuthCallback(request: Request, env: GoogleAdsEnv
   if (!state || !code) return new Response("Missing OAuth response.", { status: 400 });
 
   const stateResponse = await oauthStore(env).fetch(`https://store.internal/state?state=${encodeURIComponent(state)}`);
-  const saved = stateResponse.ok ? await stateResponse.json() as { state?: string } : null;
-  if (!saved || saved.state !== state) return new Response("Invalid or expired OAuth state.", { status: 400 });
+  const saved = stateResponse.ok
+    ? await stateResponse.json() as { value?: string; expires?: number }
+    : null;
+  if (!saved || saved.value !== state || !saved.expires || saved.expires < Date.now()) {
+    return new Response("Invalid or expired OAuth state.", { status: 400 });
+  }
   await oauthStore(env).fetch(`https://store.internal/state?state=${encodeURIComponent(state)}`, { method: "DELETE" });
 
   const redirectUri = new URL("/google/ads/oauth/callback", request.url).toString();

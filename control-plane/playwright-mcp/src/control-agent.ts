@@ -26,7 +26,7 @@ export type ControlAgentState = {
   version: 5;
   capabilities: string[];
   browser_mcp: "connected" | "disconnected";
-  ai: "ready" | "error";
+  ai: "ready" | "error" | "unverified";
   last_orchestration?: {
     at: string;
     provider: string;
@@ -157,7 +157,8 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       "workers-ai",
       "nvidia-nim",
       "nvidia-fallback",
-      "8-brains",
+      "9-brains",
+      "marketing-growth-draft-generation",
       "21-capabilities",
       "20-autonomous-functions",
       "gauntlet-loop",
@@ -168,7 +169,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       "nvidia-pair-analysis",
     ],
     browser_mcp: "disconnected",
-    ai: "ready",
+    ai: "unverified",
   };
 
   async onStart() {
@@ -210,9 +211,12 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       const snapshot = specialistSnapshot();
       const orchestrationSystem =
         "Você é o COMMANDER do Control Tower da Clínica São Paulo. " +
-        "Use a arquitetura de 8 cérebros, 21 capacidades e 20 funções autônomas abaixo. " +
+        "Use o registro de 9 papéis cerebrais, 21 capacidades e 20 funções definidas abaixo. " +
         "Decomponha a solicitação, escolha os cérebros/especialistas necessários, " +
         "declare dependências e blockers e produza um plano que outro executor possa seguir. " +
+        "Este endpoint planeja e verifica respostas; ele não executa diretamente ferramentas externas do Composio. " +
+        "Não alegue que uma ferramenta externa foi executada sem um resultado recebido e verificável. " +
+        "Para uma ação externa, indique o tool slug necessário, o executor autorizado e o bloqueio se não houver ponte disponível. " +
         "Nunca permita ações financeiras, exposição de secrets ou ações destrutivas sem confirmação explícita. " +
         "Se uma integração não estiver conectada, marque-a como blocker; não invente acesso. " +
         "A resposta deve ser JSON válido com: brains (array), specialists (array), mode, blockers (array), " +
@@ -304,6 +308,123 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
         autonomous_functions: autonomousFunctionSnapshot(),
         verification: null,
       });
+    }
+
+    if (url.pathname.endsWith("/marketing/brief") && request.method === "POST") {
+      type MarketingBriefRequest = {
+        treatment?: string;
+        objective?: string;
+        audience?: string;
+        channels?: string[];
+        approvedOffer?: string;
+      };
+      let body: MarketingBriefRequest = {};
+      try {
+        body = await request.json();
+      } catch {
+        return Response.json({ ok: false, error: "invalid_json" }, { status: 400 });
+      }
+
+      const treatment = typeof body.treatment === "string" ? body.treatment.trim() : "";
+      const objective = typeof body.objective === "string" ? body.objective.trim() : "gerar agendamentos qualificados";
+      const audience = typeof body.audience === "string" ? body.audience.trim() : "pessoas adultas em Parnamirim/RN interessadas em odontologia";
+      const approvedOffer = typeof body.approvedOffer === "string" ? body.approvedOffer.trim() : "";
+      const allowedChannels = new Set(["instagram_stories", "instagram_reels", "instagram_feed", "google_search", "whatsapp", "landing_page"]);
+      const channels = Array.isArray(body.channels)
+        ? body.channels.filter((value): value is string => typeof value === "string" && allowedChannels.has(value)).slice(0, 5)
+        : ["instagram_stories", "whatsapp", "landing_page"];
+
+      if (!treatment || treatment.length > 160 || objective.length > 300 || audience.length > 300 || approvedOffer.length > 300) {
+        return Response.json({ ok: false, error: "required_or_invalid_marketing_fields" }, { status: 400 });
+      }
+
+      const marketingSystem =
+        "Você é o cérebro MARKETING/GROWTH da Clínica São Paulo, clínica odontológica local em Parnamirim/RN. " +
+        "Crie um briefing e copy utilizável que percorra o funil inteiro: atenção, desejo com confiança, consumo, intenção/impulso ético, conversa, qualificação, agendamento, retenção e mensuração. " +
+        "Use português brasileiro natural. Não invente preço, desconto, escassez, depoimento, número de pacientes, prova social, disponibilidade, resultado clínico ou alegações de superioridade. " +
+        "Se não foi fornecida oferta aprovada, não invente uma oferta; proponha CTA para avaliação e liste dados faltantes. Nunca prometa resultado odontológico. " +
+        "Não peça dados de saúde, nome, telefone ou detalhes identificáveis de pacientes. Separe métricas de atenção de métricas de negócio. " +
+        "Não publique nem alegue que publicou: este endpoint apenas gera texto e plano. Não gera imagem/vídeo nem chama Meta Ads/Instagram/WhatsApp. " +
+        "Responda SOMENTE JSON válido nesta estrutura: {strategy:{audience,insight,positioning,offer_frame},funnel:{attention:{hook,kpi},desire_trust:{message,proof_needed},consume:{content_sequence,kpi},intent_impulse:{cta,friction_reducer},conversion:{whatsapp_opening,qualification_questions,success_event},retention:{follow_up_ideas,consent_required},measurement:{events,primary_business_kpi,guardrail_kpis}},creative_variants:[{angle,hook,format,script,cta,test_metric},{angle,hook,format,script,cta,test_metric}],missing_inputs:[],status:'draft_only_not_published'}. " +
+        "Cada campo textual deve ser breve e concreto; creative_variants deve ter ao menos duas variantes distintas.\n" +
+        "Canais permitidos: " + channels.join(", ") + ".";
+      const prompt =
+        "Tratamento/tema: " + treatment + "\n" +
+        "Objetivo de negócio: " + objective + "\n" +
+        "Público: " + audience + "\n" +
+        "Oferta aprovada fornecida pelo responsável: " + (approvedOffer || "nenhuma; não inventar") + "\n" +
+        "Entrega só um rascunho JSON para revisão humana.";
+      
+      const isValidBrief = (value: Record<string, any> | null) =>
+        Boolean(value &&
+          value.strategy && typeof value.strategy === "object" &&
+          value.funnel && typeof value.funnel === "object" &&
+          Array.isArray(value.creative_variants) && value.creative_variants.length >= 2 &&
+          value.creative_variants.every((item: any) =>
+            item && typeof item.hook === "string" &&
+            typeof item.script === "string" && typeof item.cta === "string") &&
+          value.funnel.attention && value.funnel.desire_trust &&
+          value.funnel.consume && value.funnel.intent_impulse &&
+          value.funnel.conversion && value.funnel.retention && value.funnel.measurement
+        );
+
+      try {
+        const nvidia = await nvidiaChat(this.env, marketingSystem, prompt);
+        const brief = nvidia ? tryJson(nvidia.text) : null;
+        if (nvidia && isValidBrief(brief)) {
+          this.setState({ ...this.state, ai: "ready" });
+          return Response.json({
+            ok: true,
+            agent: "MarketingGrowth",
+            provider: "nvidia-nim",
+            model: nvidia.model,
+            schema_validated: true,
+            review_required: true,
+            published: false,
+            media_assets_generated: false,
+            brief,
+          }, { headers: { "cache-control": "no-store" } });
+        }
+      } catch (error) {
+        console.error("[MarketingGrowth] NIM failed; using Workers AI:", error);
+      }
+
+      try {
+        const workersai = createWorkersAI({ binding: this.env.AI });
+        const generated = await generateText({
+          model: workersai("@cf/zai-org/glm-4.7-flash"),
+          system: marketingSystem,
+          prompt,
+          stopWhen: stepCountIs(3),
+        });
+        const brief = tryJson(generated.text);
+        if (!isValidBrief(brief)) {
+          return Response.json({
+            ok: false,
+            error: "marketing_brief_schema_validation_failed",
+            retryable: false,
+          }, { status: 502, headers: { "cache-control": "no-store" } });
+        }
+        this.setState({ ...this.state, ai: "ready" });
+        return Response.json({
+          ok: true,
+          agent: "MarketingGrowth",
+          provider: "cloudflare-workers-ai",
+          model: "@cf/zai-org/glm-4.7-flash",
+          schema_validated: true,
+          review_required: true,
+          published: false,
+          media_assets_generated: false,
+          brief,
+        }, { headers: { "cache-control": "no-store" } });
+      } catch (error) {
+        console.error("[MarketingGrowth] text generation failed:", error);
+        return Response.json({
+          ok: false,
+          error: "marketing_brief_generation_failed",
+          retryable: false,
+        }, { status: 502, headers: { "cache-control": "no-store" } });
+      }
     }
 
     if (url.pathname.endsWith("/pairs/test") && request.method === "POST") {
