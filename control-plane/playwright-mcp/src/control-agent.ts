@@ -372,12 +372,14 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
         const nvidia = await nvidiaChat(this.env, marketingSystem, prompt);
         const brief = nvidia ? tryJson(nvidia.text) : null;
         if (nvidia && isValidBrief(brief)) {
+          this.setState({ ...this.state, ai: "ready" });
           return Response.json({
             ok: true,
             agent: "MarketingGrowth",
             provider: "nvidia-nim",
             model: nvidia.model,
-            verified: true,
+            schema_validated: true,
+            review_required: true,
             published: false,
             media_assets_generated: false,
             brief,
@@ -403,12 +405,14 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
             retryable: false,
           }, { status: 502, headers: { "cache-control": "no-store" } });
         }
+        this.setState({ ...this.state, ai: "ready" });
         return Response.json({
           ok: true,
           agent: "MarketingGrowth",
           provider: "cloudflare-workers-ai",
           model: "@cf/zai-org/glm-4.7-flash",
-          verified: true,
+          schema_validated: true,
+          review_required: true,
           published: false,
           media_assets_generated: false,
           brief,
