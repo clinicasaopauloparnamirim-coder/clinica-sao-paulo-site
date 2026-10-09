@@ -1,6 +1,6 @@
 /**
  * Control Tower MCP — Streamable-style JSON-RPC over HTTP POST.
- * Tools: health, ads_auth_check, ads_audit, ads_search, ads_mutate, ga4_audit, gsc_audit.
+ * Tools: health, ads auth/audit/search/mutate, GA4/GSC audit, NVIDIA test, and MarketingGrowth brief.
  * Auth: same Bearer MCP_AUTH_TOKEN (checked by index before this handler).
  */
 
@@ -24,6 +24,7 @@ type TowerEnv = {
   GOOGLE_ADS_CUSTOMER_ID?: string;
   GOOGLE_ADS_LOGIN_CUSTOMER_ID?: string;
   GOOGLE_OAUTH_STORE: DurableObjectNamespace;
+  CONTROL_AGENT: DurableObjectNamespace;
   MCP_AUTH_TOKEN?: string;
   TYPESAFE_API_KEY?: string;
   LAYA_HTTP_URL?: string;
@@ -130,6 +131,26 @@ const TOOLS = [
     name: "gsc_audit",
     description: "Performance Search Console (queries, paginas, dispositivos).",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "marketing_brief",
+    description: "Generate a draft full-funnel marketing brief and at least two copy variants. Text only; never publishes or changes accounts.",
+    inputSchema: {
+      type: "object",
+      required: ["treatment"],
+      properties: {
+        treatment: { type: "string", minLength: 1, maxLength: 160, description: "Treatment or content theme; no patient-identifiable information." },
+        objective: { type: "string", maxLength: 300, description: "Business goal, e.g. qualified evaluations." },
+        audience: { type: "string", maxLength: 300, description: "Audience or local segment." },
+        channels: {
+          type: "array",
+          maxItems: 5,
+          items: { type: "string", enum: ["instagram_stories", "instagram_reels", "instagram_feed", "google_search", "whatsapp", "landing_page"] },
+        },
+        approvedOffer: { type: "string", maxLength: 300, description: "Only a price/promotion actually approved by the clinic; omit if none." },
+      },
+      additionalProperties: false,
+    },
   },
   {
     name: "nvidia_test",
@@ -286,6 +307,17 @@ async function callTool(request: Request, env: TowerEnv, name: string, args: Rec
       return responseToJson(await googleGa4Audit(env));
     case "gsc_audit":
       return responseToJson(await googleGscAudit(env));
+    case "marketing_brief": {
+      const treatment = typeof args.treatment === "string" ? args.treatment.trim() : "";
+      if (!treatment || treatment.length > 160) throw new Error("treatment is required (max 160 characters)");
+      const agent = env.CONTROL_AGENT.get(env.CONTROL_AGENT.idFromName("marketing-growth"));
+      const response = await agent.fetch("https://control-agent/marketing/brief", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(args),
+      });
+      return responseToJson(response);
+    }
     case "nvidia_test": {
       const apiKey = env.NVIDIA_API_KEY;
       const configuredBaseUrl = env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1";
