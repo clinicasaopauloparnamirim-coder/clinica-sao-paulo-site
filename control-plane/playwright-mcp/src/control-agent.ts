@@ -459,18 +459,19 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
           funnel: value.funnel,
           creative_variants: value.creative_variants,
         }).toLocaleLowerCase("pt-BR");
+        const serializedBrief = JSON.stringify(value).toLocaleLowerCase("pt-BR");
         const hardFailures = [
-          /[\u3400-\u9fff]/u,                                // mixed language / unexpected CJK characters
           /\b(?:servi[cç]o|produto|pacote|marca)\s+[xyz]\b/i, // unresolved placeholders
-          /\br\$\s*(?:\d|[xy]\b)/i,                     // unapproved price or price placeholder
+          /\br\$\s*[xy]\b/i,                              // price placeholder, even if an offer was supplied
           /\b(?:cat[aá]logo\s+de\s+im[oó]veis|pacote\s+de\s+色泽)\b/i,
           /\b(?:alvo|meta|target)\s*[:=]\s*\d[\d.,]*/i, // invented numerical target presented as fact
         ];
-        if (hardFailures.some((pattern) => pattern.test(generatedCopy))) return false;
+        if (/[\u3400-\u9fff]/u.test(serializedBrief) ||
+            hardFailures.some((pattern) => pattern.test(serializedBrief))) return false;
 
         if (!approvedOffer) {
           const unapprovedCommercialClaim =
-            /\b(?:gratuit[oa]s?|gr[aá]tis|descontos?|promo[cç][oõ]es?|pre[cç]o\s+promocional|\br\$\s*\d)\b/i;
+            /\b(?:gratuit[oa]s?|gr[aá]tis|descontos?|promo[cç][oõ]es?|pre[cç]o\s+promocional|r\$\s*\d)/i;
           if (unapprovedCommercialClaim.test(generatedCopy)) return false;
         }
         const unsupportedAvailability =
