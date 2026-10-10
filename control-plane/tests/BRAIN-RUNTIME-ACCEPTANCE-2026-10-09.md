@@ -83,3 +83,36 @@ Campanha aprovada de Ads: `24289443969` (ALTA INTENÇÃO). Campanha `Search-2` p
 7. Após refresh do esquema OpenAPI no Composio, executar `marketingSocialSnapshotWrite` com o perfil oficial e dados sanitizados; conferir contagens; executar `marketingSocialSnapshotRead` e validar perfil/captura.
 8. Repetir `marketingSocialSnapshotWrite` com username fora do escopo e exigir HTTP 403; testar payload acima de 24.000 caracteres e exigir HTTP 413. Verificar também que chamadas sem bearer são rejeitadas.
 9. Executar `marketingBrief` com tema não sensível; confirmar `instagram_context.available=true`, frescor correto e `published=false`. Não publicar nada durante a aceitação.
+
+
+## Atualização de execução — 2026-10-10
+
+### Estado confirmado em produção
+
+- SHA de `main`: `df9bb3f9d89065c7b5e6dbcee73c440a9e82f22b`.
+- [Deploy V2 #38011333014](https://github.com/clinicasaopauloparnamirim-coder/clinica-sao-paulo-site/actions/runs/38011333014): concluído com sucesso; instalação, typecheck, deploy, smoke test, verificação Zaraz e rotas protegidas concluídos.
+- [Control Plane push #38011333005](https://github.com/clinicasaopauloparnamirim-coder/clinica-sao-paulo-site/actions/runs/38011333005): concluído com sucesso.
+- Leitura live de `CUSTOM_CONTROL_TOWER_HEALTH`: `ok=true`, autenticação configurada, NVIDIA configurado para `nvidia/nemotron-3.5-lightning-30b-a3b`; JEV não configurado e LAYA configurado, mas isso não prova inferência de nenhum deles.
+- Leitura live de `INSTAGRAM_GET_USER_INFO`: perfil `@clinicasaopauloparnamirim`, 3.723 seguidores, 1.813 seguindo e 74 mídias. Sem efeitos colaterais.
+
+### MarketingGrowth — status por caminho
+
+| Capacidade | Status | Evidência/limite |
+|---|---|---|
+| REST autenticado `POST /marketing/social-snapshot` + read-back | PASS, conforme testes de produção registrados na execução de 2026-10-10 | Snapshot sanitizado persistido e relido; não confundir com sincronização recorrente. |
+| Rejeição de bearer inválido | PASS | HTTP 401 observado no teste de produção. |
+| Rejeição de perfil fora do escopo | PASS | Username não autorizado rejeitado no teste de produção. |
+| Payload excessivo >24.000 caracteres | INCONCLUSIVE no nível da aplicação | Proxy pode rejeitar antes do Worker; não promover para PASS sem evidência da resposta emitida pela aplicação. |
+| `POST /marketing/brief` com contexto social | PASS para fluxo seguro com fallback | Contexto disponível/fresco, duas variantes, sete etapas, revisão humana obrigatória, `published=false`, `media_assets_generated=false`. |
+| Geração autônoma pelo modelo | FAIL / degradado | Saídas anteriores continham geografia não solicitada, metas sem base, placeholders e caracteres de outro idioma; no último teste conhecido, o modelo foi rejeitado e o fallback determinístico foi usado. |
+| Operações MarketingGrowth no catálogo Composio | BLOCKED | Nova busca `tool_search` em 2026-10-10 retornou ferramentas genéricas do Control Tower, mas não retornou operações de social snapshot nem marketing brief. Conexão ACTIVE não equivale a sincronização do catálogo. |
+| Inferência NVIDIA/Nemotron | INCONCLUSIVE | Health confirma configuração; nenhuma saída de inferência validada nesta rodada. |
+| Instagram publishing / Meta Ads | Não executado | Nenhuma publicação nem mutação de anúncios realizada. |
+
+### Próximas ações técnicas
+
+1. Atualizar/sincronizar a definição do custom MCP no Composio e repetir descoberta das operações existentes; não duplicar endpoints REST.
+2. Testar inferência NIM com resposta não vazia e assertion explícita; não promover com base em configuração/health.
+3. Melhorar a saída do modelo com schema/JSON estruturado ou contrato equivalente, com testes de aceitação para idioma, geografia, alegações comerciais e fallback; manter publicação desativada.
+4. Executar o briefing novamente via caminho REST autenticado e validar read-back/contexto após a correção.
+5. Não alterar campanhas, orçamento, lances, palavras-chave nem publicar conteúdo.
