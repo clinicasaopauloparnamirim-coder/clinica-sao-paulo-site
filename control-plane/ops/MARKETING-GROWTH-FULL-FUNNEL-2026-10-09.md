@@ -43,6 +43,8 @@ A integração usa o tool runner externo do Composio para obter métricas da con
 
 A implantação só fica comprovada quando o cliente MCP descobrir as ferramentas, um snapshot válido for gravado e relido, um username fora do escopo for rejeitado e o briefing devolver metadados do snapshot. Sincronização recorrente e Meta Ads continuam separadas.
 
+A camada REST agora expõe também `GET/POST /marketing/social-snapshot` e `POST /marketing/brief`, com bearer auth do Worker, e ambos foram adicionados a `control-plane/docs/openapi-control-tower.yaml`. O deploy de main terminou com typecheck, deploy e smoke tests verdes. Ainda não marcar como integrado em runtime até o Composio importar o OpenAPI atualizado e os testes write/read + escopo + briefing passarem.
+
 ## 3. Etapas do funil e trabalho que o cérebro deve realizar
 
 | Etapa | Objetivo | Saídas concretas | Métricas principais |
