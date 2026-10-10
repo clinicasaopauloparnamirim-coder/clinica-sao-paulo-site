@@ -520,11 +520,116 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
         });
         const brief = tryJson(generated.text);
         if (!isValidBrief(brief)) {
+          // Fail closed on the model output, but keep the brain operational with a small,
+          // deterministic, fully grounded draft that uses only caller-provided inputs and observed metrics.
+          const mediaRows = Array.isArray(instagramEvidence.media) ? instagramEvidence.media : [];
+          const mediaWithViews = mediaRows.filter((item: any) => typeof item?.views === "number" && Number.isFinite(item.views));
+          mediaWithViews.sort((a: any, b: any) => b.views - a.views);
+          const topMedia = mediaWithViews[0];
+          const observedInsight = topMedia
+            ? "Na amostra de " + mediaRows.length + " mídias consultadas, a publicação de " +
+              String(topMedia.timestamp || "data não disponível").slice(0, 10) + " registrou " +
+              String(topMedia.views) + " visualizações" +
+              (typeof topMedia.reach === "number" ? " e alcance de " + String(topMedia.reach) + " contas" : "") +
+              ". Isso descreve apenas essa mídia, não o desempenho total do perfil nem a causa do resultado."
+            : "O snapshot não contém visualizações válidas para comparar mídias; não inferir desempenho ou causalidade.";
+          const offerFrame = approvedOffer
+            ? "Usar somente a oferta aprovada informada pelo responsável: " + approvedOffer + ". Não ampliar nem inventar condições."
+            : "Nenhuma oferta promocional foi aprovada. Convidar a conversar e pedir informações sobre avaliação; não afirmar preço, desconto, gratuidade ou disponibilidade.";
+          const groundedBrief = {
+            strategy: {
+              audience,
+              insight: "Objetivo informado: " + objective + ". " + observedInsight,
+              positioning: "Conteúdo educativo sobre odontologia, com informação clara e orientação individual após avaliação profissional.",
+              offer_frame: offerFrame,
+            },
+            funnel: {
+              attention: {
+                hook: "Uma dúvida comum sobre " + treatment + " merece uma resposta clara.",
+                kpi: "Registrar visualizações e contas alcançadas por publicação com data; não inventar meta numérica.",
+              },
+              desire_trust: {
+                message: "Explique uma informação geral e verificável sobre " + treatment + " em linguagem simples, sem diagnóstico ou promessa de resultado.",
+                proof_needed: "Usar somente evidências reais e autorizadas da equipe/estrutura; se não existirem, não inventar depoimento ou prova social.",
+              },
+              consume: {
+                content_sequence: [
+                  "Abrir com a pergunta do público sobre " + treatment + ".",
+                  "Explicar uma informação geral que possa ser confirmada pelo profissional.",
+                  "Orientar a conversar com a clínica para entender o próximo passo individual.",
+                ],
+                kpi: "Comparar visualizações, retenção disponível e interações reais entre publicações equivalentes.",
+              },
+              intent_impulse: {
+                cta: "Envie QUERO SABER no WhatsApp para tirar dúvidas sobre " + treatment + ".",
+                friction_reducer: "Explicar o próximo passo de forma simples, sem prometer horários, preço ou resultado clínico.",
+              },
+              conversion: {
+                whatsapp_opening: "Olá! Vim do Instagram da Clínica São Paulo e gostaria de informações sobre " + treatment + ". Como funciona a avaliação?",
+                qualification_questions: [
+                  "Qual assunto você gostaria de entender melhor?",
+                  "Prefere receber informações por mensagem ou solicitar uma avaliação?",
+                  "Podemos encaminhar sua dúvida à equipe?",
+                ],
+                success_event: "Registrar clique_whatsapp, generate_lead e qualify_lead separadamente; não considerar clique como agendamento.",
+              },
+              retention: {
+                follow_up_ideas: [
+                  "Enviar conteúdo educativo relevante somente quando houver consentimento.",
+                  "Após avaliação, confirmar se a pessoa deseja receber orientações ou lembretes.",
+                ],
+                consent_required: true,
+              },
+              measurement: {
+                events: ["clique_whatsapp", "generate_lead", "qualify_lead"],
+                primary_business_kpi: "Leads qualificados confirmados com origem/UTM; validar a implementação antes de atribuir resultado.",
+                guardrail_kpis: [
+                  "Não misturar clique, lead, agendamento e tratamento concluído.",
+                  "Não atribuir causa com base em poucas publicações.",
+                  "Não publicar alegações comerciais/clínicas sem comprovação.",
+                ],
+              },
+            },
+            creative_variants: [
+              {
+                angle: "Dúvida respondida com clareza",
+                hook: "Uma dúvida comum sobre " + treatment + " merece uma resposta clara.",
+                format: "Instagram Reel ou Stories",
+                script: "Cena 1: apresente a dúvida sobre " + treatment + ". Cena 2: explique uma informação geral verificável em linguagem simples. Cena 3: convide a conversar com a equipe para receber orientação individual.",
+                cta: "Envie QUERO SABER no WhatsApp.",
+                test_metric: "Comparar alcance, retenção disponível e cliques de WhatsApp; registrar a janela de análise.",
+              },
+              {
+                angle: "Orientação individual, sem promessas",
+                hook: "Antes de decidir sobre " + treatment + ", busque orientação para o seu caso.",
+                format: "Instagram Reel ou Stories",
+                script: "Apresente a importância de esclarecer dúvidas sobre " + treatment + ", sem mostrar resultados não comprovados. Termine orientando a pessoa a conversar com a equipe.",
+                cta: "Fale com a Clínica São Paulo pelo WhatsApp para tirar dúvidas.",
+                test_metric: "Comparar interações qualificadas e leads; não tratar alcance como conversão.",
+              },
+            ],
+            missing_inputs: [
+              ...(!approvedOffer ? ["Oferta comercial aprovada, caso exista; atualmente não fornecida."] : []),
+              "URL oficial do WhatsApp/landing page que deve ser usada na chamada para ação.",
+              "Disponibilidade real da agenda antes de qualquer comunicação sobre horários.",
+              "Provas sociais/imagens autorizadas, se forem usadas.",
+            ],
+            status: "draft_only_not_published",
+          };
+          this.setState({ ...this.state, ai: "ready" });
           return Response.json({
-            ok: false,
-            error: "marketing_brief_quality_validation_failed",
-            retryable: false,
-          }, { status: 502, headers: { "cache-control": "no-store" } });
+            ok: true,
+            agent: "MarketingGrowth",
+            provider: "deterministic-safe-template-fallback",
+            model: null,
+            schema_validated: true,
+            quality_gate: "model_output_rejected_fallback_used",
+            review_required: true,
+            published: false,
+            media_assets_generated: false,
+            instagram_context: { available: instagramEvidence.available, freshness: instagramEvidence.freshness, captured_at: "captured_at" in instagramEvidence ? instagramEvidence.captured_at : null },
+            brief: groundedBrief,
+          }, { headers: { "cache-control": "no-store" } });
         }
         this.setState({ ...this.state, ai: "ready" });
         return Response.json({
