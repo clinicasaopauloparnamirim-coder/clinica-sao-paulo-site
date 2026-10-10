@@ -70,7 +70,7 @@ connectors:
   meta_ads: "not-connected"
   instagram: "active-ready-read-profile-media-insights-tested-2026-10-09"
   instagram_publishing: "available-in-tool-schema-not-test-published"
-  marketing_social_snapshot_bridge: "implemented-awaiting-deploy-and-runtime-readback"
+  marketing_social_snapshot_bridge: "deployed-main-2026-10-10-openapi-exposed-awaiting-composio-catalog-sync-and-runtime-readback"
   jev: "blocked-runtime-unverified"
   laya: "blocked-runtime-unverified"
   nvidia_nim: "configured-unverified"
@@ -78,7 +78,7 @@ connectors:
   whatsapp_ledger: "partial-end-to-end-test-required"
   commander_dispatch_bridge: "partial-not-implemented-end-to-end"
   marketing_brief_tool: "implemented-in-worker-catalog-not-exposed-in-composio-search"
-  marketing_social_snapshot_write_read: "implemented-awaiting-deploy-and-composio-catalog-sync"
+  marketing_social_snapshot_write_read: "mcp-and-rest-endpoints-deployed-openapi-updated-awaiting-composio-catalog-sync-and-runtime-readback"
   agent_pair_test_tool: "implemented-in-worker-catalog-not-exposed-in-composio-search"
   nvidia_test_tool: "implemented-in-worker-catalog-not-exposed-in-composio-search"
 repositories:
