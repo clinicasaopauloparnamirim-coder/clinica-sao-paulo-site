@@ -454,10 +454,12 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
           !value.funnel.conversion || !value.funnel.retention || !value.funnel.measurement) return false;
 
         // Reject common grounding failures before returning a draft to the clinic.
-        const generatedCopy = JSON.stringify({
-          strategy: value.strategy,
-          funnel: value.funnel,
+        const userVisibleCopy = JSON.stringify({
           creative_variants: value.creative_variants,
+          attention_hook: value.funnel.attention?.hook,
+          trust_message: value.funnel.desire_trust?.message,
+          cta: value.funnel.intent_impulse?.cta,
+          whatsapp_opening: value.funnel.conversion?.whatsapp_opening,
         }).toLocaleLowerCase("pt-BR");
         const serializedBrief = JSON.stringify(value).toLocaleLowerCase("pt-BR");
         const hardFailures = [
@@ -472,11 +474,11 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
         if (!approvedOffer) {
           const unapprovedCommercialClaim =
             /\b(?:gratuit[oa]s?|gr[aá]tis|descontos?|promo[cç][oõ]es?|pre[cç]o\s+promocional|r\$\s*\d)/i;
-          if (unapprovedCommercialClaim.test(generatedCopy)) return false;
+          if (unapprovedCommercialClaim.test(userVisibleCopy)) return false;
         }
         const unsupportedAvailability =
           /\b(?:vagas\s+(?:limitadas|restantes|dispon[ií]veis)|temos\s+hor[aá]rios|hor[aá]rios\s+dispon[ií]veis)\b/i;
-        if (unsupportedAvailability.test(generatedCopy)) return false;
+        if (unsupportedAvailability.test(userVisibleCopy)) return false;
 
         const generatedAudience = typeof value.strategy.audience === "string" ? value.strategy.audience.toLocaleLowerCase("pt-BR") : "";
         const audienceInput = audience.toLocaleLowerCase("pt-BR");
