@@ -487,6 +487,53 @@ ${authenticated ? `<p>Acesso autorizado</p>
       catch (error) { return new Response(error instanceof Error ? error.message : "Search Console audit failed", { status: 502 }); }
     }
 
+    // Authenticated REST bridge for Composio/OpenAPI clients. The only writable operation
+    // is a sanitized Instagram analytics snapshot; this bridge never publishes social content.
+    if (pathname === "/marketing/social-snapshot") {
+      if (!authorized(request, env)) return unauthorized();
+      if (request.method !== "GET" && request.method !== "POST") {
+        return new Response("Method Not Allowed", {
+          status: 405,
+          headers: { Allow: "GET, POST", "cache-control": "no-store" },
+        });
+      }
+      try {
+        const agent = env.CONTROL_AGENT.get(env.CONTROL_AGENT.idFromName("marketing-growth"));
+        const body = request.method === "POST" ? await request.text() : undefined;
+        return await agent.fetch("https://control-agent/marketing/social-snapshot", {
+          method: request.method,
+          headers: { "content-type": request.headers.get("content-type") || "application/json" },
+          body,
+        });
+      } catch (error) {
+        return Response.json(
+          { ok: false, error: error instanceof Error ? error.message : "Instagram snapshot bridge failed" },
+          { status: 502, headers: { "cache-control": "no-store" } },
+        );
+      }
+    }
+
+    if (pathname === "/marketing/brief" && request.method === "POST") {
+      if (!authorized(request, env)) return unauthorized();
+      try {
+        const body = await request.text();
+        if (body.length > 5000) {
+          return Response.json({ ok: false, error: "marketing_brief_payload_too_large" }, { status: 413 });
+        }
+        const agent = env.CONTROL_AGENT.get(env.CONTROL_AGENT.idFromName("marketing-growth"));
+        return await agent.fetch("https://control-agent/marketing/brief", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body,
+        });
+      } catch (error) {
+        return Response.json(
+          { ok: false, error: error instanceof Error ? error.message : "Marketing brief bridge failed" },
+          { status: 502, headers: { "cache-control": "no-store" } },
+        );
+      }
+    }
+
     if (pathname === "/track" && request.method === "POST") {
       return trackAttributionEvent(env, request);
     }
