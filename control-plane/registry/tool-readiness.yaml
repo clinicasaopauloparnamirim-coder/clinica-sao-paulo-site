@@ -68,7 +68,9 @@ connectors:
   cloudflare_mcp: "partial-read"
   cloudflare_direct_connector: "blocked-http-400-auth-header-format"
   meta_ads: "not-connected"
-  instagram: "not-connected"
+  instagram: "active-ready-read-profile-media-insights-tested-2026-10-09"
+  instagram_publishing: "available-in-tool-schema-not-test-published"
+  marketing_social_snapshot_bridge: "implemented-awaiting-deploy-and-runtime-readback"
   jev: "blocked-runtime-unverified"
   laya: "blocked-runtime-unverified"
   nvidia_nim: "configured-unverified"
@@ -76,6 +78,7 @@ connectors:
   whatsapp_ledger: "partial-end-to-end-test-required"
   commander_dispatch_bridge: "partial-not-implemented-end-to-end"
   marketing_brief_tool: "implemented-in-worker-catalog-not-exposed-in-composio-search"
+  marketing_social_snapshot_write_read: "implemented-awaiting-deploy-and-composio-catalog-sync"
   agent_pair_test_tool: "implemented-in-worker-catalog-not-exposed-in-composio-search"
   nvidia_test_tool: "implemented-in-worker-catalog-not-exposed-in-composio-search"
 repositories:
@@ -100,6 +103,8 @@ repositories:
     - "Zernio"
     - "Hermes-Bot-Mode"
 next_execution_order:
+  - "Deploy and runtime-test Instagram snapshot write/read; negative account-scope test; verify marketing_brief consumes snapshot"
+  - "Refresh Composio custom Control Tower tool catalog and verify new social snapshot tools are discoverable"
   - "Commander external-tool dispatcher"
   - "NVIDIA NIM inference smoke test"
   - "JEV + Nemotron synthetic pair test"

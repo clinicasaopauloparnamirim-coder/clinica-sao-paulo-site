@@ -20,6 +20,7 @@ O cérebro de marketing não promete resultado clínico, não inventa depoimento
 - GA4: leitura dos eventos-chave configurados.
 - OpenSEO: acesso aos projetos e ferramentas de SEO; a integração GA4 dentro dos dois projetos não está conectada.
 - GitHub: código, versões e CI/CD.
+- Instagram Business: conexão Composio ativa; perfil, publicações, insights por mídia e demografia por cidade foram lidos. Conta oficial: `@clinicasaopauloparnamirim`. Nenhuma publicação ou alteração foi executada.
 
 ### Geração de briefing na branch de correção
 
@@ -27,10 +28,20 @@ A branch `audit/brain-09-marketing-full-funnel-20261009` adiciona a ferramenta M
 
 ### Bloqueadas ou não validadas
 - Control Tower Ads/GA4/GSC: as chamadas internas falham por OAuth/token Google.
-- Meta Ads e Instagram: conector iniciado, sem conta ativa.
+- Meta Ads: ainda sem conexão e leitura de campanha confirmadas.
+- Instagram: leitura confirmada; ainda não houve teste de publicação. O snapshot persistente no ControlAgent está em implantação e deve passar por read-back e teste negativo de escopo antes de ser tratado como integrado ao runtime.
 - WhatsApp: há um ledger de atribuição no Worker, mas a cadeia de qualificação-agendamento-comparecimento-tratamento ainda precisa de teste ponta a ponta.
 - Criação/geração/publicação criativa: não há ainda pipeline automatizado de ponta a ponta validado no runtime.
 - Hermes/Jev/Laya/Nemotron: não promover como executores do cérebro de marketing antes de provar inferência/execução.
+
+## 2A. Ponte de dados sociais para o cérebro
+
+A integração usa o tool runner externo do Composio para obter métricas da conta oficial e duas ferramentas MCP no Control Tower:
+- `marketing_social_snapshot_write`: valida o username oficial, sanitiza métricas, guarda snapshot persistente no Durable Object do MarketingGrowth e não executa ações no Instagram.
+- `marketing_social_snapshot_read`: lê o último snapshot registrado.
+- `marketing_brief`: incorpora o snapshot no contexto e indica se está fresco (até 7 dias) ou desatualizado. Isso melhora a decisão com evidência real, mas não cria publicação nem atribuição automática.
+
+A implantação só fica comprovada quando o cliente MCP descobrir as ferramentas, um snapshot válido for gravado e relido, um username fora do escopo for rejeitado e o briefing devolver metadados do snapshot. Sincronização recorrente e Meta Ads continuam separadas.
 
 ## 3. Etapas do funil e trabalho que o cérebro deve realizar
 

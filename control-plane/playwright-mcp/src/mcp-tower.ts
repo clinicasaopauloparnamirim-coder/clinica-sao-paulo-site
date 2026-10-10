@@ -1,6 +1,6 @@
 /**
  * Control Tower MCP — Streamable-style JSON-RPC over HTTP POST.
- * Tools: health, ads auth/audit/search/mutate, GA4/GSC audit, NVIDIA test, and MarketingGrowth brief.
+ * Tools: health, ads auth/audit/search/mutate, GA4/GSC audit, NVIDIA test, MarketingGrowth brief, and persistent read-only social snapshots.
  * Auth: same Bearer MCP_AUTH_TOKEN (checked by index before this handler).
  */
 
@@ -174,6 +174,79 @@ const TOOLS = [
   {
     name: "nvidia_test",
     description: "Teste ponta a ponta de inferencia NVIDIA NIM usando a chave privada do Worker. Nao retorna secrets.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "marketing_social_snapshot_write",
+    description: "Grava no estado persistente do cérebro Marketing/Growth um snapshot sanitizado e somente de leitura do Instagram oficial. Não publica nem altera conteúdo.",
+    inputSchema: {
+      type: "object",
+      required: ["captured_at", "profile", "account_insights", "media", "audience_city", "missing_metrics"],
+      properties: {
+        captured_at: { type: "string", format: "date-time" },
+        profile: {
+          type: "object", required: ["id", "username", "account_type", "followers_count", "follows_count", "media_count"],
+          properties: {
+            id: { type: "string", minLength: 1, maxLength: 80 },
+            username: { type: "string", enum: ["clinicasaopauloparnamirim"] },
+            name: { type: "string", maxLength: 160 },
+            account_type: { type: "string", enum: ["BUSINESS", "CREATOR"] },
+            followers_count: { type: "number", minimum: 0 },
+            follows_count: { type: "number", minimum: 0 },
+            media_count: { type: "number", minimum: 0 },
+          }, additionalProperties: false,
+        },
+        account_insights: {
+          type: "array", maxItems: 30,
+          items: {
+            type: "object", required: ["name", "period"],
+            properties: {
+              name: { type: "string", enum: ["reach","follower_count","online_followers","accounts_engaged","total_interactions","likes","comments","shares","saves","replies","follows_and_unfollows","profile_links_taps","views","profile_views","website_clicks","follower_demographics"] },
+              title: { type: "string", maxLength: 100 },
+              period: { type: "string", enum: ["day", "lifetime"] },
+              total_value: { type: "number", minimum: 0 },
+              values: {
+                type: "array", maxItems: 31, items: {
+                  type: "object", required: ["end_time", "value"],
+                  properties: { end_time: { type: "string", maxLength: 64 }, value: { type: "number", minimum: 0 } },
+                  additionalProperties: false,
+                },
+              },
+            }, additionalProperties: false,
+          },
+        },
+        media: {
+          type: "array", maxItems: 10,
+          items: {
+            type: "object", required: ["id", "permalink", "timestamp", "media_type"],
+            properties: {
+              id: { type: "string", minLength: 1, maxLength: 80 },
+              permalink: { type: "string", format: "uri", maxLength: 512 },
+              timestamp: { type: "string", maxLength: 64 },
+              media_type: { type: "string", maxLength: 40 },
+              media_product_type: { type: "string", maxLength: 40 },
+              views: { type: "number", minimum: 0 }, reach: { type: "number", minimum: 0 },
+              likes: { type: "number", minimum: 0 }, comments: { type: "number", minimum: 0 },
+              saved: { type: "number", minimum: 0 }, shares: { type: "number", minimum: 0 },
+              total_interactions: { type: "number", minimum: 0 },
+            }, additionalProperties: false,
+          },
+        },
+        audience_city: {
+          type: "array", maxItems: 50,
+          items: {
+            type: "object", required: ["city", "followers"],
+            properties: { city: { type: "string", minLength: 1, maxLength: 120 }, followers: { type: "number", minimum: 0 } },
+            additionalProperties: false,
+          },
+        },
+        missing_metrics: { type: "array", maxItems: 30, items: { type: "string", maxLength: 100 } },
+      }, additionalProperties: false,
+    },
+  },
+  {
+    name: "marketing_social_snapshot_read",
+    description: "Lê o último snapshot Instagram armazenado no cérebro Marketing/Growth. Read-only.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
   },
 ];
@@ -393,6 +466,21 @@ async function callTool(request: Request, env: TowerEnv, name: string, args: Rec
         if (recovery) return recovery;
         throw error;
       }
+    }
+    case "marketing_social_snapshot_write": {
+      const agent = env.CONTROL_AGENT.get(env.CONTROL_AGENT.idFromName("marketing-growth"));
+      const response = await agent.fetch("https://control-agent/marketing/social-snapshot", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          captured_at: args.captured_at, profile: args.profile, account_insights: args.account_insights,
+          media: args.media, audience_city: args.audience_city, missing_metrics: args.missing_metrics,
+        }),
+      });
+      return responseToJson(response);
+    }
+    case "marketing_social_snapshot_read": {
+      const agent = env.CONTROL_AGENT.get(env.CONTROL_AGENT.idFromName("marketing-growth"));
+      return responseToJson(await agent.fetch("https://control-agent/marketing/social-snapshot", { method: "GET" }));
     }
     case "marketing_brief": {
       const treatment = typeof args.treatment === "string" ? args.treatment.trim() : "";
