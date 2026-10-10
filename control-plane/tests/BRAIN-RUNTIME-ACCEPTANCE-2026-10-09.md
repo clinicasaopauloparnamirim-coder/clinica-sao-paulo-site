@@ -42,7 +42,7 @@ Para qualquer cérebro:
 | 4 Engineer | Branch isolada, patch, build/typecheck e PR com CI verde | CI funciona; agente de código autônomo não comprovado |
 | 5 SEO | Consulta GSC/OpenSEO real e auditoria reproduzível | Parcial; GSC e OpenSEO direto funcionam; OpenSEO GA4 desconectado |
 | 6 Ads | Consulta apenas campanha ativa, saída reconciliada com fonte; nenhuma mutação não aprovada | Parcial; Google Ads direto responde, OAuth do Worker exige reautorização |
-| 7 Marketing/Growth | Conteúdo/variantes + revisão + eventos + lead qualificado + jornada downstream | Parcial; dados diretos existem, Meta/Instagram e o funil completo ainda não |
+| 7 Marketing/Growth | Conteúdo/variantes + snapshot Instagram persistido/read-back + revisão + eventos + lead qualificado + jornada downstream | Parcial; Instagram read APIs funcionam, ponte persistente exige deploy/testes negativos, Meta Ads e funil completo pendentes |
 | 8 Red Team/Judge | Teste contraditório falha solução ruim e bloqueia ação não permitida | Bloqueado como serviço independente; regras locais de segurança existem |
 | 9 NVIDIA | Inferência NIM com status 2xx, resposta não vazia, assertion de saída e métrica de latência | Configurado, mas inferência ainda não comprovada por saída desta auditoria |
 
@@ -60,7 +60,9 @@ Para qualquer cérebro:
 | OpenSEO `LIST_PROJECTS` | PASS | dois projetos para o domínio |
 | OpenSEO → GA4, ambos projetos | FAIL | `ga4_not_connected` |
 | Jev via Composio | FAIL/BLOCKED | sem conexão ativa reconhecida para toolkit Jev |
-| Meta Ads/Instagram | BLOCKED | contas não ativas na listagem |
+| Instagram profile/media insights | PASS (read-only) | Composio ACTIVE; perfil oficial 3.723 seguidores/74 publicações; media insights e dados por cidade retornaram |
+| Instagram snapshot → ControlAgent | PENDING | após deploy: write/read, negativa de escopo e consumo por marketing_brief |
+| Meta Ads | BLOCKED | sem conexão ativa e leitura de campanha confirmada |
 | GitHub workflows | PASS | workflows recentes do Control Plane completados |
 | Cloudflare direto | FAIL anterior | formato inválido do `X-Auth-Key`; conexão separada Cloudflare MCP ativa não valida esse conector |
 
@@ -78,3 +80,6 @@ Campanha aprovada de Ads: `24289443969` (ALTA INTENÇÃO). Campanha `Search-2` p
 4. Executar `agent_pair_test` com estado sintético e registrar qual provedor respondeu. Se Jev/Laya falhar, não promover o cérebro para verde.
 5. Executar `marketing_brief` para tema sintético e validar duas variantes, todos os estágios do funil, `published=false`, `media_assets_generated=false` e revisão humana requerida.
 6. Confirmar que o toolkit Composio sincroniza as novas tools MCP. Tool no servidor que não aparece no cliente deve continuar marcada como indisponível nesse caminho.
+7. Executar `marketing_social_snapshot_write` com o perfil oficial e dados sanitizados; conferir contagens; executar `marketing_social_snapshot_read` e validar perfil/captura.
+8. Repetir `marketing_social_snapshot_write` com username fora do escopo e exigir HTTP 403; testar payload acima de 24.000 caracteres e exigir HTTP 413.
+9. Executar `marketing_brief` com tema não sensível; confirmar `instagram_context.available=true`, frescor correto e `published=false`. Não publicar nada durante a aceitação.
