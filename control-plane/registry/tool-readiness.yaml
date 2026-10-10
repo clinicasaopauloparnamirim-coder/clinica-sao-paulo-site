@@ -70,7 +70,7 @@ connectors:
   meta_ads: "not-connected"
   instagram: "active-ready-read-profile-media-insights-tested-2026-10-09"
   instagram_publishing: "available-in-tool-schema-not-test-published"
-  marketing_social_snapshot_bridge: "deployed-main-2026-10-10-openapi-exposed-awaiting-composio-catalog-sync-and-runtime-readback"
+  marketing_social_snapshot_bridge: "PASS-main-deployed-runtime-write-read-and-brief-consumption-verified-2026-10-10"
   jev: "blocked-runtime-unverified"
   laya: "blocked-runtime-unverified"
   nvidia_nim: "configured-unverified"
@@ -78,7 +78,7 @@ connectors:
   whatsapp_ledger: "partial-end-to-end-test-required"
   commander_dispatch_bridge: "partial-not-implemented-end-to-end"
   marketing_brief_tool: "implemented-in-worker-catalog-not-exposed-in-composio-search"
-  marketing_social_snapshot_write_read: "mcp-and-rest-endpoints-deployed-openapi-updated-awaiting-composio-catalog-sync-and-runtime-readback"
+  marketing_social_snapshot_write_read: "PASS-rest-proxy-write-read-scope-403-invalid-bearer-401-2026-10-10"
   agent_pair_test_tool: "implemented-in-worker-catalog-not-exposed-in-composio-search"
   nvidia_test_tool: "implemented-in-worker-catalog-not-exposed-in-composio-search"
 repositories:
@@ -103,8 +103,8 @@ repositories:
     - "Zernio"
     - "Hermes-Bot-Mode"
 next_execution_order:
-  - "Deploy and runtime-test Instagram snapshot write/read; negative account-scope test; verify marketing_brief consumes snapshot"
-  - "Refresh Composio custom Control Tower tool catalog and verify new social snapshot tools are discoverable"
+  - "Instagram snapshot app-level oversize 413 is INCONCLUSIVE through Composio proxy, which blocks large request before the Worker response"
+  - "Import OpenAPI as dedicated Composio tools only if needed; REST proxy already read/write-tested, model brief consumes fresh Instagram snapshot"
   - "Commander external-tool dispatcher"
   - "NVIDIA NIM inference smoke test"
   - "JEV + Nemotron synthetic pair test"
