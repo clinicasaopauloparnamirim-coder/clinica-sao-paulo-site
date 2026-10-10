@@ -21,6 +21,7 @@ O cérebro de marketing não promete resultado clínico, não inventa depoimento
 - OpenSEO: acesso aos projetos e ferramentas de SEO; a integração GA4 dentro dos dois projetos não está conectada.
 - GitHub: código, versões e CI/CD.
 - Instagram Business: conexão Composio ativa; perfil, publicações, insights por mídia e demografia por cidade foram lidos. Conta oficial: `@clinicasaopauloparnamirim`. Nenhuma publicação ou alteração foi executada.
+- Instagram Agent Skill: as 13 skills de criação/auditoria estão versionadas em `.agents/skills/ig-*/` e documentadas em `control-plane/ops/INSTAGRAM-AGENT-INTEGRATION.md`. Elas são instruções e scripts auxiliares, não uma API nem prova de execução no Worker. O carregamento efetivo no runtime MarketingGrowth ainda precisa de teste end-to-end; publicação, comentários e DMs continuam sujeitos à revisão humana.
 
 ### Geração de briefing na branch de correção
 

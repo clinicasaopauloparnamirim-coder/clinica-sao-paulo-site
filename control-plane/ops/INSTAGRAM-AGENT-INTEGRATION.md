@@ -1,6 +1,6 @@
 # Instagram Agent Skill — integração no MarketingGrowth
 
-**Status:** skills importadas em branch isolada; execução integrada e publicação continuam pendentes de validação.
+**Status (2026-10-10):** as 13 skills e auxiliares estão em `main` após o merge do PR #45. Os testes locais de sintaxe passaram; a execução end-to-end no runtime MarketingGrowth e a publicação continuam pendentes de validação.
 
 ## Objetivo
 
@@ -40,4 +40,4 @@ A licença MIT foi preservada em `.agents/skills/instagram-agent/LICENSE`; o tem
 ## Referência
 
 - Upstream: https://github.com/Jakeschincariol/instagram-agent-skill
-- Branch de integração: `integrate/instagram-agent-skill-20261010`
+- PR integrado: https://github.com/clinicasaopauloparnamirim-coder/clinica-sao-paulo-site/pull/45
