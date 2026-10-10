@@ -131,6 +131,91 @@ paths:
       responses:
         "200":
           description: topQueries, topPages, byDevice
+  /marketing/social-snapshot:
+    get:
+      operationId: marketingSocialSnapshotRead
+      summary: Read the last persisted, sanitized Instagram metrics snapshot
+      responses:
+        "200":
+          description: Current snapshot or found=false
+    post:
+      operationId: marketingSocialSnapshotWrite
+      summary: Persist read-only analytics for the official clinic Instagram account
+      description: Only accepts @clinicasaopauloparnamirim. Does not publish posts, send messages, or change ads.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [captured_at, profile, account_insights, media, audience_city, missing_metrics]
+              properties:
+                captured_at: { type: string, format: date-time }
+                profile:
+                  type: object
+                  required: [id, username, account_type, followers_count, follows_count, media_count]
+                  properties:
+                    id: { type: string }
+                    username: { type: string, enum: [clinicasaopauloparnamirim] }
+                    account_type: { type: string, enum: [BUSINESS, CREATOR] }
+                    followers_count: { type: number, minimum: 0 }
+                    follows_count: { type: number, minimum: 0 }
+                    media_count: { type: number, minimum: 0 }
+                account_insights:
+                  type: array
+                  maxItems: 30
+                  items: { type: object }
+                media:
+                  type: array
+                  maxItems: 10
+                  items: { type: object }
+                audience_city:
+                  type: array
+                  maxItems: 50
+                  items: { type: object }
+                missing_metrics:
+                  type: array
+                  maxItems: 30
+                  items: { type: string }
+      responses:
+        "200":
+          description: Snapshot was validated and stored
+        "400":
+          description: Invalid payload
+        "403":
+          description: Account is outside the clinic's scope
+        "413":
+          description: Payload is too large
+
+  /marketing/brief:
+    post:
+      operationId: marketingBrief
+      summary: Generate a draft marketing brief using the latest Instagram snapshot
+      description: Returns a draft for human review. Never publishes or mutates advertisements.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [treatment]
+              properties:
+                treatment: { type: string, minLength: 1, maxLength: 160 }
+                objective: { type: string, maxLength: 300 }
+                audience: { type: string, maxLength: 300 }
+                approvedOffer: { type: string, maxLength: 300 }
+                channels:
+                  type: array
+                  maxItems: 5
+                  items: { type: string, enum: [instagram_stories, instagram_reels, instagram_feed, google_search, whatsapp, landing_page] }
+      responses:
+        "200":
+          description: Draft brief with snapshot availability and freshness
+        "400":
+          description: Invalid payload
+        "502":
+          description: No valid brief was generated
+
 components:
   securitySchemes:
     bearerAuth:
