@@ -421,10 +421,14 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       const marketingSystem =
         "Você é o cérebro MARKETING/GROWTH da Clínica São Paulo, clínica odontológica local em Parnamirim/RN. " +
         "Crie um briefing e copy utilizável que percorra o funil inteiro: atenção, desejo com confiança, consumo, intenção/impulso ético, conversa, qualificação, agendamento, retenção e mensuração. " +
-        "Use português brasileiro natural. Não invente preço, desconto, escassez, depoimento, número de pacientes, prova social, disponibilidade, resultado clínico ou alegações de superioridade. " +
-        "Se não foi fornecida oferta aprovada, não invente uma oferta; proponha CTA para avaliação e liste dados faltantes. Nunca prometa resultado odontológico. " +
-        "Não peça dados de saúde, nome, telefone ou detalhes identificáveis de pacientes. Separe métricas de atenção de métricas de negócio. " +
-        "Use o snapshot do Instagram como evidência observada, nunca como causalidade; se stale ou incompleto, declare a limitação. " +
+        "Use exclusivamente português brasileiro natural; não misture idiomas e não produza caracteres de outros alfabetos. " +
+        "Não invente nem complete informações ausentes: preços, descontos, gratuidade, escassez, depoimentos, pacientes, prova social, horários, ofertas, resultados clínicos, protocolos/equipamentos, bairros/cidades ou alegações de superioridade. " +
+        "Se não houver oferta aprovada, offer_frame deve dizer claramente que não existe oferta promocional aprovada e orientar apenas para avaliação, sem preço/pacote/condição comercial. " +
+        "Preserve o público e a geografia fornecidos; não acrescente cidades/bairros. Nunca prometa resultado odontológico nem faça diagnóstico. " +
+        "Não crie metas numéricas históricas nem invente benchmarks. Se sugerir uma meta de teste, identifique literalmente como 'hipótese de teste, não dado histórico'. " +
+        "Não invente serviços/termos, não use placeholders como Serviço X, R$ Y, pacote Z, campos de modelo ou texto de preenchimento. Se não souber, registre o dado em missing_inputs. " +
+        "Não peça dados de saúde, nome, telefone ou detalhes identificáveis de pacientes. Separe métricas observadas de métricas propostas. " +
+        "Use o snapshot do Instagram como evidência observada, nunca como causalidade; identifique o período exato e declare dados ausentes. Baixo alcance em poucos dias não prova queda geral nem a causa. " +
         "Não publique nem alegue que publicou: este endpoint apenas gera texto e plano. Não gera imagem/vídeo nem chama Meta Ads/Instagram/WhatsApp. " +
         "Responda SOMENTE JSON válido nesta estrutura: {strategy:{audience,insight,positioning,offer_frame},funnel:{attention:{hook,kpi},desire_trust:{message,proof_needed},consume:{content_sequence,kpi},intent_impulse:{cta,friction_reducer},conversion:{whatsapp_opening,qualification_questions,success_event},retention:{follow_up_ideas,consent_required},measurement:{events,primary_business_kpi,guardrail_kpis}},creative_variants:[{angle,hook,format,script,cta,test_metric},{angle,hook,format,script,cta,test_metric}],missing_inputs:[],status:'draft_only_not_published'}. " +
         "Cada campo textual deve ser breve e concreto; creative_variants deve ter ao menos duas variantes distintas.\n" +
@@ -437,18 +441,52 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
         "Snapshot Instagram gravado no Control Tower: " + JSON.stringify(instagramEvidence) + "\n" +
         "Entrega só um rascunho JSON para revisão humana.";
       
-      const isValidBrief = (value: Record<string, any> | null) =>
-        Boolean(value &&
-          value.strategy && typeof value.strategy === "object" &&
-          value.funnel && typeof value.funnel === "object" &&
-          Array.isArray(value.creative_variants) && value.creative_variants.length >= 2 &&
-          value.creative_variants.every((item: any) =>
+      const isValidBrief = (value: Record<string, any> | null) => {
+        if (!value ||
+          !value.strategy || typeof value.strategy !== "object" ||
+          !value.funnel || typeof value.funnel !== "object" ||
+          !Array.isArray(value.creative_variants) || value.creative_variants.length < 2 ||
+          !value.creative_variants.every((item: any) =>
             item && typeof item.hook === "string" &&
-            typeof item.script === "string" && typeof item.cta === "string") &&
-          value.funnel.attention && value.funnel.desire_trust &&
-          value.funnel.consume && value.funnel.intent_impulse &&
-          value.funnel.conversion && value.funnel.retention && value.funnel.measurement
-        );
+            typeof item.script === "string" && typeof item.cta === "string") ||
+          !value.funnel.attention || !value.funnel.desire_trust ||
+          !value.funnel.consume || !value.funnel.intent_impulse ||
+          !value.funnel.conversion || !value.funnel.retention || !value.funnel.measurement) return false;
+
+        // Reject common grounding failures before returning a draft to the clinic.
+        const generatedCopy = JSON.stringify({
+          strategy: value.strategy,
+          funnel: value.funnel,
+          creative_variants: value.creative_variants,
+        }).toLocaleLowerCase("pt-BR");
+        const hardFailures = [
+          /[\u3400-\u9fff]/u,                                // mixed language / unexpected CJK characters
+          /\b(?:servi[cç]o|produto|pacote|marca)\s+[xyz]\b/i, // unresolved placeholders
+          /\br\$\s*(?:\d|[xy]\b)/i,                     // unapproved price or price placeholder
+          /\b(?:cat[aá]logo\s+de\s+im[oó]veis|pacote\s+de\s+色泽)\b/i,
+          /\b(?:alvo|meta|target)\s*[:=]\s*\d[\d.,]*/i, // invented numerical target presented as fact
+        ];
+        if (hardFailures.some((pattern) => pattern.test(generatedCopy))) return false;
+
+        if (!approvedOffer) {
+          const unapprovedCommercialClaim =
+            /\b(?:gratuit[oa]s?|gr[aá]tis|descontos?|promo[cç][oõ]es?|pre[cç]o\s+promocional|\br\$\s*\d)\b/i;
+          if (unapprovedCommercialClaim.test(generatedCopy)) return false;
+        }
+        const unsupportedAvailability =
+          /\b(?:vagas\s+(?:limitadas|restantes|dispon[ií]veis)|temos\s+hor[aá]rios|hor[aá]rios\s+dispon[ií]veis)\b/i;
+        if (unsupportedAvailability.test(generatedCopy)) return false;
+
+        const generatedAudience = typeof value.strategy.audience === "string" ? value.strategy.audience.toLocaleLowerCase("pt-BR") : "";
+        const audienceInput = audience.toLocaleLowerCase("pt-BR");
+        if (/parnamirim/.test(audienceInput)) {
+          const nearbyCities = ["natal", "macaíba", "são josé de mipibu", "sao jose de mipibu", "nísia floresta", "nisia floresta", "aréz", "ares", "vera cruz"];
+          for (const city of nearbyCities) {
+            if (generatedAudience.includes(city) && !audienceInput.includes(city)) return false;
+          }
+        }
+        return true;
+      };
 
       try {
         const nvidia = await nvidiaChat(this.env, marketingSystem, prompt);
@@ -484,7 +522,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
         if (!isValidBrief(brief)) {
           return Response.json({
             ok: false,
-            error: "marketing_brief_schema_validation_failed",
+            error: "marketing_brief_quality_validation_failed",
             retryable: false,
           }, { status: 502, headers: { "cache-control": "no-store" } });
         }
