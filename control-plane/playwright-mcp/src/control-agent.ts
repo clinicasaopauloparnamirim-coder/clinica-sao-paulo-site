@@ -197,6 +197,73 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
   async onRequest(request: Request) {
     const url = new URL(request.url);
 
+    // Read-only Instagram snapshot bridge for MarketingGrowth. Data is supplied by the Composio tool runner.
+    if (url.pathname.endsWith("/marketing/social-snapshot")) {
+      const key = "marketing:instagram:snapshot";
+      if (request.method === "GET") {
+        const snapshot = await this.ctx.storage.get<Record<string, any>>(key);
+        return Response.json({ ok: true, found: Boolean(snapshot), snapshot: snapshot ?? null },
+          { headers: { "cache-control": "no-store" } });
+      }
+      if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
+      const raw = await request.text();
+      if (raw.length > 24000) return Response.json({ ok: false, error: "snapshot_payload_too_large" }, { status: 413 });
+      let payload: Record<string, any>;
+      try { payload = JSON.parse(raw) as Record<string, any>; }
+      catch { return Response.json({ ok: false, error: "invalid_json" }, { status: 400 }); }
+      const profile = payload.profile && typeof payload.profile === "object" ? payload.profile : null;
+      const capturedAt = typeof payload.captured_at === "string" ? payload.captured_at : "";
+      const capturedMs = Date.parse(capturedAt);
+      if (!profile || profile.username !== "clinicasaopauloparnamirim")
+        return Response.json({ ok: false, error: "instagram_account_scope_mismatch" }, { status: 403 });
+      if (!capturedAt || !Number.isFinite(capturedMs) || capturedMs > Date.now() + 300000)
+        return Response.json({ ok: false, error: "invalid_captured_at" }, { status: 400 });
+      const num = (v: unknown): number | undefined =>
+        typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1000000000 ? v : undefined;
+      const allowed = new Set(["reach","follower_count","online_followers","accounts_engaged","total_interactions","likes","comments","shares","saves","replies","follows_and_unfollows","profile_links_taps","views","profile_views","website_clicks","follower_demographics"]);
+      if (!Array.isArray(payload.account_insights) || !Array.isArray(payload.media) ||
+          !Array.isArray(payload.audience_city) || !Array.isArray(payload.missing_metrics))
+        return Response.json({ ok: false, error: "snapshot_arrays_required" }, { status: 400 });
+      const accountInsights = payload.account_insights.filter((x: any) => x && typeof x.name === "string" && allowed.has(x.name))
+        .slice(0,30).map((x: any) => ({
+          name:x.name, title:typeof x.title==="string"?x.title.slice(0,100):undefined,
+          period:x.period==="lifetime"?"lifetime":"day", total_value:num(x.total_value),
+          values:Array.isArray(x.values)?x.values.slice(0,31).map((v:any)=>({
+            end_time:typeof v?.end_time==="string"?v.end_time.slice(0,64):undefined,value:num(v?.value)
+          })).filter((v:any)=>v.end_time&&v.value!==undefined):[]
+        }));
+      const media = payload.media.filter((x:any)=>x&&typeof x.id==="string"&&typeof x.permalink==="string"&&
+        /^https:\/\/www\.instagram\.com\/(?:reel|p|tv)\//.test(x.permalink)&&typeof x.timestamp==="string")
+        .slice(0,10).map((x:any)=>({
+          id:x.id.slice(0,80),permalink:x.permalink.slice(0,512),timestamp:x.timestamp.slice(0,64),
+          media_type:typeof x.media_type==="string"?x.media_type.slice(0,40):"UNKNOWN",
+          media_product_type:typeof x.media_product_type==="string"?x.media_product_type.slice(0,40):undefined,
+          views:num(x.views),reach:num(x.reach),likes:num(x.likes),comments:num(x.comments),saved:num(x.saved),
+          shares:num(x.shares),total_interactions:num(x.total_interactions)
+        }));
+      const cities=payload.audience_city.filter((x:any)=>x&&typeof x.city==="string"&&num(x.followers)!==undefined)
+        .slice(0,50).map((x:any)=>({city:x.city.slice(0,120),followers:num(x.followers)}));
+      const snapshot={
+        version:1,platform:"instagram",source:"composio-instagram-graph-api-read",status:"read-verified",
+        ingested_at:new Date().toISOString(),captured_at:capturedAt,
+        profile:{id:typeof profile.id==="string"?profile.id.slice(0,80):"",username:profile.username,
+          name:typeof profile.name==="string"?profile.name.slice(0,160):undefined,
+          account_type:profile.account_type==="CREATOR"?"CREATOR":"BUSINESS",
+          followers_count:num(profile.followers_count),follows_count:num(profile.follows_count),media_count:num(profile.media_count)},
+        account_insights:accountInsights,media,audience_city:cities,
+        missing_metrics:payload.missing_metrics.filter((x:unknown)=>typeof x==="string").slice(0,30).map((x:string)=>x.slice(0,100)),
+        policy:"read-only; no publishing, messaging, ads mutation, or patient data"
+      };
+      if (!snapshot.profile.id || snapshot.profile.followers_count===undefined)
+        return Response.json({ok:false,error:"profile_identity_or_follower_count_missing"},{status:400});
+      await this.ctx.storage.put(key,snapshot);
+      return Response.json({ok:true,stored:true,platform:"instagram",username:snapshot.profile.username,
+        captured_at:snapshot.captured_at,ingested_at:snapshot.ingested_at,
+        counts:{account_insights:snapshot.account_insights.length,media:snapshot.media.length,
+          audience_city:snapshot.audience_city.length,missing_metrics:snapshot.missing_metrics.length}},
+        {headers:{"cache-control":"no-store"}});
+    }
+
     if (url.pathname.endsWith("/orchestrate") && request.method === "POST") {
       let body: { prompt?: string; mode?: "read" | "write" } = {};
       try { body = await request.json(); } catch {
@@ -334,6 +401,19 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
         ? body.channels.filter((value): value is string => typeof value === "string" && allowedChannels.has(value)).slice(0, 5)
         : ["instagram_stories", "whatsapp", "landing_page"];
 
+      const storedInstagramSnapshot = await this.ctx.storage.get<Record<string, any>>("marketing:instagram:snapshot");
+      const capturedAtMs = storedInstagramSnapshot ? Date.parse(String(storedInstagramSnapshot.captured_at || "")) : NaN;
+      const ageHours = Number.isFinite(capturedAtMs) ? Math.max(0,(Date.now()-capturedAtMs)/3600000) : null;
+      const instagramEvidence = storedInstagramSnapshot ? {
+        available:true, freshness:ageHours!==null&&ageHours<=168?"fresh":"stale",
+        age_hours:ageHours===null?null:Math.round(ageHours*10)/10,
+        captured_at:storedInstagramSnapshot.captured_at, profile:storedInstagramSnapshot.profile,
+        account_insights:storedInstagramSnapshot.account_insights,
+        media:Array.isArray(storedInstagramSnapshot.media)?storedInstagramSnapshot.media.slice(0,10):[],
+        audience_city:Array.isArray(storedInstagramSnapshot.audience_city)?storedInstagramSnapshot.audience_city.slice(0,15):[],
+        missing_metrics:storedInstagramSnapshot.missing_metrics||[]
+      } : {available:false,freshness:"unavailable",note:"No Instagram snapshot stored."};
+
       if (!treatment || treatment.length > 160 || objective.length > 300 || audience.length > 300 || approvedOffer.length > 300) {
         return Response.json({ ok: false, error: "required_or_invalid_marketing_fields" }, { status: 400 });
       }
@@ -344,6 +424,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
         "Use português brasileiro natural. Não invente preço, desconto, escassez, depoimento, número de pacientes, prova social, disponibilidade, resultado clínico ou alegações de superioridade. " +
         "Se não foi fornecida oferta aprovada, não invente uma oferta; proponha CTA para avaliação e liste dados faltantes. Nunca prometa resultado odontológico. " +
         "Não peça dados de saúde, nome, telefone ou detalhes identificáveis de pacientes. Separe métricas de atenção de métricas de negócio. " +
+        "Use o snapshot do Instagram como evidência observada, nunca como causalidade; se stale ou incompleto, declare a limitação. " +
         "Não publique nem alegue que publicou: este endpoint apenas gera texto e plano. Não gera imagem/vídeo nem chama Meta Ads/Instagram/WhatsApp. " +
         "Responda SOMENTE JSON válido nesta estrutura: {strategy:{audience,insight,positioning,offer_frame},funnel:{attention:{hook,kpi},desire_trust:{message,proof_needed},consume:{content_sequence,kpi},intent_impulse:{cta,friction_reducer},conversion:{whatsapp_opening,qualification_questions,success_event},retention:{follow_up_ideas,consent_required},measurement:{events,primary_business_kpi,guardrail_kpis}},creative_variants:[{angle,hook,format,script,cta,test_metric},{angle,hook,format,script,cta,test_metric}],missing_inputs:[],status:'draft_only_not_published'}. " +
         "Cada campo textual deve ser breve e concreto; creative_variants deve ter ao menos duas variantes distintas.\n" +
@@ -353,6 +434,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
         "Objetivo de negócio: " + objective + "\n" +
         "Público: " + audience + "\n" +
         "Oferta aprovada fornecida pelo responsável: " + (approvedOffer || "nenhuma; não inventar") + "\n" +
+        "Snapshot Instagram gravado no Control Tower: " + JSON.stringify(instagramEvidence) + "\n" +
         "Entrega só um rascunho JSON para revisão humana.";
       
       const isValidBrief = (value: Record<string, any> | null) =>
@@ -382,6 +464,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
             review_required: true,
             published: false,
             media_assets_generated: false,
+            instagram_context: { available: instagramEvidence.available, freshness: instagramEvidence.freshness, captured_at: "captured_at" in instagramEvidence ? instagramEvidence.captured_at : null },
             brief,
           }, { headers: { "cache-control": "no-store" } });
         }
@@ -415,6 +498,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
           review_required: true,
           published: false,
           media_assets_generated: false,
+          instagram_context: { available: instagramEvidence.available, freshness: instagramEvidence.freshness, captured_at: "captured_at" in instagramEvidence ? instagramEvidence.captured_at : null },
           brief,
         }, { headers: { "cache-control": "no-store" } });
       } catch (error) {
