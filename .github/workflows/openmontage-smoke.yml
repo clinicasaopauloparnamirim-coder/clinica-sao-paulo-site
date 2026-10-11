@@ -1,0 +1,59 @@
+name: OpenMontage upstream smoke test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install-and-discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout integration repository
+        uses: actions/checkout@v4
+
+      - name: Install system prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg make
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: /tmp/openmontage/requirements.txt
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Checkout upstream OpenMontage source into isolated runner temp
+        env:
+          UPSTREAM_REPOSITORY: https://github.com/calesthio/OpenMontage.git
+        run: |
+          git clone --depth 1 "$UPSTREAM_REPOSITORY" /tmp/openmontage
+          git -C /tmp/openmontage log -1 --format='Upstream commit: %H'
+          test -f /tmp/openmontage/LICENSE
+          grep -q "GNU AFFERO GENERAL PUBLIC LICENSE" /tmp/openmontage/LICENSE
+
+      - name: Install upstream dependencies in the ephemeral runner
+        working-directory: /tmp/openmontage
+        run: |
+          make setup
+          cp .env.example .env
+
+      - name: Discover actual available tools
+        working-directory: /tmp/openmontage
+        run: |
+          .venv/bin/python -c "from tools.tool_registry import registry; import json; registry.discover(); print(json.dumps(registry.support_envelope(), indent=2))"
+          .venv/bin/python -c "from tools.tool_registry import registry; import json; registry.discover(); print(json.dumps(registry.provider_menu(), indent=2))"
+
+      - name: Report boundaries
+        run: |
+          echo "Smoke test completed on an ephemeral GitHub-hosted runner."
+          echo "This does not install OpenMontage on a persistent host or connect it to Control Tower."
+          echo "No provider API keys are configured; paid generation calls must not be made."
