@@ -31,6 +31,10 @@ Copy-Item .env.example .env
 
 Review `AGENT_GUIDE.md`, `PROJECT_CONTEXT.md`, and `.env.example` before running pipelines. Keep provider keys in local environment/secret storage; never commit `.env` or API keys. Installation may require additional system dependencies such as FFmpeg and may incur third-party API charges.
 
+## CI smoke test added to this pull request
+
+The manual workflow `.github/workflows/openmontage-smoke.yml` clones the upstream source into an ephemeral GitHub-hosted runner, checks the AGPL license marker, installs prerequisites/dependencies, and runs the tool registry discovery without provider API keys. It is intentionally manual (`workflow_dispatch`) to avoid unexpected runner usage. Open **Actions → OpenMontage upstream smoke test → Run workflow** on this branch to execute it. A successful run proves only that setup and discovery passed in that temporary runner; it does not install OpenMontage on a persistent host or integrate Control Tower.
+
 ## Acceptance checks before integration
 
 1. Record the upstream commit/tag and inspect dependencies and license.
