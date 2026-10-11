@@ -1,5 +1,5 @@
 version: 1
-updated_at: "2026-10-09"
+updated_at: "2026-10-10"
 repository: "clinicasaopauloparnamirim-coder/clinica-sao-paulo-site"
 branch: "audit/tool-readiness-inventory-2026-10-09"
 policy:
@@ -70,15 +70,15 @@ connectors:
   meta_ads: "not-connected"
   instagram: "active-ready-read-profile-media-insights-tested-2026-10-09"
   instagram_publishing: "available-in-tool-schema-not-test-published"
-  marketing_social_snapshot_bridge: "deployed-main-2026-10-10-openapi-exposed-awaiting-composio-catalog-sync-and-runtime-readback"
+  marketing_social_snapshot_bridge: "rest-authenticated-deployed-main-2026-10-10-runtime-write-read-scope-and-brief-tested; composio-catalog-sync-blocked"
   jev: "blocked-runtime-unverified"
   laya: "blocked-runtime-unverified"
   nvidia_nim: "configured-unverified"
   workers_ai_fallback: "configured-unverified"
   whatsapp_ledger: "partial-end-to-end-test-required"
   commander_dispatch_bridge: "partial-not-implemented-end-to-end"
-  marketing_brief_tool: "implemented-in-worker-catalog-not-exposed-in-composio-search"
-  marketing_social_snapshot_write_read: "mcp-and-rest-endpoints-deployed-openapi-updated-awaiting-composio-catalog-sync-and-runtime-readback"
+  marketing_brief_tool: "rest-endpoint-runtime-tested-safe-fallback; model-quality-inconsistent; not-exposed-in-composio-search"
+  marketing_social_snapshot_write_read: "rest-write-read-and-scope-negative-tested-pass; Composio tool path unavailable because catalog search omits operations"
   agent_pair_test_tool: "implemented-in-worker-catalog-not-exposed-in-composio-search"
   nvidia_test_tool: "implemented-in-worker-catalog-not-exposed-in-composio-search"
 repositories:
