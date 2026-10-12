@@ -99,3 +99,26 @@ Only then may the feature flag be enabled in production.
 ## Explicit status
 
 This file is a reviewed integration design and decision record. It does **not** mean OpenMuse, OpenBot, OpenDots, or OpenTag has been installed, authenticated, deployed, or connected to production. Those claims require the Phase 2/3 evidence above.
+
+
+## Follow-up live infrastructure audit — 2026-10-12
+
+Cloudflare API was queried through the authorized connection after the first draft was written:
+
+- Account contains three Workers: `clinica-sao-paulo-site`, `jev-control-tower`, and `weathered-tree-2839`.
+- `jev-control-tower` is still the stock `Hello World!` Worker. Its reported Google OAuth bindings are empty plain-text values. It is not a viable deployment target for a coworker app or the control plane.
+- `clinica-sao-paulo-site` has the current production bindings, including Composio, Google OAuth, MCP, WhatsApp, and Durable Objects. Its deployment history shows repeated production deployments on October 12. This makes an unverified direct mutation of its Worker code an unacceptable risk.
+- `weathered-tree-2839` has agent-related Durable Object bindings but no demonstrated provider credentials or successful health/round-trip evidence. It is not approved as a production host.
+- The production Worker's binding inventory did not include `CPK_INTELLIGENCE_API_KEY`, `INTELLIGENCE_API_KEY`, or OpenBot's managed agent token. This inventory reveals binding names/types, not secret values; no secret values were read.
+- No successful GitHub Actions workflow run was returned for the documentation commit. No build, live provider health check, or end-to-end coworker round-trip has passed.
+
+### Deployment decision after live audit
+
+**Deploy none of the four upstream applications at this time.** This is a deliberate safety decision, not a claim that the projects cannot ever run:
+
+- OpenMuse is the most promising pilot, but requires its own app/server/browser-worker/persistence topology and a configured Intelligence project key.
+- OpenBot requires a separate supported runtime and managed credentials; it is not a Cloudflare Worker library.
+- OpenDots requires its own runtime/storage and Intelligence connection, overlapping the proposed OpenMuse pilot.
+- OpenTag requires separate Node/Python services, a configured Intelligence/Channels path and channel credentials; it does not provide WhatsApp Business support.
+
+No code was pushed to the production branch, no production Worker was changed, no secret was created or exposed, and no upstream service was falsely marked healthy. The next allowed action is to provision/configure a separate supported staging runtime and credentials, then run the acceptance tests. Only OpenMuse should be evaluated first; the other three remain excluded unless the pilot demonstrates a specific unmet requirement.
