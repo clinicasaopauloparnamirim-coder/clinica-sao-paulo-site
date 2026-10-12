@@ -8,6 +8,9 @@ import { pairingSnapshot, runAgentPair } from "./agent-pairing";
 type ControlEnv = Env & {
   AI: Ai;
   MCP_OBJECT: DurableObjectNamespace<any>;
+  OPENAI_API_KEY?: string;
+  OPENAI_MODEL?: string;
+  OPENAI_BASE_URL?: string;
   NVIDIA_API_KEY?: string;
   NVIDIA_KEY_ROTATED?: string;
   NVIDIA_BASE_URL?: string;
@@ -48,6 +51,45 @@ const ALLOWED_NAVIGATION_HOSTS = new Set([
   "clinicasaopauloparnamirim.com.br",
   "www.clinicasaopauloparnamirim.com.br",
 ]);
+
+async function openAIChat(env: ControlEnv, system: string, prompt: string): Promise<NvResult | null> {
+  if (!env.OPENAI_API_KEY) return null;
+  const configuredBaseUrl = env.OPENAI_BASE_URL || "https://api.openai.com/v1";
+  const baseUrl = configuredBaseUrl.endsWith("/") ? configuredBaseUrl.slice(0, -1) : configuredBaseUrl;
+  const model = env.OPENAI_MODEL || "gpt-6-sol";
+  const response = await fetch(baseUrl + "/responses", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: "Bearer " + env.OPENAI_API_KEY,
+    },
+    body: JSON.stringify({
+      model,
+      instructions: system,
+      input: prompt,
+      max_output_tokens: 2200,
+    }),
+  });
+  const raw = await response.text();
+  if (!response.ok) {
+    throw new Error("OpenAI Responses API request failed (" + response.status + "): " + raw.slice(0, 300));
+  }
+  const data = JSON.parse(raw) as {
+    model?: string;
+    output_text?: string;
+    output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
+  };
+  const outputText = typeof data.output_text === "string" ? data.output_text : "";
+  const contentText = Array.isArray(data.output)
+    ? data.output.flatMap((item) => Array.isArray(item.content) ? item.content : [])
+      .filter((part) => part.type === "output_text" && typeof part.text === "string")
+      .map((part) => part.text || "")
+      .join("\n")
+    : "";
+  const text = outputText || contentText;
+  if (!text.trim()) throw new Error("OpenAI Responses API returned empty content");
+  return { model: String(data.model || model), text };
+}
 
 async function nvidiaChat(env: ControlEnv, system: string, prompt: string): Promise<NvResult | null> {
   const apiKey = env.NVIDIA_KEY_ROTATED === "true" ? env.NVIDIA_API_KEY : undefined;
@@ -155,8 +197,9 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       "mcp",
       "browser-readonly",
       "browser-domain-allowlist",
-      "workers-ai",
-      "nvidia-nim",
+      "openai-chatgpt-primary",
+      "nvidia-nemotron-analysis",
+      "workers-ai-fallback",
       "nvidia-fallback",
       "3-brains",
       "marketing-growth-draft-generation",
@@ -291,59 +334,90 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
         "plan (array), verification_checks (array).\n" +
         JSON.stringify({ ...snapshot, autonomousFunctions: autonomousFunctionSnapshot() });
 
+      let primary: NvResult | null = null;
+      let provider = "openai";
       try {
-        const nvidia = await nvidiaChat(
+        primary = await openAIChat(
           this.env,
           orchestrationSystem,
           "Solicitação: " + prompt + "\nModo solicitado: " + mode,
         );
-
-        if (nvidia) {
-          const initial = tryJson(nvidia.text);
-          let verified = false;
-          let verification: Record<string, any> | null = null;
-
-          if (initial) {
-            const verifierSystem =
-              "Você é o JUDGE/RED TEAM do Control Tower. " +
-              "Audite o plano JSON recebido contra a arquitetura e política fornecidas. " +
-              "Tente encontrar uma falha, integração inventada, dependência ausente, ação perigosa ou conclusão sem evidência. " +
-              "Responda somente JSON com: pass (boolean), findings (array), required_changes (array).\n" +
-              JSON.stringify(snapshot);
-
-            const verifier = await nvidiaChat(
-              this.env,
-              verifierSystem,
-              "PLANO PARA VERIFICAÇÃO:\n" + JSON.stringify(initial),
-            );
-            verification = verifier ? tryJson(verifier.text) : null;
-            verified = verification?.pass === true;
-          }
-
-          this.setState({
-            ...this.state,
-            ai: "ready",
-            last_orchestration: {
-              at: new Date().toISOString(),
-              provider: "nvidia-nim",
-              model: nvidia.model,
-              verified,
-            },
-          });
-
-          return Response.json({
-            ok: true,
-            agent: "ControlAgent",
-            provider: "nvidia-nim",
-            model: nvidia.model,
-            verified,
-            orchestration: initial ?? { raw: nvidia.text },
-            autonomous_functions: autonomousFunctionSnapshot(),
-            verification,
-          });
-        }
       } catch (error) {
-        console.error("[ControlAgent] NVIDIA NIM failed; falling back to Workers AI:", error);
+        console.error("[ControlAgent] OpenAI primary failed; attempting NVIDIA NIM:", error);
+      }
+
+      if (!primary) {
+        provider = "nvidia-nim";
+        try {
+          primary = await nvidiaChat(
+            this.env,
+            orchestrationSystem,
+            "Solicitação: " + prompt + "\nModo solicitado: " + mode,
+          );
+        } catch (error) {
+          console.error("[ControlAgent] NVIDIA NIM failed; falling back to Workers AI:", error);
+        }
+      }
+
+      if (primary) {
+        const initial = tryJson(primary.text);
+        let verified = false;
+        let verification: Record<string, any> | null = null;
+        const verifierSystem =
+          "Você é o JUDGE/RED TEAM do Control Tower. " +
+          "Audite o plano JSON recebido contra a arquitetura e política fornecidas. " +
+          "Tente encontrar falha, integração inventada, dependência ausente, ação perigosa ou conclusão sem evidência. " +
+          "Responda somente JSON com: pass (boolean), findings (array), required_changes (array).\n" +
+          JSON.stringify(snapshot);
+
+        let verifier: NvResult | null = null;
+        try {
+          verifier = provider === "openai"
+            ? await nvidiaChat(this.env, verifierSystem, "PLANO PARA VERIFICAÇÃO:\n" + JSON.stringify(initial ?? { raw: primary.text }))
+            : await openAIChat(this.env, verifierSystem, "PLANO PARA VERIFICAÇÃO:\n" + JSON.stringify(initial ?? { raw: primary.text }));
+        } catch (error) {
+          console.error("[ControlAgent] Independent model verification failed; trying Workers AI:", error);
+        }
+        if (verifier) verification = tryJson(verifier.text);
+
+        if (!verification) {
+          try {
+            const verifierAI = createWorkersAI({ binding: this.env.AI });
+            const verifierResult = await generateText({
+              model: verifierAI("@cf/zai-org/glm-4.7-flash"),
+              system: verifierSystem,
+              prompt: "PLANO PARA VERIFICAÇÃO:\n" + JSON.stringify(initial ?? { raw: primary.text }),
+              stopWhen: stepCountIs(2),
+            });
+            verification = tryJson(verifierResult.text);
+          } catch (error) {
+            console.error("[ControlAgent] Workers AI verification failed:", error);
+          }
+        }
+        verified = verification?.pass === true;
+
+        this.setState({
+          ...this.state,
+          ai: "ready",
+          last_orchestration: {
+            at: new Date().toISOString(),
+            provider,
+            model: primary.model,
+            verified,
+          },
+        });
+
+        return Response.json({
+          ok: true,
+          agent: "ControlAgent",
+          provider,
+          model: primary.model,
+          verified,
+          orchestration: initial ?? { raw: primary.text },
+          autonomous_functions: autonomousFunctionSnapshot(),
+          verification,
+          fallback_used: false,
+        });
       }
 
       const workersai = createWorkersAI({ binding: this.env.AI });
