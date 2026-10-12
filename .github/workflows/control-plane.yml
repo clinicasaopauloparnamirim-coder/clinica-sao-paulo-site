@@ -35,3 +35,6 @@ jobs:
 
       - name: Typecheck
         run: npm run build
+
+      - name: Hubble self-audit
+        run: node ../hubble/hubble-audit.mjs --fail-on=high
