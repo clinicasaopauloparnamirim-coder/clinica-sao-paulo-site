@@ -23,6 +23,9 @@ interface WhatsAppEnv {
   ALERT_SLACK_WEBHOOK?: string;
   ALERT_WEBHOOK_URL?: string;
   AI_SYSTEM_PROMPT?: string;
+  OPENAI_API_KEY?: string;
+  OPENAI_MODEL?: string;
+  OPENAI_BASE_URL?: string;
   AI?: any;
   WHATSAPP_LEDGER: DurableObjectNamespace;
   CONTROL_AGENT: DurableObjectNamespace;
@@ -305,6 +308,8 @@ export default {
         browser_binding: true,
         auth_configured: Boolean(env.MCP_AUTH_TOKEN),
         google_oauth_configured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+        openai_api_configured: Boolean(env.OPENAI_API_KEY),
+        openai_model: env.OPENAI_MODEL || "gpt-6-sol",
         nvidia_nim_configured: Boolean(env.NVIDIA_KEY_ROTATED === "true" && env.NVIDIA_API_KEY),
         nvidia_key_rotation_required: env.NVIDIA_KEY_ROTATED !== "true",
         laya_configured: Boolean(env.LAYA_API_KEY || env.control_tower || env.CONTROL_TOWER),
