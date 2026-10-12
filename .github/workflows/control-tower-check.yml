@@ -59,7 +59,7 @@ jobs:
           }
           const deployWorkflow = fs.readFileSync('.github/workflows/control-plane-deploy-v2.yml','utf8');
           if (!deployWorkflow.includes('"brain_count":9') || !deployWorkflow.includes('"agent_count":20')) throw new Error('Deployment smoke tests are not aligned with 9 brains / 20 agents.');
-          if (!deployWorkflow.includes('/control/crm/contacts')) throw new Error('Deployment workflow does not guard the CRM endpoint.');
+          if (!deployWorkflow.includes('/control/crm/contacts; do')) throw new Error('Anonymous CRM endpoint is missing from the protected-route smoke loop.');
           const cleanupIndex = deployWorkflow.indexOf('Sanitize unsafe NVIDIA bindings before deployment');
           const deployIndex = deployWorkflow.indexOf('Deploy Worker + public assets');
           const smokeIndex = deployWorkflow.indexOf('Smoke test');
