@@ -13,6 +13,23 @@ import { handleTowerMcp } from "./mcp-tower";
 import { specialistSnapshot } from "./agent-registry";
 import { googleAdsAuthCheck, googleAdsAudit, googleAdsBatchMutate, googleAdsMutate, googleAdsSearch, googleAdsOAuthStart, googleAdsOAuthCallback } from "./google-ads";
 
+type CrmStage = "new" | "contacted" | "qualified" | "scheduled" | "patient" | "lost";
+type CrmSource = "google_ads" | "organic" | "instagram" | "whatsapp" | "referral" | "unknown";
+type CrmContact = {
+  id: string;
+  name: string;
+  phone: string;
+  stage: CrmStage;
+  source: CrmSource;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+  last_contact_at: string | null;
+};
+
+const CRM_STAGES: CrmStage[] = ["new", "contacted", "qualified", "scheduled", "patient", "lost"];
+const CRM_SOURCES: CrmSource[] = ["google_ads", "organic", "instagram", "whatsapp", "referral", "unknown"];
+
 interface WhatsAppEnv {
   MCP_AUTH_TOKEN?: string;
   WHATSAPP_VERIFY_TOKEN?: string;
@@ -58,7 +75,61 @@ export class WhatsAppLedger extends DurableObject {
   }
 
   async fetch(request: Request) {
-    if (request.method === "GET" && new URL(request.url).pathname === "/audit") return Response.json(await this.audit());
+    const route = new URL(request.url).pathname;
+    if (request.method === "GET" && route === "/crm/contacts") {
+      const rows = await this.ctx.storage.list({ prefix: "crm:contact:", reverse: true, limit: 500 });
+      const contacts = Array.from(rows.values()) as CrmContact[];
+      contacts.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+      return Response.json({ ok: true, count: contacts.length, contacts }, { headers: { "cache-control": "no-store" } });
+    }
+    if (request.method === "POST" && route === "/crm/contacts") {
+      let payload: any;
+      try { payload = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
+      const name = String(payload?.name ?? "").trim().slice(0, 120);
+      const phoneInput = String(payload?.phone ?? "").trim().slice(0, 40);
+      const phone = phoneInput.replace(/[^0-9]/g, "").slice(0, 24);
+      if (!name && phone.length < 8) return new Response("A name or valid phone number is required.", { status: 400 });
+      const source: CrmSource = CRM_SOURCES.includes(payload?.source) ? payload.source : "unknown";
+      const requestedStage: CrmStage = CRM_STAGES.includes(payload?.stage) ? payload.stage : "new";
+      const existingId = phone ? await this.ctx.storage.get<string>(`crm:phone:${phone}`) : undefined;
+      const existing = existingId ? await this.ctx.storage.get(`crm:contact:${existingId}`) as CrmContact | undefined : undefined;
+      const now = new Date().toISOString();
+      const id = existing?.id ?? crypto.randomUUID();
+      const contact: CrmContact = {
+        id,
+        name: name || existing?.name || "Lead sem nome",
+        phone: phone || existing?.phone || "",
+        stage: existing?.stage ?? requestedStage,
+        source: source === "unknown" && existing?.source ? existing.source : source,
+        notes: String(payload?.notes ?? existing?.notes ?? "").trim().slice(0, 500),
+        created_at: existing?.created_at ?? now,
+        updated_at: now,
+        last_contact_at: existing?.last_contact_at ?? null,
+      };
+      await this.ctx.storage.put(`crm:contact:${id}`, contact);
+      if (phone) await this.ctx.storage.put(`crm:phone:${phone}`, id);
+      return Response.json({ ok: true, contact, deduplicated: Boolean(existing) }, {
+        status: existing ? 200 : 201, headers: { "cache-control": "no-store" },
+      });
+    }
+    if (request.method === "PATCH" && route.startsWith("/crm/contacts/")) {
+      const id = decodeURIComponent(route.slice("/crm/contacts/".length));
+      if (!/^[a-zA-Z0-9_-]{8,80}$/.test(id)) return new Response("Invalid contact id.", { status: 400 });
+      let payload: any;
+      try { payload = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
+      const existing = await this.ctx.storage.get(`crm:contact:${id}`) as CrmContact | undefined;
+      if (!existing) return new Response("Contact not found.", { status: 404 });
+      if (payload?.stage !== undefined && !CRM_STAGES.includes(payload.stage)) return new Response("Invalid CRM stage.", { status: 400 });
+      const contact: CrmContact = {
+        ...existing,
+        stage: payload?.stage ?? existing.stage,
+        notes: payload?.notes === undefined ? existing.notes : String(payload.notes).trim().slice(0, 500),
+        updated_at: new Date().toISOString(),
+      };
+      await this.ctx.storage.put(`crm:contact:${id}`, contact);
+      return Response.json({ ok: true, contact }, { headers: { "cache-control": "no-store" } });
+    }
+    if (request.method === "GET" && route === "/audit") return Response.json(await this.audit());
     if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
     const payload: any = await request.json();
     const receivedAt = new Date().toISOString();
@@ -109,6 +180,7 @@ export class WhatsAppLedger extends DurableObject {
         ctwa_clid: referral?.ctwa_clid ?? referral?.ctwaClid ?? null,
       };
       await this.ctx.storage.put(`message:${message?.id ?? crypto.randomUUID()}`, record);
+      if (click || referral) await this.upsertAttributedContact(message, click?.attribution ?? null, receivedAt);
 
       // Auto-replies are explicitly opt-in; webhook verification alone never enables sending.
       const messageId = typeof message?.id === "string" ? message.id : "";
@@ -153,6 +225,32 @@ export class WhatsAppLedger extends DurableObject {
       auto_replies_queued: replyJobs.length,
       attributed,
     });
+  }
+
+  private async upsertAttributedContact(message: any, attribution: Record<string, unknown> | null, at: string) {
+    const phone = String(message?.from ?? "").replace(/[^0-9]/g, "").slice(0, 24);
+    if (phone.length < 8) return;
+    const linkedId = await this.ctx.storage.get<string>(`crm:phone:${phone}`);
+    const existing = linkedId ? await this.ctx.storage.get(`crm:contact:${linkedId}`) as CrmContact | undefined : undefined;
+    const profileName = String(message?.contacts?.[0]?.profile?.name ?? "").trim().slice(0, 120);
+    const rawSource = String((attribution as any)?.utm_source ?? (attribution as any)?.source ?? "").toLowerCase();
+    const source: CrmSource = rawSource.includes("google") || rawSource.includes("adwords") ? "google_ads"
+      : rawSource.includes("instagram") || rawSource.includes("facebook") ? "instagram"
+      : rawSource ? "organic" : "whatsapp";
+    const id = existing?.id ?? crypto.randomUUID();
+    const contact: CrmContact = {
+      id,
+      name: profileName || existing?.name || "Lead WhatsApp",
+      phone,
+      stage: existing?.stage ?? "new",
+      source: existing?.source === "unknown" ? source : existing?.source ?? source,
+      notes: existing?.notes ?? "",
+      created_at: existing?.created_at ?? at,
+      updated_at: at,
+      last_contact_at: at,
+    };
+    await this.ctx.storage.put(`crm:contact:${id}`, contact);
+    await this.ctx.storage.put(`crm:phone:${phone}`, id);
   }
 
   private async processAutoReplies(jobs: Array<{ id: string; to: string; message: string }>, env: WhatsAppEnv) {
@@ -316,6 +414,7 @@ export default {
         whatsapp_signature_configured: Boolean(env.WHATSAPP_APP_SECRET),
         whatsapp_verify_configured: Boolean(env.WHATSAPP_VERIFY_TOKEN),
         brain_count: snapshot.brainCount,
+        agent_count: snapshot.agentCount,
         capability_count: snapshot.capabilityCount,
         autonomous_function_count: autonomousFunctionSnapshot().count,
         pairings: pairingSnapshot(env),
@@ -373,7 +472,7 @@ export default {
 <main style="width:min(920px,92vw);background:#111722;border:1px solid #273142;border-radius:20px;padding:28px">
 <h1>Control Tower</h1>
 ${authenticated ? `<p>Acesso autorizado</p>
-<p><a href="/health">Health</a> | <a href="/google/ads/audit">Ads</a> | <a href="/mcp/tower">MCP Tower</a> | <a href="/control/logout">Sair</a></p>` : `<form method="POST" action="/control/login"><label>MCP Auth Token</label><br><input name="token" type="password" required style="width:100%;padding:12px"><br><button type="submit">Entrar</button></form>`}
+<p><a href="/control-tower/">Dashboard + CRM</a> | <a href="/health">Health</a> | <a href="/google/ads/audit">Ads</a> | <a href="/mcp/tower">MCP Tower</a> | <a href="/control/logout">Sair</a></p>` : `<form method="POST" action="/control/login"><label>MCP Auth Token</label><br><input name="token" type="password" required style="width:100%;padding:12px"><br><button type="submit">Entrar</button></form>`}
 </main></body></html>`;
       return new Response(html, {
         status: 200,
@@ -389,6 +488,7 @@ ${authenticated ? `<p>Acesso autorizado</p>
         ...snapshot,
         pairings: pairingSnapshot(env),
         brain_count: snapshot.brainCount,
+        agent_count: snapshot.agentCount,
         capability_count: snapshot.capabilityCount,
         autonomous_function_count: autonomousFunctionSnapshot().count,
       }, { headers: { "cache-control": "no-store" } });
@@ -515,6 +615,39 @@ ${authenticated ? `<p>Acesso autorizado</p>
       } catch {
         return new Response("Bad Request", { status: 400 });
       }
+    }
+
+
+    if (pathname === "/control/crm/contacts" && (request.method === "GET" || request.method === "POST")) {
+      if (!authorized(request, env)) return unauthorized();
+      const ledger = env.WHATSAPP_LEDGER.get(env.WHATSAPP_LEDGER.idFromName("whatsapp"));
+      if (request.method === "GET") {
+        const result = await ledger.fetch("https://ledger.internal/crm/contacts", { method: "GET" });
+        return new Response(result.body, { status: result.status, headers: { "content-type": "application/json; charset=UTF-8", "cache-control": "no-store" } });
+      }
+      try {
+        const payload = await request.json();
+        const result = await ledger.fetch("https://ledger.internal/crm/contacts", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        return new Response(result.body, { status: result.status, headers: { "content-type": "application/json; charset=UTF-8", "cache-control": "no-store" } });
+      } catch { return new Response("Invalid CRM payload.", { status: 400 }); }
+    }
+    if (pathname.startsWith("/control/crm/contacts/") && request.method === "PATCH") {
+      if (!authorized(request, env)) return unauthorized();
+      const id = pathname.slice("/control/crm/contacts/".length);
+      const ledger = env.WHATSAPP_LEDGER.get(env.WHATSAPP_LEDGER.idFromName("whatsapp"));
+      try {
+        const payload = await request.json();
+        const result = await ledger.fetch("https://ledger.internal/crm/contacts/" + encodeURIComponent(id), {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        return new Response(result.body, { status: result.status, headers: { "content-type": "application/json; charset=UTF-8", "cache-control": "no-store" } });
+      } catch { return new Response("Invalid CRM update.", { status: 400 }); }
     }
 
     if (pathname === "/control/attribution/track" && request.method === "POST") {
