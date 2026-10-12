@@ -115,12 +115,16 @@ jobs:
       - name: Smoke test
         run: |
           set -euo pipefail
-          body="$(curl -sS --retry 5 --retry-delay 2 --connect-timeout 10 --max-time 30 "https://clinica-sao-paulo-site.clinicasaopauloparnamirim.workers.dev/health")"
+          health_url="https://clinica-sao-paulo-site.clinicasaopauloparnamirim.workers.dev/health?deploy_check=$(date +%s)"
+          body="$(curl -sS --retry 5 --retry-delay 2 --connect-timeout 10 --max-time 30 "$health_url")"
           echo "$body"
           echo "$body" | grep -q '"ok":true'
           echo "$body" | grep -q '"brain_count":3'
           echo "$body" | grep -q '"capability_count":21'
           echo "$body" | grep -q '"autonomous_function_count":20'
+          # Catch stale or mismatched deployed bundles, even when OpenAI is not yet configured.
+          echo "$body" | grep -q '"openai_api_configured":'
+          echo "$body" | grep -q '"openai_control":'
       - name: Verify public HTML has no dual Zaraz
         run: |
           set -euo pipefail
