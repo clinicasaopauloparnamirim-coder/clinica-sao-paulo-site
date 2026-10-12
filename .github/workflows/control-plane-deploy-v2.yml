@@ -98,11 +98,14 @@ jobs:
         run: |
           set -euo pipefail
           base="https://clinica-sao-paulo-site.clinicasaopauloparnamirim.workers.dev"
-          for path in /mcp/tower /control/architecture /control/agents /orchestrate /google/ads/oauth/start /google/oauth/start /google/ads/audit /google/ga4/audit /google/gsc/audit /google/business-profile/audit /control/attribution/report; do
+          for path in /mcp/tower /control/architecture /control/agents /google/ads/oauth/start /google/oauth/start /google/ads/audit /google/ga4/audit /google/gsc/audit /google/business-profile/audit /control/attribution/report; do
             code="$(curl -sS -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 2 --connect-timeout 10 --max-time 30 "$base$path")"
             echo "$path -> HTTP $code"
             test "$code" = "401"
           done
+          orchestrate_code="$(curl -sS -o /dev/null -w '%{http_code}' --retry 2 --retry-delay 1 --connect-timeout 10 --max-time 30 -X POST "$base/orchestrate" -H 'content-type: application/json' --data '{}')"
+          echo "POST /orchestrate without credentials -> HTTP $orchestrate_code"
+          test "$orchestrate_code" = "401"
           webhook_post_code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 -X POST "$base/webhooks/whatsapp" -H 'content-type: application/json' --data '{}')"
           echo "/webhooks/whatsapp unsigned POST -> HTTP $webhook_post_code"
           test "$webhook_post_code" = "403" || test "$webhook_post_code" = "503"
