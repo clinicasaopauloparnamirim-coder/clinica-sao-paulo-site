@@ -22,6 +22,7 @@ export interface AttributionEvent {
 export interface AttributionEnv {
   WHATSAPP_LEDGER: DurableObjectNamespace;
   NVIDIA_API_KEY?: string;
+  NVIDIA_KEY_ROTATED?: string;
   NVIDIA_BASE_URL?: string;
   INVESTIGATOR_MODEL?: string;
   LAYA_HTTP_URL?: string;
@@ -147,7 +148,7 @@ async function callLaya(env: AttributionEnv, report: unknown) {
 }
 
 async function callGlm53(env: AttributionEnv, report: unknown, laya: unknown) {
-  if (!env.NVIDIA_API_KEY) return { status: "not_configured" };
+  if (env.NVIDIA_KEY_ROTATED !== "true" || !env.NVIDIA_API_KEY) return { status: "disabled_until_key_rotation" };
   const base = (env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1").replace(/\/$/, "");
   const model = env.INVESTIGATOR_MODEL || "z-ai/glm-5.3";
   const userPrompt = [

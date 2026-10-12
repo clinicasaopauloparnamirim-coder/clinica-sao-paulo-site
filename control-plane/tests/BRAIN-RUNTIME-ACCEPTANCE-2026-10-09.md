@@ -1,4 +1,4 @@
-# Testes de aceitação do runtime — 9 cérebros
+# Testes de aceitação do runtime — 3 cérebros
 
 Data: 2026-10-09
 
@@ -15,9 +15,9 @@ Conexão ativa, repositório existente, endpoint de saúde verde, prompt detalha
 
 ## P0 — Harness / registro
 
-1. `GET /health` deve reportar `brain_count:9`, `capability_count:21` e `autonomous_function_count:20`.
-2. `GET /control/architecture` autenticado deve expor nove definições e estados de prontidão com motivo.
-3. O workflow de deploy falha se o runtime retornar oito cérebros.
+1. `GET /health` deve reportar `brain_count:3`, `capability_count:21` e `autonomous_function_count:20`.
+2. `GET /control/architecture` autenticado deve expor três definições e estados de prontidão com motivo.
+3. O workflow de deploy falha se o runtime retornar qualquer contagem diferente de três cérebros.
 4. `npm install && npm run build` dentro de `control-plane/playwright-mcp` precisa passar antes do merge.
 5. CI/smoke de rotas protegidas deve passar após o deploy autorizado.
 6. `/orchestrate` deve distinguir plano de execução, identificar executor real e não declarar tool call concluída sem um resultado.
@@ -32,19 +32,14 @@ Para qualquer cérebro:
 5. ler novamente estado da fonte, quando aplicável;
 6. parar após duas falhas consecutivas da mesma etapa, registrar blocker e não repetir em loop.
 
-## Matriz de aceitação
+## Matriz de aceitação — arquitetura consolidada
 
-| Cérebro | Teste mínimo PASS | Situação inicial desta auditoria |
-|---|---|---|
-| 1 Commander | Plano válido → tool dispatcher executa ferramenta permitida → output gravado/verificado | Parcial; o endpoint atual produz planos, não despacha diretamente Composio |
-| 2 Control Tower | Health + arquitetura + ledger + política de escopo passarem | Parcial; Worker health passa, os OAuth internos de Ads/GA4/GSC falham |
-| 3 Researcher | Coletar ao menos duas fontes e preservar citações/contradições | Inconclusivo como runtime autônomo |
-| 4 Engineer | Branch isolada, patch, build/typecheck e PR com CI verde | CI funciona; agente de código autônomo não comprovado |
-| 5 SEO | Consulta GSC/OpenSEO real e auditoria reproduzível | Parcial; GSC e OpenSEO direto funcionam; OpenSEO GA4 desconectado |
-| 6 Ads | Consulta apenas campanha ativa, saída reconciliada com fonte; nenhuma mutação não aprovada | Parcial; Google Ads direto responde, OAuth do Worker exige reautorização |
-| 7 Marketing/Growth | Conteúdo/variantes + snapshot Instagram persistido/read-back + revisão + eventos + lead qualificado + jornada downstream | Parcial; Instagram read APIs funcionam, ponte persistente exige deploy/testes negativos, Meta Ads e funil completo pendentes |
-| 8 Red Team/Judge | Teste contraditório falha solução ruim e bloqueia ação não permitida | Bloqueado como serviço independente; regras locais de segurança existem |
-| 9 NVIDIA | Inferência NIM com status 2xx, resposta não vazia, assertion de saída e métrica de latência | Configurado, mas inferência ainda não comprovada por saída desta auditoria |
+| Cérebro | Funções agrupadas | Critério mínimo de PASS | Estado de referência |
+|---|---|---|---|
+| Control Tower | Orquestração, pesquisa, JEV/Laya/Nemotron, red team, julgamento, memória, política e GAUNTLET LOOP | Plano → ferramenta autorizada → resultado verificado e registrado; acesso não autenticado bloqueado | Parcial; execução e credenciais integradas ainda exigem reteste |
+| Marketing Growth | SEO, Google Ads, GA4, Search Console, Perfil da Empresa, Instagram, WhatsApp e atribuição | Ler fontes reais, separar eventos técnicos de leads e comprovar atribuição sem alterações de campanha ou publicações | Parcial; leituras reais existem, funil ponta a ponta não comprovado |
+| Engenharia e Segurança | Código, GitHub, Cloudflare, webhook, segredos, CI/CD e recuperação | Build/typecheck, remoção de binding inseguro, testes negativos do webhook, smoke das rotas protegidas e leitura pós-deploy | Bloqueado até rotação da chave NVIDIA e comprovação do deploy |
+
 
 ## Testes de integração já executados (09/10/2026)
 

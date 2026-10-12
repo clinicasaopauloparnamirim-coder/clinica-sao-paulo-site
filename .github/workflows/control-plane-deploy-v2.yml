@@ -34,13 +34,53 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy --config wrangler.jsonc --keep-vars
+      - name: Remove unsafe NVIDIA plain-text Worker binding
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WORKER_NAME: clinica-sao-paulo-site
+        run: |
+          node --input-type=module <<'NODE'
+          const { CLOUDFLARE_API_TOKEN: token, CLOUDFLARE_ACCOUNT_ID: account, WORKER_NAME: name } = process.env;
+          if (!token || !account || !name) throw new Error("Cloudflare deployment credentials are missing.");
+          const endpoint = `https://api.cloudflare.com/client/v4/accounts/${account}/workers/scripts/${name}/settings`;
+          const headers = { Authorization: `Bearer ${token}` };
+          const currentResponse = await fetch(endpoint, { headers });
+          const current = await currentResponse.json();
+          if (!currentResponse.ok || current.success !== true || !Array.isArray(current.result?.bindings)) {
+            throw new Error(`Could not safely inspect Worker bindings (HTTP ${currentResponse.status}).`);
+          }
+          const bindings = current.result.bindings;
+          const unsafe = (binding) =>
+            binding?.name === "N" ||
+            (binding?.type === "plain_text" && typeof binding?.text === "string" && /^nvapi-/i.test(binding.text));
+          const filtered = bindings.filter((binding) => !unsafe(binding));
+          if (filtered.length !== bindings.length) {
+            const form = new FormData();
+            form.append("settings", new Blob([JSON.stringify({ bindings: filtered })], { type: "application/json" }));
+            const patchResponse = await fetch(endpoint, { method: "PATCH", headers, body: form });
+            const patchData = await patchResponse.json();
+            if (!patchResponse.ok || patchData.success !== true) {
+              throw new Error(`Failed to remove unsafe NVIDIA binding (HTTP ${patchResponse.status}).`);
+            }
+            const verifyResponse = await fetch(endpoint, { headers });
+            const verify = await verifyResponse.json();
+            if (!verifyResponse.ok || verify.success !== true || !Array.isArray(verify.result?.bindings)) {
+              throw new Error("Could not verify Worker binding removal.");
+            }
+            if (verify.result.bindings.some(unsafe)) throw new Error("Unsafe NVIDIA binding still exists after cleanup.");
+            console.log("Removed and verified removal of unsafe NVIDIA plaintext binding(s).");
+          } else {
+            console.log("No unsafe NVIDIA plaintext binding found; no settings changed.");
+          }
+          NODE
       - name: Smoke test
         run: |
           set -euo pipefail
           body="$(curl -sS --retry 5 --retry-delay 2 --connect-timeout 10 --max-time 30 "https://clinica-sao-paulo-site.clinicasaopauloparnamirim.workers.dev/health")"
           echo "$body"
           echo "$body" | grep -q '"ok":true'
-          echo "$body" | grep -q '"brain_count":9'
+          echo "$body" | grep -q '"brain_count":3'
           echo "$body" | grep -q '"capability_count":21'
           echo "$body" | grep -q '"autonomous_function_count":20'
       - name: Verify public HTML has no dual Zaraz
@@ -58,9 +98,15 @@ jobs:
         run: |
           set -euo pipefail
           base="https://clinica-sao-paulo-site.clinicasaopauloparnamirim.workers.dev"
-          for path in /mcp/tower /control/architecture /google/ads/oauth/start /google/oauth/start /google/ads/audit /google/ga4/audit /google/gsc/audit; do
+          for path in /mcp/tower /control/architecture /control/agents /orchestrate /google/ads/oauth/start /google/oauth/start /google/ads/audit /google/ga4/audit /google/gsc/audit /google/business-profile/audit /control/attribution/report; do
             code="$(curl -sS -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 2 --connect-timeout 10 --max-time 30 "$base$path")"
             echo "$path -> HTTP $code"
             test "$code" = "401"
           done
+          webhook_post_code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 -X POST "$base/webhooks/whatsapp" -H 'content-type: application/json' --data '{}')"
+          echo "/webhooks/whatsapp unsigned POST -> HTTP $webhook_post_code"
+          test "$webhook_post_code" = "403" || test "$webhook_post_code" = "503"
+          webhook_get_code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$base/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token=invalid&hub.challenge=probe")"
+          echo "/webhooks/whatsapp invalid verification -> HTTP $webhook_get_code"
+          test "$webhook_get_code" = "403" || test "$webhook_get_code" = "503"
 
