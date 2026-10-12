@@ -8,6 +8,7 @@ import { trackAttributionEvent, getAttributionReport, investigateAttribution, se
 import { googleBusinessAudit } from "./google-business-profile";
 import { autonomousFunctionSnapshot } from "./autonomous-functions";
 import { pairingSnapshot } from "./agent-pairing";
+import { generateReply, sendWhatsAppReply, sendAlerts } from "./whatsapp-ai";
 import { handleTowerMcp } from "./mcp-tower";
 import { specialistSnapshot } from "./agent-registry";
 import { googleAdsAuthCheck, googleAdsAudit, googleAdsBatchMutate, googleAdsMutate, googleAdsSearch, googleAdsOAuthStart, googleAdsOAuthCallback } from "./google-ads";
@@ -16,6 +17,13 @@ interface WhatsAppEnv {
   MCP_AUTH_TOKEN?: string;
   WHATSAPP_VERIFY_TOKEN?: string;
   WHATSAPP_APP_SECRET?: string;
+  WHATSAPP_AUTOREPLY_ENABLED?: string;
+  WHATSAPP_ACCESS_TOKEN?: string;
+  WHATSAPP_PHONE_NUMBER_ID?: string;
+  ALERT_SLACK_WEBHOOK?: string;
+  ALERT_WEBHOOK_URL?: string;
+  AI_SYSTEM_PROMPT?: string;
+  AI?: any;
   WHATSAPP_LEDGER: DurableObjectNamespace;
   CONTROL_AGENT: DurableObjectNamespace;
   GOOGLE_OAUTH_STORE: DurableObjectNamespace;
@@ -67,6 +75,8 @@ export class WhatsAppLedger extends DurableObject {
 
     let attributedMessages = 0;
     const attributed: Array<{lead_id:string; attribution:Record<string,unknown>}> = [];
+    const env = this.ctx.env as unknown as WhatsAppEnv;
+    const replyJobs: Array<{ id: string; to: string; message: string }> = [];
     for (const message of messages) {
       const referral = message?.referral ?? message?.context?.referral ?? null;
       const text = String(message?.text?.body ?? "");
@@ -90,6 +100,24 @@ export class WhatsAppLedger extends DurableObject {
       };
       await this.ctx.storage.put(`message:${message?.id ?? crypto.randomUUID()}`, record);
 
+      // Auto-replies are explicitly opt-in; webhook verification alone never enables sending.
+      const messageId = typeof message?.id === "string" ? message.id : "";
+      const recipient = typeof message?.from === "string" ? message.from : "";
+      if (
+        env.WHATSAPP_AUTOREPLY_ENABLED === "true" &&
+        messageId &&
+        recipient &&
+        text.trim() &&
+        typeof message?.type === "string" &&
+        message.type === "text"
+      ) {
+        const replyKey = `autoreply:${messageId}`;
+        const existingReply = await this.ctx.storage.get(replyKey);
+        if (!existingReply) {
+          await this.ctx.storage.put(replyKey, { status: "queued", queued_at: receivedAt });
+          replyJobs.push({ id: messageId, to: recipient, message: text.trim().slice(0, 4000) });
+        }
+      }
     }
     const id = crypto.randomUUID();
     await this.ctx.storage.put(`event:${Date.now()}:${id}`, {
@@ -98,13 +126,44 @@ export class WhatsAppLedger extends DurableObject {
       attributed_messages: attributedMessages,
       attributed,
     });
+    if (replyJobs.length > 0) {
+      this.ctx.waitUntil(this.processAutoReplies(replyJobs, env));
+    }
+    if (messages.length > 0 && (env.ALERT_SLACK_WEBHOOK || env.ALERT_WEBHOOK_URL)) {
+      // Alerts contain counts only; never forward patient message text or contact data.
+      this.ctx.waitUntil(sendAlerts([
+        `WhatsApp webhook accepted: ${messages.length} inbound message(s); ${attributedMessages} attributed.`,
+      ], env));
+    }
     return Response.json({
       ok: true,
       id,
       message_count: messages.length,
       attributed_messages: attributedMessages,
+      auto_replies_queued: replyJobs.length,
       attributed,
     });
+  }
+
+  private async processAutoReplies(jobs: Array<{ id: string; to: string; message: string }>, env: WhatsAppEnv) {
+    for (const job of jobs) {
+      try {
+        const reply = await generateReply(job.message, env);
+        if (!reply) throw new Error("Reply model returned no content");
+        const sent = await sendWhatsAppReply(job.to, reply, env);
+        await this.ctx.storage.put(`autoreply:${job.id}`, {
+          status: sent ? "sent" : "failed",
+          updated_at: new Date().toISOString(),
+        });
+      } catch (error) {
+        // Do not log patient content, phone number, or provider response body.
+        console.error("WhatsApp auto-reply failed for message id", job.id, error instanceof Error ? error.name : "unknown");
+        await this.ctx.storage.put(`autoreply:${job.id}`, {
+          status: "failed",
+          updated_at: new Date().toISOString(),
+        });
+      }
+    }
   }
 
   async audit() {
