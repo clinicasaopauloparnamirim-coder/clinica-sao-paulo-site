@@ -47,6 +47,13 @@ interface WhatsAppEnv {
 }
 
 export class WhatsAppLedger extends DurableObject {
+  private readonly runtimeEnv: WhatsAppEnv;
+
+  constructor(ctx: any, env: any) {
+    super(ctx, env);
+    this.runtimeEnv = env as WhatsAppEnv;
+  }
+
   async fetch(request: Request) {
     if (request.method === "GET" && new URL(request.url).pathname === "/audit") return Response.json(await this.audit());
     if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
@@ -75,7 +82,7 @@ export class WhatsAppLedger extends DurableObject {
 
     let attributedMessages = 0;
     const attributed: Array<{lead_id:string; attribution:Record<string,unknown>}> = [];
-    const env = this.ctx.env as unknown as WhatsAppEnv;
+    const env = this.runtimeEnv;
     const replyJobs: Array<{ id: string; to: string; message: string }> = [];
     for (const message of messages) {
       const referral = message?.referral ?? message?.context?.referral ?? null;
