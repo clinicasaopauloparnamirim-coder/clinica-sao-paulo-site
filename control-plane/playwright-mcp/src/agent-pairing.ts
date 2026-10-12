@@ -181,6 +181,23 @@ export function pairingSnapshot(env: PairEnv) {
       api_key_configured: Boolean(env.LAYA_API_KEY || env.control_tower),
       analysis_partner: "NVIDIA NIM / Nemotron",
     },
-    policy: "JEV/Laya remain authoritative decision engines; NVIDIA NIM analyzes evidence but never receives execution authority",
+    brain_roles: {
+      brain1_nvidia: {
+        status: env.NVIDIA_KEY_ROTATED === "true" && Boolean(env.NVIDIA_API_KEY) ? "configured-unverified" : "blocked",
+        model: env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b",
+        role: "analysis and independent verification; no execution authority",
+      },
+      brain2_chatgpt: {
+        status: env.OPENAI_API_KEY ? "configured-unverified" : "blocked",
+        model: env.OPENAI_MODEL || "gpt-6-sol",
+        role: "primary Control Tower orchestration and planning",
+      },
+      brain3_marketing_growth: {
+        status: "partial",
+        role: "SEO, Google Ads, GA4, Search Console, Instagram and lead attribution",
+        reason: "Read integrations are active; end-to-end attribution and automated publishing are not yet fully proven.",
+      },
+    },
+    policy: "Brain 2 OpenAI/ChatGPT is the primary Control Tower orchestrator; Brain 1 NVIDIA/Nemotron performs analysis and independent verification only; Brain 3 MarketingGrowth owns acquisition and conversion workflows. JEV/Laya remain auxiliary integrations and cannot override the three-brain policy or grant execution authority.",
   };
 }
