@@ -18,7 +18,7 @@ repositories:
   - name: JEV
     full_name: malevrigns/agent-jev
     role: candidate-agent
-    status: candidate
+    status: verified-identity
     approved: false
     source: github-public-search
     note: Repository exists, but exact match to the previously audited JEV project is not yet proven.
@@ -26,7 +26,7 @@ repositories:
   - name: Laya
     full_name: vishalmysore/layaAgent
     role: candidate-agent
-    status: candidate
+    status: verified-identity
     approved: false
     source: github-public-search
     note: Repository exists, but exact match to the previously audited Laya project is not yet proven.
@@ -34,7 +34,7 @@ repositories:
   - name: MonkeyCode
     full_name: chaitin/MonkeyCode
     role: candidate-agent-or-coding-tool
-    status: candidate
+    status: verified-identity
     approved: false
     source: github-public-search
     note: Repository identity found; prior-audit equivalence still requires verification.
@@ -42,7 +42,7 @@ repositories:
   - name: FreeLLMAPI
     full_name: tashfeenahmed/freellmapi
     role: candidate-api-or-llm-infrastructure
-    status: candidate
+    status: verified-identity
     approved: false
     source: github-public-search
     note: Repository identity found; prior-audit equivalence still requires verification.
@@ -50,7 +50,7 @@ repositories:
   - name: Open-SEO
     full_name: every-app/open-seo
     role: candidate-seo-tool
-    status: candidate
+    status: verified-identity
     approved: false
     source: github-public-search
     note: Repository identity found; prior-audit equivalence still requires verification.
@@ -58,7 +58,7 @@ repositories:
   - name: Browser Harness
     full_name: browser-use/browser-harness
     role: candidate-browser-agent-infrastructure
-    status: candidate
+    status: verified-identity
     approved: false
     source: github-public-search
     note: Repository identity found; prior-audit equivalence still requires verification.
@@ -66,7 +66,7 @@ repositories:
   - name: Ruflo
     full_name: ruvnet/ruflo
     role: multi-agent-orchestration
-    status: candidate
+    status: verified-identity
     approved: false
     source: github-public-search
     note: Repository identity found; adoption remains unapproved pending audit evidence.
@@ -74,7 +74,7 @@ repositories:
   - name: Superpowers
     full_name: obra/superpowers
     role: agent-development-workflow
-    status: candidate
+    status: verified-identity
     approved: false
     source: github-public-search
     note: Repository identity found; exact prior-audit scope should be verified before adoption.
@@ -98,7 +98,104 @@ repositories:
   - name: Open-dot
     full_name: composio-community/open-dot
     role: personal-openai-composio-agent
-    status: candidate
+    status: verified-identity
     approved: false
     source: github-public-search
     note: OpenAI + Composio personal agent template. Requires OPENAI_API_KEY + COMPOSIO_API_KEY. Gate: read-only session first.
+
+
+# Toolchain status (verified 2026-10-05)
+# This section records real connector/tool state; it does not imply production deployment.
+toolchain:
+  control_tower:
+    status: active
+    role: central-orchestration-and-governance
+    verification: health-ok
+    limitation: internal Google OAuth refresh is currently failing; use direct connected Google tools for Ads/GA4/GSC until repaired.
+
+  github:
+    status: active
+    role: repository-read-write-and-audit-evidence
+    account: clinicasaopauloparnamirim-coder
+
+  gemini:
+    status: available-discovery-only
+    role: secondary-reviewer
+    source: composio
+    verification: active-toolkit-and-live-model-catalog
+    limitation: GEMINI_GENERATE_CONTENT is restricted in this execution environment, so Gemini cannot currently be used here as an executing reviewer; the Gemini Android app is not remotely controlled.
+
+  claude:
+    status: blocked
+    role: secondary-reviewer
+    verification: github-models-path-discovered;live-call-failed
+    path: github-models/anthropic/*
+    limitation: A Claude-compatible GitHub Models route is exposed by the connector schema, but the live inference test returned a connector parsing failure; do not mark Claude execution active until a successful live call is verified.
+
+  google_ads:
+    status: active
+    role: paid-search-audit
+    verification: direct-composio-connection
+    scope: customer-4603647788
+
+  google_analytics:
+    status: active
+    role: GA4-audit-and-conversion-verification
+    verification: direct-composio-connection
+    property: properties/552216899
+
+  search_console:
+    status: active
+    role: SEO-indexing-and-search-audit
+    verification: direct-composio-connection
+    properties:
+      - sc-domain:clinicasaopauloparnamirim.com.br
+      - https://www.clinicasaopauloparnamirim.com.br/
+
+  slack:
+    status: active
+    role: audit-notifications-and-team-output
+    verification: direct-composio-connection
+
+  google_drive:
+    status: active
+    role: evidence-and-document-storage
+    verification: direct-composio-connection
+
+audit_pipeline:
+  production_repo:
+    - github
+    - control_tower
+    - gemini-review
+    - google_ads
+    - google_analytics
+    - search_console
+    - slack
+    - google_drive
+  candidate_repositories:
+    policy: read-only-audit-until-identity-verified
+    repositories:
+      - JEV
+      - Laya
+      - MonkeyCode
+      - FreeLLMAPI
+      - Open-SEO
+      - Browser Harness
+      - Ruflo
+      - Superpowers
+      - Hermes Agent
+      - Composio
+      - Open-dot
+  claude_gate: blocked-until-direct-anthropic-connection-is-verified
+  mutation_gate: read-verify-before-write; no production mutation from an unverified audit
+
+
+verification:
+  registry_commit: d8aee1d9f4d80fdb13ba2fce6ddf02134762372d
+  ci:
+    state: failed
+    provider: cloudflare-workers-and-pages
+    note: Branch check failed on 2026-10-06; PR #24 remains unmerged and main was not changed by this registry update.
+  llm:
+    gemini: catalog_verified;generation_restricted
+    claude: live_inference_unverified
