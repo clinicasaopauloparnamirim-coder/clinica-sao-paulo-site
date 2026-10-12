@@ -71,7 +71,9 @@ export class WhatsAppLedger extends DurableObject {
       const referral = message?.referral ?? message?.context?.referral ?? null;
       const text = String(message?.text?.body ?? "");
       const ref = text.match(/CSP-[A-F0-9]{10}/i)?.[0]?.toUpperCase() ?? null;
-      const click = ref ? await this.ctx.storage.get(`click:${ref}`) : null;
+      const click = ref
+        ? (await this.ctx.storage.get(`click:${ref}`)) as { attribution?: Record<string, unknown> } | null
+        : null;
       if (click) { attributedMessages++; attributed.push({ lead_id: ref!, attribution: click.attribution ?? {} }); }
       const record = {
         received_at: receivedAt,
@@ -107,16 +109,21 @@ export class WhatsAppLedger extends DurableObject {
 
   async audit() {
     const rows = await this.ctx.storage.list({ reverse: true, limit: 100 });
-    const items = Array.from(rows.entries()).map(([key, value]) => ({
-      key,
-      received_at: value?.received_at ?? null,
-      lead_id: value?.lead_id ?? null,
-      attributed: value?.attributed ?? null,
-      attribution: value?.attribution ?? null,
-      source_type: value?.source_type ?? null,
-      source_url: value?.source_url ?? null,
-      type: value?.type ?? null,
-    }));
+    const items = Array.from(rows.entries()).map(([key, value]) => {
+      const row = (value ?? {}) as Record<string, unknown>;
+      return {
+        key,
+        received_at: typeof row.received_at === "string" ? row.received_at : null,
+        lead_id: typeof row.lead_id === "string" ? row.lead_id : null,
+        attributed: typeof row.attributed === "boolean" ? row.attributed : null,
+        attribution: row.attribution && typeof row.attribution === "object"
+          ? row.attribution as Record<string, unknown>
+          : null,
+        source_type: typeof row.source_type === "string" ? row.source_type : null,
+        source_url: typeof row.source_url === "string" ? row.source_url : null,
+        type: typeof row.type === "string" ? row.type : null,
+      };
+    });
     return {
       ok: true,
       total_sampled: items.length,
@@ -312,7 +319,7 @@ ${authenticated ? `<p>Acesso autorizado</p>
         pairings: pairingSnapshot(env),
         brain_count: snapshot.brainCount,
         capability_count: snapshot.capabilityCount,
-        autonomous_function_count: snapshot.autonomousFunctions.count,
+        autonomous_function_count: autonomousFunctionSnapshot().count,
       }, { headers: { "cache-control": "no-store" } });
     }
 
