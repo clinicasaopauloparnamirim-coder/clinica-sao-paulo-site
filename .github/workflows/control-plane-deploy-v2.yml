@@ -51,9 +51,14 @@ jobs:
             throw new Error(`Could not safely inspect Worker bindings (HTTP ${currentResponse.status}).`);
           }
           const bindings = current.result.bindings;
+          const rotationConfirmed = bindings.some((binding) =>
+            binding?.name === "NVIDIA_KEY_ROTATED" &&
+            binding?.type === "plain_text" &&
+            binding?.text === "true"
+          );
           const unsafe = (binding) =>
             binding?.name === "N" ||
-            binding?.name === "NVIDIA_API_KEY" ||
+            (binding?.name === "NVIDIA_API_KEY" && !rotationConfirmed) ||
             (binding?.type === "plain_text" && typeof binding?.text === "string" && /^nvapi-/i.test(binding.text));
           const filtered = bindings.filter((binding) => !unsafe(binding));
           if (filtered.length !== bindings.length) {
