@@ -1,19 +1,11 @@
-# Agents
+# Runtime de agentes — arquitetura consolidada em três cérebros
 
-This directory tracks agent roles, capabilities, permissions and verification results.
+O runtime tem exatamente três cérebros de responsabilidade:
 
-## Current candidates
+1. **Control Tower** — orquestração, pesquisa, JEV/Laya/Nemotron, julgamento, Red Team, memória, política e GAUNTLET LOOP.
+2. **Marketing Growth** — SEO, Perfil da Empresa, Google Ads, GA4, Search Console, Instagram, WhatsApp, atribuição e CRO.
+3. **Engenharia e Segurança** — código, GitHub, Cloudflare Workers, webhooks, segredos, CI/CD, testes e recuperação.
 
-- Brain 09 — NVIDIA Ecosystem Intelligence — dedicated NVIDIA discovery, forensic audit, security/license review and controlled promotion layer.
-- Hermes Agent — candidate autonomous execution layer.
-- Composio — candidate integration/auth/tool layer.
+As 21 capacidades e 20 funções autônomas são subfunções desses três cérebros, não cérebros independentes. Os rótulos antigos de nove cérebros são legado documental e não devem ser usados para medir a arquitetura atual.
 
-## Permission model
-
-1. Read-only discovery.
-2. Read-only test with evidence.
-3. Sandboxed write test.
-4. Scoped production write.
-5. Expanded permissions only after repeated verification.
-
-No agent receives unrestricted production access by default.
+**Segurança P0:** as chamadas NVIDIA NIM ficam desabilitadas enquanto `NVIDIA_KEY_ROTATED` não for exatamente `true`. A chave potencialmente exposta precisa ser revogada no provedor e substituída antes de habilitar novamente o NIM. O pipeline remove o binding inseguro de texto simples `N` e verifica a remoção antes dos smoke tests.

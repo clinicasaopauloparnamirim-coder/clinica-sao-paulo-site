@@ -9,6 +9,7 @@ type ControlEnv = Env & {
   AI: Ai;
   MCP_OBJECT: DurableObjectNamespace<any>;
   NVIDIA_API_KEY?: string;
+  NVIDIA_KEY_ROTATED?: string;
   NVIDIA_BASE_URL?: string;
   NVIDIA_MODEL?: string;
   TYPESAFE_API_KEY?: string;
@@ -49,7 +50,7 @@ const ALLOWED_NAVIGATION_HOSTS = new Set([
 ]);
 
 async function nvidiaChat(env: ControlEnv, system: string, prompt: string): Promise<NvResult | null> {
-  const apiKey = env.NVIDIA_API_KEY;
+  const apiKey = env.NVIDIA_KEY_ROTATED === "true" ? env.NVIDIA_API_KEY : undefined;
   if (!apiKey) return null;
   const configuredBaseUrl = env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1";
   const baseUrl = configuredBaseUrl.endsWith("/") ? configuredBaseUrl.slice(0, -1) : configuredBaseUrl;
@@ -157,7 +158,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       "workers-ai",
       "nvidia-nim",
       "nvidia-fallback",
-      "9-brains",
+      "3-brains",
       "marketing-growth-draft-generation",
       "21-capabilities",
       "20-autonomous-functions",

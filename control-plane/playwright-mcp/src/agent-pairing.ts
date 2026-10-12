@@ -6,6 +6,7 @@ export type PairEnv = {
   LAYA_API_KEY?: string;
   control_tower?: string;
   NVIDIA_API_KEY?: string;
+  NVIDIA_KEY_ROTATED?: string;
   NVIDIA_BASE_URL?: string;
   NVIDIA_MODEL?: string;
 };
@@ -26,8 +27,8 @@ function baseUrl(value: string) {
 }
 
 async function nvidiaAnalysis(env: PairEnv, system: string, prompt: string) {
-  if (!env.NVIDIA_API_KEY) {
-    throw new Error("NVIDIA_API_KEY not configured; Nemotron analysis unavailable");
+  if (env.NVIDIA_KEY_ROTATED !== "true" || !env.NVIDIA_API_KEY) {
+    throw new Error("Nemotron disabled until the NVIDIA API key is rotated and NVIDIA_KEY_ROTATED is set to true");
   }
   const endpoint = baseUrl(env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1");
   const model = env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b";
@@ -158,7 +159,8 @@ export async function runAgentPair(env: PairEnv, pair: PairId, state: string): P
 export function pairingSnapshot(env: PairEnv) {
   return {
     nvidia_nim: {
-      configured: Boolean(env.NVIDIA_API_KEY),
+      configured: Boolean(env.NVIDIA_KEY_ROTATED === "true" && env.NVIDIA_API_KEY),
+      rotation_required: env.NVIDIA_KEY_ROTATED !== "true",
       model: env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b",
       role: "analysis partner; never overrides JEV/Laya decision",
     },
