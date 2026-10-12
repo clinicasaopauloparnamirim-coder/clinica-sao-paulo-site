@@ -57,7 +57,7 @@ async function openAIChat(env: ControlEnv, system: string, prompt: string): Prom
   const configuredBaseUrl = env.OPENAI_BASE_URL || "https://api.openai.com/v1";
   const baseUrl = configuredBaseUrl.endsWith("/") ? configuredBaseUrl.slice(0, -1) : configuredBaseUrl;
   const model = env.OPENAI_MODEL || "gpt-6-sol";
-  const response = await fetch(baseUrl + "/chat/completions", {
+  const response = await fetch(baseUrl + "/responses", {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -65,26 +65,29 @@ async function openAIChat(env: ControlEnv, system: string, prompt: string): Prom
     },
     body: JSON.stringify({
       model,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.1,
-      max_tokens: 2200,
+      instructions: system,
+      input: prompt,
+      max_output_tokens: 2200,
     }),
   });
   const raw = await response.text();
   if (!response.ok) {
-    throw new Error("OpenAI API request failed (" + response.status + "): " + raw.slice(0, 300));
+    throw new Error("OpenAI Responses API request failed (" + response.status + "): " + raw.slice(0, 300));
   }
-  const data = JSON.parse(raw) as { model?: string; choices?: Array<{ message?: { content?: string | Array<{type?: string; text?: string}> } }> };
-  const content = data.choices?.[0]?.message?.content;
-  const text = typeof content === "string"
-    ? content
-    : Array.isArray(content)
-      ? content.map((part) => typeof part?.text === "string" ? part.text : "").join("")
-      : "";
-  if (!text.trim()) throw new Error("OpenAI API returned empty content");
+  const data = JSON.parse(raw) as {
+    model?: string;
+    output_text?: string;
+    output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
+  };
+  const outputText = typeof data.output_text === "string" ? data.output_text : "";
+  const contentText = Array.isArray(data.output)
+    ? data.output.flatMap((item) => Array.isArray(item.content) ? item.content : [])
+      .filter((part) => part.type === "output_text" && typeof part.text === "string")
+      .map((part) => part.text || "")
+      .join("\n")
+    : "";
+  const text = outputText || contentText;
+  if (!text.trim()) throw new Error("OpenAI Responses API returned empty content");
   return { model: String(data.model || model), text };
 }
 
