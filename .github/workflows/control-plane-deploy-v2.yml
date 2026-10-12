@@ -56,29 +56,61 @@ jobs:
             binding?.type === "plain_text" &&
             binding?.text === "true"
           );
-          const unsafe = (binding) =>
+
+          // Settings API controls non-secret bindings only. The legacy name N and any
+          // NVIDIA-looking plain-text values are removed here; secret_text bindings
+          // must be managed through the dedicated /secrets API below.
+          const unsafeSetting = (binding) =>
             binding?.name === "N" ||
-            (binding?.name === "NVIDIA_API_KEY" && !rotationConfirmed) ||
             (binding?.type === "plain_text" && typeof binding?.text === "string" && /^nvapi-/i.test(binding.text));
-          const filtered = bindings.filter((binding) => !unsafe(binding));
+          const filtered = bindings.filter((binding) => !unsafeSetting(binding));
           if (filtered.length !== bindings.length) {
             const form = new FormData();
             form.append("settings", new Blob([JSON.stringify({ bindings: filtered })], { type: "application/json" }));
             const patchResponse = await fetch(endpoint, { method: "PATCH", headers, body: form });
             const patchData = await patchResponse.json();
             if (!patchResponse.ok || patchData.success !== true) {
-              throw new Error(`Failed to remove unsafe NVIDIA binding (HTTP ${patchResponse.status}).`);
+              throw new Error(`Failed to remove unsafe NVIDIA plaintext binding (HTTP ${patchResponse.status}).`);
             }
-            const verifyResponse = await fetch(endpoint, { headers });
-            const verify = await verifyResponse.json();
-            if (!verifyResponse.ok || verify.success !== true || !Array.isArray(verify.result?.bindings)) {
-              throw new Error("Could not verify Worker binding removal.");
-            }
-            if (verify.result.bindings.some(unsafe)) throw new Error("Unsafe NVIDIA binding still exists after cleanup.");
-            console.log("Removed and verified removal of unsafe NVIDIA credential binding(s).");
-          } else {
-            console.log("No unsafe NVIDIA plaintext binding found; no settings changed.");
           }
+
+          const verifySettingsResponse = await fetch(endpoint, { headers });
+          const verifySettings = await verifySettingsResponse.json();
+          if (!verifySettingsResponse.ok || verifySettings.success !== true || !Array.isArray(verifySettings.result?.bindings)) {
+            throw new Error("Could not verify Worker settings after NVIDIA binding cleanup.");
+          }
+          if (verifySettings.result.bindings.some(unsafeSetting)) {
+            throw new Error("Unsafe NVIDIA plaintext binding still exists after cleanup.");
+          }
+
+          // Secret-text bindings require the dedicated Secrets endpoint. Remove the
+          // old credential unless a fresh key was explicitly installed and marked.
+          const secretsEndpoint = endpoint.replace(/\/settings$/, "/secrets");
+          const secretsResponse = await fetch(secretsEndpoint, { headers });
+          const secrets = await secretsResponse.json();
+          if (!secretsResponse.ok || secrets.success !== true || !Array.isArray(secrets.result)) {
+            throw new Error(`Could not safely inspect Worker secrets (HTTP ${secretsResponse.status}).`);
+          }
+
+          if (!rotationConfirmed && secrets.result.some((secret) => secret?.name === "NVIDIA_API_KEY")) {
+            const deleteResponse = await fetch(`${secretsEndpoint}/NVIDIA_API_KEY`, { method: "DELETE", headers });
+            const deleteResult = await deleteResponse.json();
+            if (!deleteResponse.ok || deleteResult.success !== true) {
+              throw new Error(`Failed to remove old NVIDIA_API_KEY secret (HTTP ${deleteResponse.status}).`);
+            }
+          }
+
+          const verifySecretsResponse = await fetch(secretsEndpoint, { headers });
+          const verifySecrets = await verifySecretsResponse.json();
+          if (!verifySecretsResponse.ok || verifySecrets.success !== true || !Array.isArray(verifySecrets.result)) {
+            throw new Error("Could not verify Worker secrets after NVIDIA key cleanup.");
+          }
+          if (!rotationConfirmed && verifySecrets.result.some((secret) => secret?.name === "NVIDIA_API_KEY")) {
+            throw new Error("Old NVIDIA_API_KEY secret still exists after cleanup.");
+          }
+          console.log(rotationConfirmed
+            ? "Verified explicit NVIDIA rotation flag; retained the replacement secret and removed unsafe plaintext alias."
+            : "Removed and verified removal of old NVIDIA credential binding(s).");
           NODE
       - name: Smoke test
         run: |
