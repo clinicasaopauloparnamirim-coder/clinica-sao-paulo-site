@@ -1,0 +1,26 @@
+pipeline:
+  - discover_demand
+  - validate_entity
+  - classify_intent
+  - map_question_cluster
+  - create_evidence_brief
+  - produce_canonical_asset
+  - derive_social_assets
+  - add_internal_links
+  - add_valid_structured_data
+  - publish
+  - measure
+  - refresh
+
+content_rules:
+  - "Uma intenção forte não implica uma página nova se um conteúdo canônico já resolve."
+  - "Cada peça deve ter utilidade real e ligação clara com a jornada."
+  - "Claims clínicos precisam de base apropriada."
+  - "Nunca fabricar prova social."
+  - "Não publicar volume por volume."
+
+derivatives:
+  canonical_page:
+    outputs: [faq, carousel, stories, reel_script, whatsapp_script, reception_script]
+  faq:
+    outputs: [stories, carousel, reception_script]

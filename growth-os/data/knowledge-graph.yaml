@@ -1,0 +1,53 @@
+nodes:
+  clinic:
+    label: "Clínica São Paulo"
+    type: organization
+  location:
+    label: "Parnamirim, RN"
+    type: place
+  orthodontics:
+    type: service
+    topics:
+      - pain
+      - duration
+      - cost
+      - age
+      - food
+      - hygiene
+      - maintenance
+      - types
+      - retention
+  whitening:
+    type: service
+    topics:
+      - sensitivity
+      - duration
+      - safety
+      - office_vs_home
+      - repetition
+      - restorations
+  resin_veneers:
+    type: service
+    topics:
+      - durability
+      - staining
+      - tooth_preservation
+      - repair
+      - coffee
+      - bruxism
+  cleaning:
+    type: service
+    topics:
+      - pain
+      - frequency
+      - prevention
+relations:
+  - [clinic, located_in, location]
+  - [clinic, offers, orthodontics]
+  - [clinic, offers, whitening]
+  - [clinic, offers, resin_veneers]
+  - [clinic, offers, cleaning]
+  - [service, answers, topic]
+  - [topic, informs, content]
+  - [content, supports, trust]
+  - [content, drives, conversion]
