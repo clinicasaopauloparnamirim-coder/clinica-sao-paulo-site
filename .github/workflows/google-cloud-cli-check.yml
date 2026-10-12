@@ -1,0 +1,55 @@
+name: Google Cloud CLI Connectivity Check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  gcloud-connectivity:
+    name: Authenticate and verify gcloud
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Validate required repository variables
+        env:
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          GCP_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT }}
+        run: |
+          set -euo pipefail
+          for name in GCP_PROJECT_ID GCP_WORKLOAD_IDENTITY_PROVIDER GCP_SERVICE_ACCOUNT; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing GitHub Actions repository variable: $name"
+              exit 1
+            fi
+          done
+          echo "Required Google Cloud configuration variables are present (values not printed)."
+
+      - name: Authenticate to Google Cloud via Workload Identity Federation
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Install Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Verify gcloud authentication and project access
+        env:
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          gcloud --version
+          ACTIVE_ACCOUNT="$(gcloud auth list --filter=status:ACTIVE --format='value(account)')"
+          if [ -z "$ACTIVE_ACCOUNT" ]; then
+            echo "::error::gcloud has no active authenticated account."
+            exit 1
+          fi
+          echo "Authenticated account: $ACTIVE_ACCOUNT"
+          gcloud config set project "$GCP_PROJECT_ID" --quiet
+          gcloud projects describe "$GCP_PROJECT_ID" --format='value(projectId)'
+          echo "Google Cloud CLI authentication and project visibility verified."
