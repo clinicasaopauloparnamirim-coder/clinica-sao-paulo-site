@@ -125,6 +125,8 @@ jobs:
           # Catch stale or mismatched deployed bundles, even when OpenAI is not yet configured.
           echo "$body" | grep -q '"openai_api_configured":'
           echo "$body" | grep -q '"openai_control":'
+          echo "$body" | grep -q '"brain_roles":'
+          echo "$body" | grep -q 'Brain 2 OpenAI/ChatGPT is the primary'
       - name: Verify public HTML has no dual Zaraz
         run: |
           set -euo pipefail
