@@ -53,6 +53,7 @@ jobs:
           const bindings = current.result.bindings;
           const unsafe = (binding) =>
             binding?.name === "N" ||
+            binding?.name === "NVIDIA_API_KEY" ||
             (binding?.type === "plain_text" && typeof binding?.text === "string" && /^nvapi-/i.test(binding.text));
           const filtered = bindings.filter((binding) => !unsafe(binding));
           if (filtered.length !== bindings.length) {
@@ -69,7 +70,7 @@ jobs:
               throw new Error("Could not verify Worker binding removal.");
             }
             if (verify.result.bindings.some(unsafe)) throw new Error("Unsafe NVIDIA binding still exists after cleanup.");
-            console.log("Removed and verified removal of unsafe NVIDIA plaintext binding(s).");
+            console.log("Removed and verified removal of unsafe NVIDIA credential binding(s).");
           } else {
             console.log("No unsafe NVIDIA plaintext binding found; no settings changed.");
           }
