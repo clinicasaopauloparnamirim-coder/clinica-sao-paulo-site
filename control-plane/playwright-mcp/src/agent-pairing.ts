@@ -1,6 +1,8 @@
 export type PairId = "jev-nemotron" | "laya-llm";
 
 export type PairEnv = {
+  OPENAI_API_KEY?: string;
+  OPENAI_MODEL?: string;
   TYPESAFE_API_KEY?: string;
   LAYA_HTTP_URL?: string;
   LAYA_API_KEY?: string;
@@ -163,6 +165,11 @@ export function pairingSnapshot(env: PairEnv) {
       rotation_required: env.NVIDIA_KEY_ROTATED !== "true",
       model: env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b",
       role: "analysis partner; never overrides JEV/Laya decision",
+    },
+    openai_control: {
+      configured: Boolean(env.OPENAI_API_KEY),
+      model: env.OPENAI_MODEL || "gpt-6-sol",
+      role: "primary orchestration provider; status requires live inference",
     },
     jev_nemotron: {
       decision_engine_configured: Boolean(env.TYPESAFE_API_KEY),
