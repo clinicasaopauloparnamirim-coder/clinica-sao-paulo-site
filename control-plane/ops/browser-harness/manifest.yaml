@@ -1,0 +1,54 @@
+schema_version: 1
+name: browser-harness
+role: browser-execution-worker
+upstream:
+  repository: browser-use/browser-harness
+  package: browser-harness
+  mcp_package: browser-harness[mcp]
+  baseline_version: "0.1.13"
+
+execution:
+  default_mode: READ_ONLY
+  allow_mutations: false
+  require_postcondition: true
+  require_evidence_for_mutations: true
+  allow_arbitrary_cdp: false
+  allow_unrestricted_js: false
+
+isolation:
+  require_dedicated_browser: true
+  allow_personal_chrome_profile: false
+  shared_local_lane: serialized
+  parallel_work: isolated_workers
+
+recording:
+  enabled_by_default: false
+
+telemetry:
+  enabled_by_default: false
+
+scheduler:
+  max_concurrent_jobs_per_worker: 1
+  lease_required: true
+
+failure:
+  on_unexpected_ui: stop
+  on_auth_wall: stop
+  on_policy_violation: block
+  on_assertion_failure: fail
+  on_ambiguous_target: stop
+
+evidence:
+  required_fields:
+    - job_id
+    - target
+    - mode
+    - actions
+    - assertions
+    - final_state
+  prohibit:
+    - cookies
+    - access_tokens
+    - refresh_tokens
+    - passwords
+    - client_secrets
