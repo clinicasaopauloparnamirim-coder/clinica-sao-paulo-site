@@ -57,6 +57,8 @@ jobs:
           for (const feature of ['9 cérebros','20 agentes separados','CRM · pipeline de leads','/google/ads/audit','/google/ga4/audit','/google/gsc/audit','/control/crm/contacts']) {
             if (!dashboard.includes(feature)) throw new Error(`Dashboard missing expected feature: ${feature}`);
           }
+          const pairing = fs.readFileSync('control-plane/playwright-mcp/src/agent-pairing.ts','utf8');
+          if (!pairing.includes('model_roles:') || pairing.includes('brain_roles:') || pairing.includes('three-brain policy')) throw new Error('Model-provider metadata must remain distinct from the nine operational brains.');
           const deployWorkflow = fs.readFileSync('.github/workflows/control-plane-deploy-v2.yml','utf8');
           if (!deployWorkflow.includes('"brain_count":9') || !deployWorkflow.includes('"agent_count":20')) throw new Error('Deployment smoke tests are not aligned with 9 brains / 20 agents.');
           if (!deployWorkflow.includes('/control/crm/contacts; do')) throw new Error('Anonymous CRM endpoint is missing from the protected-route smoke loop.');
