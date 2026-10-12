@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="color-scheme" content="light">
+<title>Control Tower | Clínica São Paulo</title>
+<style>
+:root{--bg:#f5f4ef;--surface:#fff;--ink:#172c24;--muted:#68776f;--line:#e0e5df;--green:#123d2d;--green2:#1d5942;--gold:#b38b55;--red:#9d3838;--amber:#926722;--blue:#355e7d;--shadow:0 8px 28px rgba(20,49,37,.06)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer}.app{min-height:100vh;display:grid;grid-template-columns:248px minmax(0,1fr)}aside{background:#102f24;color:#f4f7f1;padding:24px 15px;display:flex;flex-direction:column;gap:22px;min-height:100vh}.brand{padding:3px 12px 18px;border-bottom:1px solid rgba(255,255,255,.15)}.brand b{display:block;font-size:15px;letter-spacing:.02em}.brand small{display:block;margin-top:4px;color:#c6d4ca;font-size:10px;text-transform:uppercase;letter-spacing:.15em}.brandmark{width:35px;height:35px;border:1px solid #c6a873;display:grid;place-items:center;border-radius:10px;margin-bottom:14px;color:#e2c28b;font-weight:800}.nav-label{padding:0 12px;color:#9db2a6;font-size:10px;letter-spacing:.16em;text-transform:uppercase}.nav{display:grid;gap:5px}.nav button{border:0;border-radius:9px;color:#dce7df;background:transparent;text-align:left;padding:11px 12px;display:flex;justify-content:space-between;gap:10px}.nav button:hover,.nav button.active{background:rgba(255,255,255,.12);color:#fff}.nav .n{font-size:11px;color:#c7d5cb}.side-foot{margin-top:auto;padding:14px 12px;color:#bacbc0;font-size:11px;border-top:1px solid rgba(255,255,255,.15)}main{min-width:0;padding:26px clamp(16px,3vw,42px) 48px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:26px}.eyebrow{font-size:10px;color:var(--gold);font-weight:800;letter-spacing:.16em;text-transform:uppercase}.topbar h1{font-size:clamp(24px,3vw,34px);line-height:1.15;margin:7px 0 5px;letter-spacing:-.04em}.sub{color:var(--muted);font-size:13px}.actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.btn{border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);padding:9px 13px;font-weight:700;font-size:12px}.btn.primary{background:var(--green);color:#fff;border-color:var(--green)}.btn:disabled{opacity:.5;cursor:not-allowed}.statusline{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}.dot{width:7px;height:7px;border-radius:50%;background:#a9b5ad;display:inline-block}.dot.good{background:#238654}.dot.warn{background:#c18a2c}.dot.bad{background:#bd4545}.section{display:none}.section.active{display:block}.grid{display:grid;gap:14px}.kpis{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:17px}.card{background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:18px;box-shadow:var(--shadow);min-width:0}.kpi-label{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}.kpi-value{font-size:clamp(24px,3vw,32px);font-weight:750;letter-spacing:-.04em;margin:10px 0 2px;font-variant-numeric:tabular-nums}.kpi-note{font-size:11px;color:var(--muted)}.split{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr)}.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:13px}.card h2{font-size:15px;margin:0;letter-spacing:-.015em}.card p{margin-top:6px}.tiny{font-size:11px;color:var(--muted)}.pill{display:inline-flex;align-items:center;border-radius:100px;padding:4px 8px;font-weight:750;font-size:10px;background:#eef1ed;color:#56635b;white-space:nowrap}.pill.good{color:#17603b;background:#e8f4eb}.pill.warn{color:#895d15;background:#faf1dc}.pill.bad{color:#923434;background:#fae9e8}.pill.info{color:#355e7d;background:#eaf2f7}.barlist{display:grid;gap:9px}.barrow{display:grid;grid-template-columns:minmax(120px,1fr) 2fr auto;align-items:center;gap:12px;font-size:12px}.track{height:7px;background:#edf0eb;border-radius:9px;overflow:hidden}.fill{height:100%;border-radius:9px;background:var(--green2);width:0}.list{display:grid;gap:8px}.listrow{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid var(--line);padding-top:10px}.listrow:first-child{border-top:0;padding-top:0}.listrow b{font-size:12px}.listrow small{display:block;color:var(--muted);font-size:11px;margin-top:3px}.cards-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.brain-card,.agent-card{cursor:pointer;transition:transform .14s,border-color .14s}.brain-card:hover,.agent-card:hover{transform:translateY(-2px);border-color:#b6c4b9}.brain-number{display:grid;place-items:center;width:35px;height:35px;background:#e9efe9;color:var(--green);border-radius:10px;font-size:12px;font-weight:850}.brain-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.brain-card h3,.agent-card h3{font-size:14px;margin:13px 0 8px;line-height:1.35}.brain-card .mission,.agent-card .mission{font-size:12px;color:var(--muted);min-height:54px}.meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.agent-card{padding:15px}.agent-top{display:flex;justify-content:space-between;gap:8px}.agent-card h3{margin:0 0 7px}.agent-card .mission{min-height:50px}.agent-badges{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#58675f}.agents-filter{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.agents-filter select,.field input,.field select,.field textarea,.search{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);outline-color:#7aa38a}.agents-filter select{width:auto;min-width:180px}.crm-board{display:grid;grid-template-columns:repeat(6,minmax(195px,1fr));gap:10px;overflow-x:auto;padding-bottom:8px}.crm-col{background:#ecefe9;border:1px solid #dfe4dd;border-radius:13px;min-height:250px;padding:9px}.crm-col-head{display:flex;justify-content:space-between;align-items:center;padding:5px 5px 11px;font-size:12px;font-weight:800}.crm-col-head span{background:#fff;padding:2px 7px;border-radius:50px;font-size:10px;color:var(--muted)}.lead-card{background:#fff;border:1px solid #dfe5de;border-radius:10px;padding:11px;margin-bottom:8px;box-shadow:0 2px 6px rgba(30,50,35,.03)}.lead-name{font-weight:800;font-size:12px;overflow-wrap:anywhere}.lead-line{font-size:11px;color:var(--muted);margin-top:4px;overflow-wrap:anywhere}.lead-card select{margin-top:8px;width:100%;padding:7px;border:1px solid var(--line);border-radius:7px;font-size:11px;background:#fbfcfa}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field{display:grid;gap:5px}.field label{font-size:11px;font-weight:750;color:var(--muted)}.field.full{grid-column:1/-1}.field textarea{resize:vertical;min-height:65px}.form-actions{display:flex;align-items:center;gap:10px;margin-top:14px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px}.table{width:100%;border-collapse:collapse;min-width:530px;font-size:12px}.table th,.table td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}.table th{background:#f7f8f5;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.05em}.table tr:last-child td{border-bottom:0}.data-block{background:#f7f8f5;border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;max-height:340px}.data-block pre{font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;word-break:break-word;margin:0;color:#33433a}.message{padding:12px 14px;border-radius:10px;font-size:12px;background:#eef3ee;color:#365444}.message.error{background:#fae9e8;color:#923434}.message.hidden{display:none}.detail-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.9fr);gap:14px}.empty{padding:25px 15px;text-align:center;color:var(--muted);font-size:12px}.divider{height:1px;background:var(--line);margin:14px 0}.lock{display:none;position:fixed;inset:0;background:rgba(245,244,239,.97);z-index:99;align-items:center;justify-content:center;padding:22px}.lock.show{display:flex}.lock-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:28px;max-width:420px;width:100%;box-shadow:var(--shadow)}.lock-card h2{margin:0 0 8px}.footer-note{font-size:11px;color:var(--muted);margin-top:18px}.hide{display:none!important}
+@media(max-width:1080px){.app{grid-template-columns:205px minmax(0,1fr)}.cards-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.split{grid-template-columns:1fr}}
+@media(max-width:700px){.app{display:block}aside{min-height:auto;padding:13px 14px;gap:12px}.brand{padding:0 4px 10px;display:flex;align-items:center;gap:12px}.brandmark{margin:0;width:32px;height:32px;flex-shrink:0}.nav-label,.side-foot{display:none}.nav{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}.nav button{font-size:11px;padding:9px 8px;justify-content:center;text-align:center}main{padding:20px 13px 34px}.topbar{margin-bottom:18px}.kpis{gap:8px}.card{padding:14px;border-radius:12px}.cards-grid{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.detail-layout{grid-template-columns:1fr}.barrow{grid-template-columns:minmax(85px,1fr) 1.3fr auto;gap:7px;font-size:11px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+  <div class="brand"><div class="brandmark">CS</div><div><b>CONTROL TOWER</b><small>Clínica São Paulo · Parnamirim</small></div></div>
+  <div class="nav-label">Operação</div>
+  <nav class="nav" aria-label="Navegação principal">
+    <button class="active" data-view="overview">Visão geral <span class="n">01</span></button>
+    <button data-view="brains">9 cérebros <span class="n">09</span></button>
+    <button data-view="agents">20 agentes <span class="n">20</span></button>
+    <button data-view="crm">CRM <span class="n">06</span></button>
+    <button data-view="ads">Google Ads <span class="n">↗</span></button>
+    <button data-view="analytics">Analytics <span class="n">GA4/GSC</span></button>
+  </nav>
+  <div class="side-foot">GAUNTLET LOOP<br>Buscar → confrontar → testar → verificar<br><br>Dados comerciais protegidos por sessão autenticada. Nenhum token fica gravado neste painel.</div>
+</aside>
+<main>
+  <header class="topbar">
+    <div><div class="eyebrow">Command & intelligence center</div><h1 id="page-title">Visão geral</h1><div class="sub" id="page-sub">Estado real das conexões, agentes, aquisição e leads.</div></div>
+    <div class="actions"><span class="statusline"><i class="dot" id="global-dot"></i><span id="global-status">Verificando sessão…</span></span><button class="btn" id="refresh">Atualizar dados</button><a class="btn" href="/control/logout">Sair</a></div>
+  </header>
+  <div class="message hidden" id="notice" role="status"></div>
+
+  <section class="section active" id="view-overview">
+    <div class="grid kpis">
+      <div class="card"><div class="kpi-label">Cérebros registrados</div><div class="kpi-value" id="kpi-brains">—</div><div class="kpi-note">Separados por missão</div></div>
+      <div class="card"><div class="kpi-label">Agentes registrados</div><div class="kpi-value" id="kpi-agents">—</div><div class="kpi-note">Cada um com estado próprio</div></div>
+      <div class="card"><div class="kpi-label">Leads no CRM</div><div class="kpi-value" id="kpi-leads">—</div><div class="kpi-note" id="kpi-leads-note">Só contatos gravados no CRM</div></div>
+      <div class="card"><div class="kpi-label">Custo Ads · 30 dias</div><div class="kpi-value" id="kpi-spend">—</div><div class="kpi-note" id="kpi-ads-note">Campanha autorizada · somente leitura</div></div>
+    </div>
+    <div class="grid split">
+      <div class="card"><div class="card-head"><div><h2>Mapa dos 9 cérebros</h2><p class="tiny">Abra um cérebro para ver o seu painel individual.</p></div><span class="pill info" id="brain-count-pill">9 esperados</span></div><div class="grid cards-grid" id="overview-brains"></div></div>
+      <div class="grid">
+        <div class="card"><div class="card-head"><div><h2>Google Ads · aquisição</h2><p class="tiny">Somente a campanha autorizada; nenhuma alteração foi aplicada.</p></div><span class="pill" id="ads-status-pill">Verificando</span></div><div class="grid kpis" style="grid-template-columns:repeat(2,minmax(0,1fr));margin:0"><div><div class="kpi-label">Cliques</div><div class="kpi-value" id="ads-clicks">—</div></div><div><div class="kpi-label">Conversões</div><div class="kpi-value" id="ads-conv">—</div></div><div><div class="kpi-label">Impressões</div><div class="kpi-value" id="ads-impressions">—</div></div><div><div class="kpi-label">CPC médio</div><div class="kpi-value" id="ads-cpc">—</div></div></div><div class="divider"></div><div class="tiny" id="ads-campaign-name">Aguardando leitura autenticada…</div><button class="btn" style="margin-top:13px" data-goto="ads">Abrir painel Google Ads</button></div>
+        <div class="card"><div class="card-head"><div><h2>Prontidão dos agentes</h2><p class="tiny">Distinção entre execução comprovada e cadastro.</p></div><span class="pill" id="agent-status-pill">Verificando</span></div><div class="barlist" id="readiness-bars"></div><p class="footer-note">“Registrado” não significa que o agente executa tarefas autonomamente. A prontidão vem do registry e deve ser comprovada por teste real.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="view-brains"><div class="card-head"><div><h2>Os 9 cérebros</h2><p class="tiny">Módulos independentes por missão, ferramentas e prontidão.</p></div><span class="pill info" id="brain-count-full">—</span></div><div class="grid cards-grid" id="all-brains"></div></section>
+
+  <section class="section" id="view-brain-detail">
+    <div class="actions" style="margin-bottom:14px"><button class="btn" data-goto="brains">← Todos os cérebros</button><span class="pill" id="detail-readiness">Estado desconhecido</span></div>
+    <div class="detail-layout">
+      <div class="card"><div class="eyebrow" id="detail-number">Cérebro</div><h2 id="detail-name" style="font-size:23px;margin-top:8px"></h2><p id="detail-mission"></p><div class="divider"></div><div class="kpi-label">Motivo do estado</div><p id="detail-reason" class="tiny"></p><div class="divider"></div><div class="kpi-label">Famílias de ferramentas</div><div id="detail-tools" class="meta"></div><div class="divider"></div><div class="kpi-label">Conectores registrados</div><div id="detail-connections" class="data-block" style="margin-top:8px"><pre></pre></div></div>
+      <div class="card"><div class="card-head"><div><h2>Agentes deste cérebro</h2><p class="tiny">Clique em um agente para abrir sua descrição e prontidão.</p></div><span class="pill" id="detail-agents-count">0</span></div><div class="list" id="detail-agents"></div><div class="divider"></div><h2>Indicadores ligados ao domínio</h2><div class="list" id="detail-domain-metrics" style="margin-top:12px"></div></div>
+    </div>
+  </section>
+
+  <section class="section" id="view-agents"><div class="card-head"><div><h2>20 agentes separados</h2><p class="tiny">Estado, cérebro proprietário, permissão de modo e missão de cada agente.</p></div><span class="pill info" id="agent-count-full">—</span></div><div class="agents-filter"><select id="filter-brain" aria-label="Filtrar por cérebro"><option value="">Todos os cérebros</option></select><select id="filter-status" aria-label="Filtrar por estado"><option value="">Todos os estados</option><option value="runtime-verified">Runtime verificado</option><option value="partial">Parcial</option><option value="configured-unverified">Configurado, não verificado</option><option value="registry-only">Somente cadastro</option><option value="blocked">Bloqueado</option></select></div><div class="grid cards-grid" id="all-agents"></div></section>
+
+  <section class="section" id="view-crm">
+    <div class="card-head"><div><h2>CRM · pipeline de leads</h2><p class="tiny">Contatos do CRM e leads atribuídos do WhatsApp; não armazena conteúdo clínico.</p></div><div class="actions"><span class="pill info" id="crm-count">0 contatos</span><button class="btn primary" id="toggle-lead-form">+ Novo lead</button></div></div>
+    <div class="card hide" id="lead-form-card" style="margin-bottom:14px"><div class="card-head"><div><h2>Cadastrar lead</h2><p class="tiny">O telefone é usado para deduplicação; mantenha as notas estritamente comerciais.</p></div></div>
+      <form id="lead-form"><div class="form-grid">
+      <div class="field"><label for="lead-name">Nome</label><input id="lead-name" name="name" maxlength="120" placeholder="Nome do contato"></div>
+      <div class="field"><label for="lead-phone">WhatsApp / telefone</label><input id="lead-phone" name="phone" maxlength="40" placeholder="Ex.: +55 84 99999-9999"></div>
+      <div class="field"><label for="lead-source">Origem</label><select id="lead-source" name="source"><option value="google_ads">Google Ads</option><option value="organic">Busca orgânica</option><option value="instagram">Instagram</option><option value="whatsapp">WhatsApp</option><option value="referral">Indicação</option><option value="unknown">Desconhecida</option></select></div>
+      <div class="field"><label for="lead-stage">Etapa inicial</label><select id="lead-stage" name="stage"><option value="new">Novo lead</option><option value="contacted">Contatado</option><option value="qualified">Qualificado</option><option value="scheduled">Agendado</option><option value="patient">Paciente</option><option value="lost">Perdido</option></select></div>
+      <div class="field full"><label for="lead-notes">Nota comercial (sem dados clínicos)</label><textarea id="lead-notes" name="notes" maxlength="500" placeholder="Preferência de horário, retorno comercial ou próximo passo. Não registre diagnóstico ou informações clínicas."></textarea></div>
+      </div><div class="form-actions"><button class="btn primary" type="submit">Salvar lead</button><button class="btn" type="button" id="cancel-lead">Cancelar</button><span class="tiny" id="lead-form-status"></span></div></form>
+    </div>
+    <div class="message hidden" id="crm-message"></div>
+    <div class="crm-board" id="crm-board"></div>
+    <div class="footer-note">O quadro carrega contatos reais persistidos no ledger. A movimentação de etapa grava no backend autenticado. O número não é combinado com dados externos sem prova de identidade.</div>
+  </section>
+
+  <section class="section" id="view-ads">
+    <div class="grid kpis"><div class="card"><div class="kpi-label">Custo · últimos 30 dias</div><div class="kpi-value" id="ads-detail-spend">—</div><div class="kpi-note">BRL</div></div><div class="card"><div class="kpi-label">Cliques</div><div class="kpi-value" id="ads-detail-clicks">—</div></div><div class="card"><div class="kpi-label">Conversões</div><div class="kpi-value" id="ads-detail-conv">—</div></div><div class="card"><div class="kpi-label">CPA observado</div><div class="kpi-value" id="ads-detail-cpa">—</div><div class="kpi-note">Custo ÷ conversões reportadas</div></div></div>
+    <div class="grid split"><div class="card"><div class="card-head"><div><h2>Campanha autorizada</h2><p class="tiny">Fonte: endpoint Control Tower Google Ads.</p></div><span class="pill" id="ads-detail-pill">—</span></div><div id="campaign-detail" class="list"></div></div><div class="card"><div class="card-head"><div><h2>Palavras-chave</h2><p class="tiny">Amostra retornada pelo endpoint de auditoria.</p></div></div><div id="keyword-table"></div></div></div>
+    <div class="footer-note">Escopo guardado no código: campanha <span class="mono">24289443969</span>, customer <span class="mono">4603647788</span>. Search-2, mutações de orçamento e alterações automáticas não fazem parte deste painel.</div>
+  </section>
+
+  <section class="section" id="view-analytics">
+    <div class="card-head"><div><h2>Analytics & atribuição</h2><p class="tiny">Respostas reais das APIs ligadas ao Worker; erros ficam explícitos, sem substituição por valores de exemplo.</p></div></div>
+    <div class="grid split">
+      <div class="card"><div class="card-head"><h2>GA4</h2><span class="pill" id="ga4-pill">—</span></div><div class="data-block"><pre id="ga4-data">Aguardando leitura…</pre></div></div>
+      <div class="card"><div class="card-head"><h2>Search Console</h2><span class="pill" id="gsc-pill">—</span></div><div class="data-block"><pre id="gsc-data">Aguardando leitura…</pre></div></div>
+      <div class="card"><div class="card-head"><h2>Atribuição do site</h2><span class="pill" id="attr-pill">—</span></div><div class="data-block"><pre id="attr-data">Aguardando leitura…</pre></div></div>
+      <div class="card"><div class="card-head"><h2>Eventos WhatsApp</h2><span class="pill" id="wa-pill">—</span></div><div class="data-block"><pre id="wa-data">Aguardando leitura…</pre></div></div>
+    </div>
+  </section>
+
+  <div class="footer-note">Fonte de verdade: APIs e registro da aplicação. Estado “parcial” ou “não verificado” não deve ser lido como erro confirmado nem como integração funcional. Horário da última leitura: <span id="last-updated">—</span>.</div>
+</main>
+</div>
+
+<div class="lock" id="lock">
+  <div class="lock-card"><div class="brain-number">CS</div><h2>Autenticação necessária</h2><p class="tiny">O dashboard não guarda credenciais de API. Entre no Control Tower para criar a sessão protegida e então retorne ao painel.</p><p style="margin-top:18px"><a class="btn primary" href="/control">Entrar no Control Tower</a></p><p class="footer-note">Após o login, abra novamente <span class="mono">/control-tower/</span>.</p></div>
+</div>
+
+<script>
+(() => {
+"use strict";
+const $ = (id) => document.getElementById(id);
+const STAGES = [
+  ["new","Novo"],["contacted","Contatado"],["qualified","Qualificado"],
+  ["scheduled","Agendado"],["patient","Paciente"],["lost","Perdido"]
+];
+const SOURCES = {google_ads:"Google Ads",organic:"Orgânico",instagram:"Instagram",whatsapp:"WhatsApp",referral:"Indicação",unknown:"Desconhecida"};
+const state = {health:null,architecture:null,ads:null,ga4:null,gsc:null,attribution:null,whatsapp:null,crm:[],brain:null};
+const TITLES = {
+  overview:["Visão geral","Estado real das conexões, agentes, aquisição e leads."],
+  brains:["9 cérebros","Cada cérebro tem missão, ferramentas, agentes e estado próprios."],
+  agents:["20 agentes separados","Registro individual de missão, prontidão e modos autorizados."],
+  crm:["CRM · Pipeline de leads","Cadastro, atribuição e avanço dos leads com persistência autenticada."],
+  ads:["Google Ads","Auditoria da campanha autorizada, em modo somente leitura."],
+  analytics:["Analytics & atribuição","GA4, Search Console, ledger de atribuição e eventos WhatsApp."]
+};
+function el(tag, cls, text) { const n=document.createElement(tag); if(cls)n.className=cls; if(text!==undefined)n.textContent=String(text); return n; }
+function add(parent,tag,cls,text){const n=el(tag,cls,text);parent.appendChild(n);return n;}
+function pillStatus(s){
+ const map={"runtime-verified":["Runtime verificado","good"],partial:["Parcial","warn"],"configured-unverified":["Configurado · não verificado","warn"],"registry-only":["Somente cadastro","info"],blocked:["Bloqueado","bad"],ok:["Conectado","good"],error:["Falha de leitura","bad"]};
+ return map[s]||[s||"Desconhecido",""];
+}
+function setPill(node,s){if(!node)return;const [label,cls]=pillStatus(s);node.className="pill"+(cls?" "+cls:"");node.textContent=label;}
+function brl(n){if(!Number.isFinite(n))return "—";return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:2}).format(n);}
+function num(n){const v=Number(n);return Number.isFinite(v)?new Intl.NumberFormat("pt-BR",{maximumFractionDigits:2}).format(v):"—";}
+function micros(m){const v=Number(m);return Number.isFinite(v)?v/1e6:NaN;}
+function showNotice(text,isError=false){const n=$("notice");n.textContent=text;n.classList.toggle("hidden",!text);n.classList.toggle("error",!!isError);}
+function safeJson(data,limit=12000){if(data===null||data===undefined)return "Sem resposta";const text=JSON.stringify(data,null,2);return text.length>limit?text.slice(0,limit)+"\n… conteúdo truncado para exibição":text;}
+async function getJson(url){
+ const res=await fetch(url,{credentials:"same-origin",cache:"no-store",headers:{"Accept":"application/json"}});
+ if(res.status===401||res.status===403){throw Object.assign(new Error("Sessão expirada ou sem permissão"),{auth:true,status:res.status});}
+ if(!res.ok){const body=(await res.text()).slice(0,220);throw new Error(url+" respondeu HTTP "+res.status+(body?": "+body:""));}
+ return await res.json();
+}
+async function postJson(url,method,payload){
+ const res=await fetch(url,{method,credentials:"same-origin",cache:"no-store",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify(payload)});
+ if(res.status===401||res.status===403)throw Object.assign(new Error("Sessão expirada ou sem permissão"),{auth:true});
+ if(!res.ok)throw new Error((await res.text()).slice(0,300)||("HTTP "+res.status));
+ return await res.json();
+}
+function allBrains(){return Array.isArray(state.architecture?.brains)?state.architecture.brains:[];}
+function allAgents(){const a=state.architecture?.agents||state.architecture?.specialists;return Array.isArray(a)?a:[];}
+function campaignRows(){const rows=state.ads?.campaigns?.results;return Array.isArray(rows)?rows:[];}
+function firstCampaign(){return campaignRows()[0]||null;}
+function adsMetrics(){
+ const row=firstCampaign(), m=row?.metrics||{};
+ return {campaign:row?.campaign||{},metrics:m,clicks:Number(m.clicks)||0,impressions:Number(m.impressions)||0,conversions:Number(m.conversions)||0,cost:micros(m.costMicros??m.cost_micros)};
+}
+function go(view){
+ document.querySelectorAll(".section").forEach(n=>n.classList.remove("active"));
+ const panel=$("view-"+view);if(panel)panel.classList.add("active");
+ document.querySelectorAll(".nav button[data-view]").forEach(n=>n.classList.toggle("active",n.dataset.view===view||(view==="brain-detail"&&n.dataset.view==="brains")));
+ const [title,sub]=TITLES[view]||["Painel do cérebro","Painel individual."];
+ $("page-title").textContent=title;$("page-sub").textContent=sub;
+}
+document.querySelectorAll(".nav button[data-view]").forEach(n=>n.addEventListener("click",()=>go(n.dataset.view)));
+document.querySelectorAll("[data-goto]").forEach(n=>n.addEventListener("click",()=>go(n.dataset.goto)));
+function renderBrainCards(target,compact=false){
+ const root=$(target);root.replaceChildren();
+ allBrains().forEach((b,i)=>{
+  const card=add(root,"article","card brain-card");card.tabIndex=0;card.setAttribute("role","button");card.setAttribute("aria-label","Abrir painel "+b.name);
+  const top=add(card,"div","brain-top");add(top,"span","brain-number",String(i+1).padStart(2,"0"));setPill(add(top,"span","pill"),b.readiness||"registry-only");
+  add(card,"h3","",b.name||b.id);add(card,"p","mission",b.mission||"Missão ainda não cadastrada.");
+  const meta=add(card,"div","meta");add(meta,"span","pill",String((allAgents().filter(a=>a.brain===b.id)).length)+" agentes");
+  add(meta,"span","pill",b.toolExecutionPath||"sem rota");
+  const open=()=>openBrain(b,i);card.addEventListener("click",open);card.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open();}});
+ });
+ if(!allBrains().length)add(root,"div","empty","A API autenticada não retornou a lista de cérebros.");
+}
+function openBrain(b,i){
+ state.brain=b;go("brain-detail");
+ $("detail-number").textContent="Cérebro "+String(i+1).padStart(2,"0")+" / 09";
+ $("detail-name").textContent=b.name||b.id;$("detail-mission").textContent=b.mission||"";
+ $("detail-reason").textContent=b.readinessReason||"Sem motivo informado.";
+ setPill($("detail-readiness"),b.readiness||"registry-only");
+ $("detail-tools").replaceChildren();(b.toolFamilies||[]).forEach(t=>add($("detail-tools"),"span","pill",t));
+ $("detail-connections").querySelector("pre").textContent=safeJson({connected:b.connectedToolSlugs||[],planned:b.plannedToolSlugs||[]});
+ const agents=allAgents().filter(a=>a.brain===b.id);$("detail-agents-count").textContent=String(agents.length);
+ $("detail-agents").replaceChildren();
+ agents.forEach(a=>{const row=add($("detail-agents"),"div","listrow");const left=add(row,"div","");add(left,"b","",a.name||a.id);add(left,"small","",a.readinessReason||a.mission||"");setPill(add(row,"span","pill"),a.readiness||"registry-only");});
+ const met=$("detail-domain-metrics");met.replaceChildren();
+ const metrics = b.id==="ads" ? [["Campanha autorizada",adsMetrics().campaign.name||"Sem leitura"],["Cliques (30 dias)",num(adsMetrics().clicks)],["Custo (30 dias)",brl(adsMetrics().cost)]]
+ : b.id==="marketing-growth" ? [["Leads no CRM",String(state.crm.length)],["Eventos de atribuição",String(state.attribution?.total_events??state.attribution?.count??"Não informado")],["WhatsApp",String(state.whatsapp?.messages??state.whatsapp?.total_sampled??"Não informado")]]
+ : b.id==="seo" ? [["Fonte",state.gsc?"Search Console conectado":"Sem leitura"],["Diagnóstico GSC",state.gsc?.ok===true?"Resposta OK":"Verificar API"]]
+ : [["Agentes deste domínio",String(agents.length)],["Rotas registradas",b.toolExecutionPath||"Não definida"],["Próximo passo",b.readinessReason||"Executar teste real"]];
+ metrics.forEach(([k,v])=>{const row=add(met,"div","listrow");add(row,"div","",k);add(row,"b","",v);});
+}
+function renderAgents(){
+ const root=$("all-agents");root.replaceChildren();
+ const brainFilter=$("filter-brain").value,statusFilter=$("filter-status").value;
+ const brains=allBrains();const labels=Object.fromEntries(brains.map(b=>[b.id,b.name]));
+ allAgents().filter(a=>(!brainFilter||a.brain===brainFilter)&&(!statusFilter||a.readiness===statusFilter)).forEach(a=>{
+  const card=add(root,"article","card agent-card");card.tabIndex=0;
+  const top=add(card,"div","agent-top");add(top,"h3","",a.name||a.id);setPill(add(top,"span","pill"),a.readiness||"registry-only");
+  add(card,"p","mission",a.mission||"Missão ainda não cadastrada.");
+  add(card,"div","mono",a.id);
+  add(card,"p","tiny","Cérebro: "+(labels[a.brain]||a.brain||"não atribuído"));
+  const badges=add(card,"div","agent-badges");add(badges,"span","pill",Array.isArray(a.allowedModes)?a.allowedModes.join(" / "):"sem modo");add(badges,"span","pill",a.financialActions==="blocked"?"Financeiro bloqueado":"Política não informada");
+  const reason=add(card,"p","tiny",a.readinessReason||"Sem nota de prontidão.");reason.style.marginTop="10px";
+ });
+ $("agent-count-full").textContent=allAgents().length+" agentes no registry";
+}
+function renderReadiness(){
+ const root=$("readiness-bars");root.replaceChildren();
+ const agents=allAgents();const keys=["runtime-verified","partial","configured-unverified","registry-only","blocked"];
+ const labels={"runtime-verified":"Runtime verificado","partial":"Parcial","configured-unverified":"Não verificado","registry-only":"Somente cadastro","blocked":"Bloqueado"};
+ const total=Math.max(agents.length,1);
+ keys.forEach(k=>{const count=agents.filter(a=>a.readiness===k).length;const row=add(root,"div","barrow");add(row,"span","",labels[k]);const track=add(row,"div","track");const fill=add(track,"div","fill");fill.style.width=(count/total*100)+"%";add(row,"b","",count);});
+ const ready=agents.filter(a=>a.readiness==="runtime-verified").length;
+ setPill($("agent-status-pill"),ready>0?"partial":"registry-only");
+}
+function renderAds(){
+ const x=adsMetrics(),m=x.metrics;
+ $("ads-clicks").textContent=num(x.clicks);$("ads-conv").textContent=num(x.conversions);$("ads-impressions").textContent=num(x.impressions);
+ $("ads-cpc").textContent=brl(x.clicks?x.cost/x.clicks:NaN);
+ $("ads-campaign-name").textContent=x.campaign.name||"Campanha indisponível na leitura atual.";
+ $("kpi-spend").textContent=brl(x.cost);$("kpi-ads-note").textContent="Somente leitura · últimos 30 dias";
+ $("ads-detail-spend").textContent=brl(x.cost);$("ads-detail-clicks").textContent=num(x.clicks);$("ads-detail-conv").textContent=num(x.conversions);
+ $("ads-detail-cpa").textContent=brl(x.conversions?x.cost/x.conversions:NaN);
+ const ok=!!state.ads&&!state.ads.error;
+ setPill($("ads-status-pill"),ok?"ok":"error");setPill($("ads-detail-pill"),ok?"ok":"error");
+ const c=$("campaign-detail");c.replaceChildren();
+ if(x.campaign.name){[["Campanha",x.campaign.name],["ID",x.campaign.id],["Status",x.campaign.status],["Cliques",num(x.clicks)],["Impressões",num(x.impressions)],["Conversões",num(x.conversions)],["Custo",brl(x.cost)],["CTR",m.ctr===undefined?((x.impressions?x.clicks/x.impressions*100:0).toLocaleString("pt-BR",{maximumFractionDigits:2})+"%"):((Number(m.ctr)*100).toLocaleString("pt-BR",{maximumFractionDigits:2})+"%")]].forEach(([k,v])=>{const r=add(c,"div","listrow");const l=add(r,"div","",k);l.className="tiny";add(r,"b","",v);});}
+ else add(c,"div","empty",state.ads?.error||"Nenhuma campanha retornada.");
+ const keywords=state.ads?.keywords?.results||[];const table=$("keyword-table");table.replaceChildren();
+ if(!keywords.length){add(table,"div","empty","Nenhuma palavra-chave retornada nessa auditoria.");return;}
+ const wrap=add(table,"div","table-wrap"),t=add(wrap,"table","table"),thead=add(t,"thead"),hr=add(thead,"tr");
+ ["Palavra-chave","Cliques","Custo","Conversões"].forEach(s=>add(hr,"th","",s));
+ const body=add(t,"tbody");
+ keywords.slice(0,12).forEach(r=>{const tr=add(body,"tr");const key=r.adGroupCriterion?.keyword?.text??r.ad_group_criterion?.keyword?.text??"—";const m=r.metrics||{};add(tr,"td","",key);add(tr,"td","",num(m.clicks));add(tr,"td","",brl(micros(m.costMicros??m.cost_micros)));add(tr,"td","",num(m.conversions));});
+}
+function renderCRM(){
+ const root=$("crm-board");root.replaceChildren();
+ const contacts=Array.isArray(state.crm)?state.crm:[];
+ $("crm-count").textContent=contacts.length+" contatos";
+ $("kpi-leads").textContent=num(contacts.length);
+ $("kpi-leads-note").textContent=contacts.filter(c=>c.stage==="scheduled").length+" agendados · "+contacts.filter(c=>c.stage==="patient").length+" pacientes";
+ STAGES.forEach(([stage,label])=>{
+  const col=add(root,"div","crm-col");const head=add(col,"div","crm-col-head");add(head,"b","",label);add(head,"span","",contacts.filter(c=>c.stage===stage).length);
+  const inStage=contacts.filter(c=>c.stage===stage);
+  if(!inStage.length)add(col,"div","empty","Nenhum contato");
+  inStage.forEach(c=>{
+   const card=add(col,"article","lead-card");add(card,"div","lead-name",c.name||"Lead sem nome");
+   if(c.phone)add(card,"div","lead-line",c.phone);
+   add(card,"div","lead-line","Origem: "+(SOURCES[c.source]||c.source||"Desconhecida"));
+   if(c.notes)add(card,"div","lead-line",c.notes);
+   add(card,"div","lead-line","Atualizado: "+(c.updated_at?new Date(c.updated_at).toLocaleDateString("pt-BR"):"—"));
+   const select=add(card,"select","","");select.setAttribute("aria-label","Alterar etapa de "+(c.name||"lead"));
+   STAGES.forEach(([v,l])=>{const o=add(select,"option","",l);o.value=v;o.selected=v===c.stage;});
+   select.addEventListener("change",async()=>{select.disabled=true;try{await postJson("/control/crm/contacts/"+encodeURIComponent(c.id),"PATCH",{stage:select.value});await loadCRM();showCRMMessage("Etapa atualizada.");}catch(e){showCRMMessage(e.message,true);select.value=c.stage;}finally{select.disabled=false;}});
+  });
+ });
+}
+function showCRMMessage(t,err=false){const n=$("crm-message");n.textContent=t;n.classList.toggle("hidden",!t);n.classList.toggle("error",!!err);}
+async function loadCRM(){const data=await getJson("/control/crm/contacts");state.crm=Array.isArray(data.contacts)?data.contacts:[];renderCRM();}
+function renderAnalytics(){
+ const items=[["ga4","ga4-data","ga4-pill"],["gsc","gsc-data","gsc-pill"],["attribution","attr-data","attr-pill"],["whatsapp","wa-data","wa-pill"]];
+ items.forEach(([key,dataId,pillId])=>{$(dataId).textContent=state[key]?.error||safeJson(state[key]);setPill($(pillId),state[key]?.error?"error":state[key]?"ok":"registry-only");});
+}
+function renderAll(){
+ $("kpi-brains").textContent=num(allBrains().length);$("kpi-agents").textContent=num(allAgents().length);
+ $("brain-count-pill").textContent=allBrains().length+" / 9";
+ $("brain-count-full").textContent=allBrains().length+" cérebros no registry";
+ renderBrainCards("overview-brains",true);renderBrainCards("all-brains");
+ const filter=$("filter-brain"),old=filter.value;filter.replaceChildren();add(filter,"option","","Todos os cérebros").value="";
+ allBrains().forEach(b=>{const o=add(filter,"option","",b.name);o.value=b.id;});filter.value=old;
+ renderAgents();renderReadiness();renderAds();renderCRM();renderAnalytics();
+ $("last-updated").textContent=new Date().toLocaleString("pt-BR");
+}
+async function loadAll(){
+ $("refresh").disabled=true;$("global-status").textContent="Atualizando";$("global-dot").className="dot warn";
+ try {
+  const auth=await fetch("/control/auth-check",{credentials:"same-origin",cache:"no-store"});
+  if(!auth.ok){$("lock").classList.add("show");$("global-status").textContent="Login necessário";$("global-dot").className="dot bad";return;}
+  const requests=[
+   ["health","/health"],["architecture","/control/architecture"],["ads","/google/ads/audit"],
+   ["ga4","/google/ga4/audit"],["gsc","/google/gsc/audit"],["attribution","/control/attribution/report"],
+   ["crm","/control/crm/contacts"],["whatsapp","/control/whatsapp/audit"]
+  ];
+  const results=await Promise.allSettled(requests.map(x=>getJson(x[1])));
+  let errors=0,authFailure=false;
+  results.forEach((r,i)=>{const k=requests[i][0];if(r.status==="fulfilled"){if(k==="crm"){state.crm=Array.isArray(r.value.contacts)?r.value.contacts:[];}else state[k]=r.value;}else{errors++;state[k]={error:r.reason?.message||"Falha na leitura"};if(r.reason?.auth)authFailure=true;}});
+  if(authFailure){$("lock").classList.add("show");$("global-status").textContent="Sessão expirada";$("global-dot").className="dot bad";return;}
+  $("lock").classList.remove("show");renderAll();
+  $("global-status").textContent=errors?"Leitura parcial · "+errors+" fonte(s) com falha":"Dados atualizados";
+  $("global-dot").className="dot "+(errors?"warn":"good");
+  if(errors)showNotice("Algumas fontes falharam. O painel mostra erro explícito em vez de inventar métricas.",true);else showNotice("");
+ } catch(e) {
+  $("global-status").textContent="Erro de carregamento";$("global-dot").className="dot bad";showNotice(e.message,true);
+ } finally {$("refresh").disabled=false;}
+}
+$("refresh").addEventListener("click",loadAll);
+$("filter-brain").addEventListener("change",renderAgents);$("filter-status").addEventListener("change",renderAgents);
+$("toggle-lead-form").addEventListener("click",()=>{$("lead-form-card").classList.toggle("hide");$("lead-name").focus();});
+$("cancel-lead").addEventListener("click",()=>{$("lead-form-card").classList.add("hide");$("lead-form").reset();$("lead-form-status").textContent="";});
+$("lead-form").addEventListener("submit",async e=>{
+ e.preventDefault();const f=new FormData(e.currentTarget);const payload={name:String(f.get("name")||"").trim(),phone:String(f.get("phone")||"").trim(),source:f.get("source"),stage:f.get("stage"),notes:String(f.get("notes")||"").trim()};
+ $("lead-form-status").textContent="Salvando…";
+ try{
+  const result=await postJson("/control/crm/contacts","POST",payload);
+  $("lead-form-status").textContent=result.deduplicated?"Contato existente atualizado.":"Lead gravado.";
+  e.currentTarget.reset();$("lead-form-card").classList.add("hide");
+  await loadCRM();showCRMMessage(result.deduplicated?"Contato deduplicado por telefone.":"Lead cadastrado no CRM.");
+ }catch(err){$("lead-form-status").textContent=err.message;showCRMMessage(err.message,true);if(err.auth)$("lock").classList.add("show");}
+});
+loadAll();
+})();
+</script>
+</body>
+</html>

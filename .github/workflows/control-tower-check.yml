@@ -1,0 +1,64 @@
+name: Control Tower feature checks
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "control-plane/playwright-mcp/**"
+      - "public/control-tower/**"
+      - ".github/workflows/control-tower-check.yml"
+      - ".github/workflows/control-plane-deploy-v2.yml"
+  push:
+    branches: ["feature/9-brains-20-agents-control-tower-crm"]
+    paths:
+      - "control-plane/playwright-mcp/**"
+      - "public/control-tower/**"
+      - ".github/workflows/control-tower-check.yml"
+      - ".github/workflows/control-plane-deploy-v2.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck-and-architecture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          npm install --prefix control-plane/playwright-mcp
+          npm install
+      - name: Typecheck Worker
+        working-directory: control-plane/playwright-mcp
+        run: npm run build
+      - name: Verify brains, agents, CRM and dashboard contracts
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const registry = fs.readFileSync('control-plane/playwright-mcp/src/agent-registry.ts', 'utf8');
+          const specialistBlock = registry.match(/export const SPECIALISTS: SpecialistDefinition\[\] = \[([\s\S]*?)\n\];\n\nexport const BRAINS:/)?.[1] || '';
+          const brainBlock = registry.match(/export const BRAINS: BrainDefinition\[\] = \[([\s\S]*?)\n\];\n\nexport const CAPABILITIES:/)?.[1] || '';
+          const agentCount = (specialistBlock.match(/\{ id: "/g) || []).length;
+          const brainCount = (brainBlock.match(/\{ id: "/g) || []).length;
+          if (agentCount !== 20) throw new Error(`Expected 20 independent agents, got ${agentCount}`);
+          if (brainCount !== 9) throw new Error(`Expected 9 brains, got ${brainCount}`);
+          for (const route of [
+            'pathname === "/control/crm/contacts"',
+            'pathname.startsWith("/control/crm/contacts/")',
+            'route === "/crm/contacts"',
+            'upsertAttributedContact(message'
+          ]) if (!fs.readFileSync('control-plane/playwright-mcp/src/index.ts','utf8').includes(route)) throw new Error(`Missing CRM contract: ${route}`);
+          const dashboard = fs.readFileSync('public/control-tower/index.html','utf8');
+          for (const feature of ['9 cérebros','20 agentes separados','CRM · pipeline de leads','/google/ads/audit','/google/ga4/audit','/google/gsc/audit','/control/crm/contacts']) {
+            if (!dashboard.includes(feature)) throw new Error(`Dashboard missing expected feature: ${feature}`);
+          }
+          const deployWorkflow = fs.readFileSync('.github/workflows/control-plane-deploy-v2.yml','utf8');
+          if (!deployWorkflow.includes('"brain_count":9') || !deployWorkflow.includes('"agent_count":20')) throw new Error('Deployment smoke tests are not aligned with 9 brains / 20 agents.');
+          if (!deployWorkflow.includes('/control/crm/contacts')) throw new Error('Deployment workflow does not guard the CRM endpoint.');
+          console.log(JSON.stringify({ok:true,brainCount,agentCount,crmEndpoints:3,dashboard:'present',deploySmoke:'aligned'},null,2));
+          NODE
