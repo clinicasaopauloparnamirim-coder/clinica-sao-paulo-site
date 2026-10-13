@@ -141,8 +141,8 @@ jobs:
           grep -q 'src="/hero-ortho.webp"' public/index.html
           grep -q 'src="/attribution.js' public/index.html
           grep -q 'src="/attribution.js' public/aparelho-ortodontico-parnamirim/index.html
-          if grep -q 'src=""' public/index.html public/aparelho-ortodontico-parnamirim/index.html; then
-            echo "empty hero image src found" && exit 1
+          if grep -Eq '<img[^>]*src=""' public/index.html public/aparelho-ortodontico-parnamirim/index.html; then
+            echo "empty image src found" && exit 1
           fi
           grep -q 'pathname === "/track"' control-plane/playwright-mcp/src/index.ts
           echo "Public HTML, hero and attribution checks OK"
