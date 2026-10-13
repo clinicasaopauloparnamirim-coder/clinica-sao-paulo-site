@@ -1,0 +1,40 @@
+name: Semantic SEO Quality Gate
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "public/**/*.html"
+      - "public/sitemap.xml"
+      - "public/robots.txt"
+      - "public/attribution.js"
+      - "scripts/semantic-seo-audit.mjs"
+      - ".github/workflows/semantic-seo-quality-gate.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "public/**/*.html"
+      - "public/sitemap.xml"
+      - "public/robots.txt"
+      - "public/attribution.js"
+      - "scripts/semantic-seo-audit.mjs"
+      - ".github/workflows/semantic-seo-quality-gate.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-seo-audit:
+    name: Validate local SEO, schema and attribution
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run semantic SEO quality gate
+        run: node scripts/semantic-seo-audit.mjs
