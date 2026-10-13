@@ -794,7 +794,13 @@ ${authenticated ? `<p>Acesso autorizado</p>
         headers.set("permissions-policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
         const assetPath = new URL(request.url).pathname;
         const contentType = headers.get("content-type") || "";
-        if (contentType.includes("text/html") || assetPath === "/sitemap.xml" || assetPath === "/robots.txt" || assetPath === "/attribution.js") headers.set("cache-control", "no-store, max-age=0");
+        if (contentType.includes("text/html")) {
+          // Public HTML must remain revalidatable without disabling browser back/forward cache.
+          headers.set("cache-control", "public, max-age=0, must-revalidate");
+        } else if (assetPath === "/sitemap.xml" || assetPath === "/robots.txt" || assetPath === "/attribution.js") {
+          // These assets are public; the attribution URL is versioned in HTML.
+          headers.set("cache-control", "public, max-age=300");
+        }
         return new Response(assetResponse.body, {
           status: assetResponse.status,
           statusText: assetResponse.statusText,
