@@ -792,6 +792,9 @@ ${authenticated ? `<p>Acesso autorizado</p>
         headers.set("x-frame-options", "SAMEORIGIN");
         headers.set("referrer-policy", "strict-origin-when-cross-origin");
         headers.set("permissions-policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
+        const assetPath = new URL(request.url).pathname;
+        const contentType = headers.get("content-type") || "";
+        if (contentType.includes("text/html") || assetPath === "/sitemap.xml" || assetPath === "/robots.txt" || assetPath === "/attribution.js") headers.set("cache-control", "no-store, max-age=0");
         return new Response(assetResponse.body, {
           status: assetResponse.status,
           statusText: assetResponse.statusText,

@@ -323,35 +323,15 @@ footer a{color:var(--gold)}
 <footer><strong>Clínica São Paulo · Odontologia em Parnamirim</strong><br>Rua Edgar Dantas, 106, 1º andar, sala 7, Centro, Parnamirim/RN · <a href="https://wa.me/5584998947669">(84) 99894-7669</a><br><a href="/">Página inicial</a> · <a href="/dentista-parnamirim/">Dentista em Parnamirim</a> · <a href="/clareamento-dental-parnamirim/">Clareamento</a> · <a href="/limpeza-dental-parnamirim/">Limpeza</a></footer>
 <script>
 (function(){
- var links=document.querySelectorAll('.whatsapp-track');
- links.forEach(function(link){link.addEventListener('click',function(){
-  if(window.zaraz&&typeof window.zaraz.track==='function'){window.zaraz.track('clique_whatsapp',{event_label:document.title,link_location:link.className||'whatsapp_cta'});}
- });});
- var key='csp_attribution_v1';
- function token(){return 'CP-'+Math.random().toString(36).slice(2,8).toUpperCase()+'-'+Date.now().toString(36).slice(-4).toUpperCase();}
- function addTracking(){
-  var p=new URLSearchParams(location.search), saved={};
-  try{saved=JSON.parse(localStorage.getItem(key)||'{}')}catch(e){}
-  var previous=saved.last||{};
-  var current={source:p.get('utm_source')||previous.source||'',medium:p.get('utm_medium')||previous.medium||'',campaign:p.get('utm_campaign')||previous.campaign||'',term:p.get('utm_term')||previous.term||'',content:p.get('utm_content')||previous.content||'',gclid:p.get('gclid')||previous.gclid||'',fbclid:p.get('fbclid')||previous.fbclid||'',referrer:document.referrer||previous.referrer||'',page:location.pathname};
-  if(current.gclid){current.source='google';current.medium=current.medium||'cpc'}
-  if(!current.source&&/google\./i.test(current.referrer||'')){current.source='google';current.medium='organic'}
-  var state={first:saved.first||Object.assign({},current,{session_id:(crypto.randomUUID?crypto.randomUUID():String(Date.now())),lead_token:token(),first_at:new Date().toISOString()}),last:current};
-  try{localStorage.setItem(key,JSON.stringify(state))}catch(e){}
-  function send(type,extra){
-   var payload=Object.assign({event_type:type,event_id:(crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random()),at:new Date().toISOString(),session_id:state.first.session_id,lead_token:state.first.lead_token,page:location.pathname,referrer:current.referrer,source:current.source,medium:current.medium,campaign:current.campaign,term:current.term,content:current.content,gclid:current.gclid||state.first.gclid||'',fbclid:current.fbclid||state.first.fbclid||'',user_agent:navigator.userAgent},extra||{});
-   try{navigator.sendBeacon('/track',new Blob([JSON.stringify(payload)],{type:'application/json'}));}catch(e){fetch('/track',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload),keepalive:true}).catch(function(){});}
-  }
-  send('page_view');
-  document.querySelectorAll('a[href*="wa.me/"]').forEach(function(link){
-   try{var u=new URL(link.href);var msg=u.searchParams.get('text')||'Olá! Quero agendar uma avaliação.';if(!/Código:/i.test(msg)){u.searchParams.set('text',msg+' Código: '+state.first.lead_token);link.href=u.toString();}}catch(e){}
-   link.addEventListener('click',function(){send('whatsapp_click',{link_location:link.className||'whatsapp_link'});});
-  });
-  document.querySelectorAll('a[href*="maps.app.goo.gl"],a[href*="google.com/maps"]').forEach(function(link){link.addEventListener('click',function(){send('maps_click',{link_location:'maps'});});});
-  document.querySelectorAll('a[href^="tel:"]').forEach(function(link){link.addEventListener('click',function(){send('phone_click',{link_location:'phone'});});});
- }
- addTracking();
+ var b=document.getElementById('menu-toggle'),n=document.getElementById('primary-navigation');
+ if(!b||!n)return;
+ function closeMenu(){n.hidden=true;b.setAttribute('aria-expanded','false');b.setAttribute('aria-label','Abrir menu');}
+ b.addEventListener('click',function(){var open=b.getAttribute('aria-expanded')!=='true';b.setAttribute('aria-expanded',String(open));b.setAttribute('aria-label',open?'Fechar menu':'Abrir menu');n.hidden=!open;});
+ n.addEventListener('click',function(e){if(e.target.closest('a'))closeMenu();});
+ document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMenu();});
+ document.addEventListener('click',function(e){if(!n.hidden&&!n.contains(e.target)&&!b.contains(e.target))closeMenu();});
 })();
 </script>
+<script src="/attribution.js?v=20261013b" defer></script>
 </body>
 </html>

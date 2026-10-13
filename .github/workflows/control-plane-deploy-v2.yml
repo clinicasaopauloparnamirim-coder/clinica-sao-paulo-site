@@ -130,17 +130,22 @@ jobs:
           test -f public/control-tower/index.html
           grep -q '20 agentes separados' public/control-tower/index.html
           grep -q '/control/crm/contacts' public/control-tower/index.html
-      - name: Verify public HTML has no dual Zaraz
+      - name: Verify public HTML, hero and attribution
         run: |
           set -euo pipefail
-          # workers.dev may not be custom domain; check asset from deploy artifact path
-          if ! grep -q 'clique_whatsapp' public/index.html; then
-            echo "missing clique_whatsapp tracker" && exit 1
+          test -f public/attribution.js
+          test -f public/hero-ortho.webp
+          grep -q 'clique_whatsapp' public/attribution.js
+          grep -q '/api/lead-click' public/attribution.js
+          grep -q 'CSP-' public/attribution.js
+          grep -q 'src="/hero-ortho.webp"' public/index.html
+          grep -q 'src="/attribution.js' public/index.html
+          grep -q 'src="/attribution.js' public/aparelho-ortodontico-parnamirim/index.html
+          if grep -q 'src=""' public/index.html public/aparelho-ortodontico-parnamirim/index.html; then
+            echo "empty hero image src found" && exit 1
           fi
-          if grep -q 'zaraz is loaded twice' public/index.html; then
-            echo "baked dual zaraz still in public/index.html" && exit 1
-          fi
-          echo "public/index.html P0 HTML checks OK"
+          grep -q 'pathname === "/track"' control-plane/playwright-mcp/src/index.ts
+          echo "Public HTML, hero and attribution checks OK"
       - name: Verify protected Control Tower routes
         run: |
           set -euo pipefail

@@ -1,28 +1,20 @@
-name: Purge Cloudflare cache
+name: Manual Cloudflare cache purge
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - "public/**"
 jobs:
   purge:
     runs-on: ubuntu-latest
     steps:
-      - name: Purge everything for zone
+      - name: Purge cache for the clinic zone
         env:
           CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          if [ -z "${CF_API_TOKEN:-}" ]; then
-            echo "CLOUDFLARE_API_TOKEN missing — skip purge"
-            exit 0
+          if [ -z "${CF_API_TOKEN:-}" ] || [ -z "${CF_ACCOUNT_ID:-}" ]; then
+            echo "Cloudflare account credentials are missing." >&2
+            exit 1
           fi
-          ZONE_ID="$(curl -fsS -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" \
-            "https://api.cloudflare.com/client/v4/zones?account.id=$CF_ACCOUNT_ID&name=clinicasaopauloparnamirim.com.br" \
-            | jq -r '.result[0].id')"
-          echo "ZONE_ID=$ZONE_ID"
+          ZONE_ID="$(curl -fsS -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" "https://api.cloudflare.com/client/v4/zones?account.id=$CF_ACCOUNT_ID&name=clinicasaopauloparnamirim.com.br" | jq -r '.result[0].id')"
           test -n "$ZONE_ID" -a "$ZONE_ID" != "null"
-          curl -fsS -X POST -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" \
-            "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/purge_cache" \
-            --data '{"purge_everything":true}' | jq .
+          curl -fsS -X POST -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/purge_cache" --data '{"purge_everything":true}' | jq .
