@@ -515,7 +515,7 @@ async function callTool(request: Request, env: TowerEnv, name: string, args: Rec
       }
       const started = Date.now();
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30000);
+      const timeout = setTimeout(() => controller.abort(), 60000);
       try {
         const response = await fetch(baseUrl + "/chat/completions", {
           method: "POST",
@@ -530,15 +530,20 @@ async function callTool(request: Request, env: TowerEnv, name: string, args: Rec
               { role: "user", content: "NIM health check" },
             ],
             temperature: 0,
-            max_tokens: 8,
+            max_tokens: 512,
           }),
           signal: controller.signal,
         });
         const raw = await response.text();
         let data: any = null;
-        try { data = raw ? JSON.parse(raw) : null; } catch {}
-        const output = data?.choices?.[0]?.message?.content ?? "";
-        const responseCheck = /NIM_OK/i.test(String(output));
+        try { data = raw ? JSON.parse(raw) : null; } catch { }
+        const message = data?.choices?.[0]?.message ?? {};
+        // Reasoning models may answer inside reasoning_content and leave content null;
+        // accept either so the probe measures provider health, not response shape.
+        const answerText = String(message.content ?? message.reasoning_content ?? "");
+        const responseCheck = /NIM_OK/i.test(answerText);
+        const finishReason = data?.choices?.[0]?.finish_reason ?? null;
+        const truncated = finishReason === "length" && !responseCheck;
         return {
           ok: response.ok && responseCheck,
           provider: "nvidia-nim",
@@ -547,7 +552,12 @@ async function callTool(request: Request, env: TowerEnv, name: string, args: Rec
           http_status: response.status,
           latency_ms: Date.now() - started,
           response_check: responseCheck,
-          error: response.ok ? undefined : "NVIDIA NIM returned HTTP " + response.status,
+          matched_field: message.content ? "content" : message.reasoning_content ? "reasoning_content" : null,
+          finish_reason: finishReason,
+          truncated_by_max_tokens: truncated,
+          error: truncated
+            ? "Model exhausted its token budget before answering (finish_reason: length)."
+            : response.ok ? undefined : "NVIDIA NIM returned HTTP " + response.status,
         };
       } catch (error) {
         return {
