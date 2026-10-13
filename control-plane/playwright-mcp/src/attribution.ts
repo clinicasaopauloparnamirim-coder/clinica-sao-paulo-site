@@ -15,6 +15,7 @@ export interface AttributionEvent {
   gclid?: string;
   fbclid?: string;
   user_agent?: string;
+  ga_client_id?: string;
   link_location?: string;
   metadata?: Record<string, unknown>;
 }
@@ -59,6 +60,7 @@ function normalizeEvent(input: any): AttributionEvent {
     gclid: clean(input?.gclid, 250),
     fbclid: clean(input?.fbclid, 250),
     user_agent: clean(input?.user_agent, 500),
+    ga_client_id: clean(input?.ga_client_id, 120),
     link_location: clean(input?.link_location, 120),
     metadata: input?.metadata && typeof input.metadata === "object" ? input.metadata : undefined,
   };

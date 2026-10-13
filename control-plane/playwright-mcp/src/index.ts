@@ -601,8 +601,15 @@ ${authenticated ? `<p>Acesso autorizado</p>
 
 
     if (pathname === "/api/lead-click" && request.method === "POST") {
+      const origin = request.headers.get("Origin") || "";
+      if (origin !== "https://clinicasaopauloparnamirim.com.br" && origin !== "https://www.clinicasaopauloparnamirim.com.br")
+        return new Response("Forbidden", { status: 403, headers: { "cache-control": "no-store" } });
+      const length = Number(request.headers.get("content-length") || "0");
+      if (length > 16384) return new Response("Payload Too Large", { status: 413 });
       try {
-        const payload = await request.json() as { type?: string; lead_id?: string; attribution?: Record<string, unknown> };
+        const raw = await request.clone().text();
+        if (raw.length > 16384) return new Response("Payload Too Large", { status: 413 });
+        const payload = JSON.parse(raw) as { type?: string; lead_id?: string; attribution?: Record<string, unknown> };
         if (payload.type !== "click" || !payload.lead_id || !/^CSP-[A-F0-9]{10}$/i.test(payload.lead_id)) {
           return new Response("Invalid attribution payload.", { status: 400 });
         }
@@ -648,6 +655,26 @@ ${authenticated ? `<p>Acesso autorizado</p>
         });
         return new Response(result.body, { status: result.status, headers: { "content-type": "application/json; charset=UTF-8", "cache-control": "no-store" } });
       } catch { return new Response("Invalid CRM update.", { status: 400 }); }
+    }
+
+    if (pathname === "/analytics-config" && request.method === "GET") {
+      const measurementId = /^G-[A-Z0-9]{6,20}$/.test(String(env.GA4_MEASUREMENT_ID || "")) ? String(env.GA4_MEASUREMENT_ID) : null;
+      return Response.json({ measurement_id: measurementId }, { headers: { "cache-control": "no-store" } });
+    }
+    if (pathname === "/track" && request.method === "POST") {
+      const origin = request.headers.get("Origin") || "";
+      if (origin !== "https://clinicasaopauloparnamirim.com.br" && origin !== "https://www.clinicasaopauloparnamirim.com.br")
+        return new Response("Forbidden", { status: 403, headers: { "cache-control": "no-store" } });
+      const length = Number(request.headers.get("content-length") || "0");
+      if (length > 16384) return new Response("Payload Too Large", { status: 413 });
+      const raw = await request.clone().text();
+      if (raw.length > 16384) return new Response("Payload Too Large", { status: 413 });
+      let payload: any;
+      try { payload = JSON.parse(raw); } catch { return new Response("Bad Request", { status: 400 }); }
+      if (!payload || typeof payload !== "object" || Array.isArray(payload) ||
+          !["page_view", "whatsapp_click", "maps_click", "phone_click", "custom"].includes(payload.event_type))
+        return new Response("Invalid tracking event", { status: 400 });
+      return trackAttributionEvent(env, new Request(request.url, { method: "POST", headers: request.headers, body: raw }));
     }
 
     if (pathname === "/control/attribution/track" && request.method === "POST") {
