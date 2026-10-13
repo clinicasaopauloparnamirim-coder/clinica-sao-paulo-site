@@ -130,7 +130,7 @@ jobs:
           test -f public/control-tower/index.html
           grep -q '20 agentes separados' public/control-tower/index.html
           grep -q '/control/crm/contacts' public/control-tower/index.html
-      - name: Verify public HTML, hero and attribution
+      - name: Verify public HTML, hero, maps and attribution
         run: |
           set -euo pipefail
           test -f public/attribution.js
@@ -145,7 +145,15 @@ jobs:
             echo "empty image src found" && exit 1
           fi
           grep -q 'pathname === "/track"' control-plane/playwright-mcp/src/index.ts
-          echo "Public HTML, hero and attribution checks OK"
+          grep -q 'https://www.google.com/maps/dir/' public/index.html
+          for page in public/*/index.html; do
+            if [[ "$page" == "public/control-tower/index.html" ]]; then continue; fi
+            grep -q 'rel="canonical"' "$page"
+            grep -q 'name="description"' "$page"
+            grep -q 'Como chegar' "$page"
+            grep -q '/attribution.js' "$page"
+          done
+          echo "Public HTML, hero, maps, canonical and attribution checks OK"
       - name: Verify protected Control Tower routes
         run: |
           set -euo pipefail
