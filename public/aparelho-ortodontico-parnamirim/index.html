@@ -111,6 +111,12 @@ footer a{color:var(--gold)}
 }
 @media(max-width:380px){.brand-name{font-size:17px}.brand-sub{font-size:6px}.header-cta{font-size:10px;padding:10px 9px}.menu-mark{width:20px}.hero-content{min-height:780px}.benefit{font-size:11px;margin-right:7px;padding-right:7px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important}}
+
+.oral-thumbnails{display:flex;align-items:center;gap:10px;flex:none}
+.oral-thumb{width:76px;height:76px;border:2px solid var(--gold);border-radius:50%;overflow:hidden;flex:none;background:#111;box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+.oral-thumb img{display:block;width:100%;height:100%;object-fit:cover}
+@media(max-width:700px){.oral-thumbnails{gap:8px}.oral-thumb{width:64px;height:64px}}
+
 </style>
 <script type="application/ld+json">
 {
@@ -291,7 +297,11 @@ footer a{color:var(--gold)}
   </a>
   <p class="cta-note">Atendimento individual · Sem compromisso de iniciar tratamento</p>
   <div class="treatment-strip" aria-label="Opções de aparelho">
-   <span class="treatment-pill">Convencional</span><span class="treatment-pill">Estético</span><span class="treatment-pill">Autoligado</span>
+   <div class="oral-thumbnails" aria-label="Exemplos visuais de sorrisos com aparelhos">
+    <div class="oral-thumb"><img src="/hero-ortho.webp" width="114" height="114" loading="lazy" alt="" style="object-position:66% 55%"></div>
+    <div class="oral-thumb"><img src="/hero-ortho.webp" width="114" height="114" loading="lazy" alt="" style="object-position:72% 60%"></div>
+    <div class="oral-thumb"><img src="/hero-ortho.webp" width="114" height="114" loading="lazy" alt="" style="object-position:62% 52%"></div>
+   </div>
    <span class="treatment-caption">Tratamentos planejados para o seu caso real.</span>
   </div>
  </div>
