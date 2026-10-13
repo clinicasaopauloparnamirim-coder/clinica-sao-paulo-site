@@ -145,7 +145,8 @@ jobs:
             echo "empty image src found" && exit 1
           fi
           grep -q 'pathname === "/track"' control-plane/playwright-mcp/src/index.ts
-          grep -q 'https://www.google.com/maps/dir/' public/index.html
+          grep -q 'maps.app.goo.gl/VJ3AWx4hMo6gqXRk6' public/index.html
+          grep -q 'toque 27' public/index.html
           for page in public/*/index.html; do
             if [[ "$page" == "public/control-tower/index.html" ]]; then continue; fi
             grep -q 'rel="canonical"' "$page"
