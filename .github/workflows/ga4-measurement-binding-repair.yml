@@ -1,0 +1,72 @@
+name: One-time GA4 Measurement Binding Repair
+
+on:
+  push:
+    paths:
+      - ".github/workflows/ga4-measurement-binding-repair.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  configure-ga4:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Add GA4 measurement ID to the production Worker without changing other bindings
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          const token = process.env.CLOUDFLARE_API_TOKEN;
+          const account = process.env.CLOUDFLARE_ACCOUNT_ID;
+          if (!token || !account) throw new Error("Existing Cloudflare deployment credentials are unavailable.");
+
+          const script = "weathered-tree-2839";
+          const measurementId = "G-EGTYJM0REP";
+          const base = `https://api.cloudflare.com/client/v4/accounts/${account}/workers/scripts/${script}`;
+          const headers = { Authorization: `Bearer ${token}` };
+
+          async function readJson(url, options = {}) {
+            const response = await fetch(url, { ...options, headers: { ...headers, ...(options.headers || {}) } });
+            const data = await response.json();
+            if (!response.ok || data.success !== true) {
+              const details = Array.isArray(data.errors) ? data.errors.map((e) => e.message).join("; ") : "Cloudflare API request failed";
+              throw new Error(`${options.method || "GET"} ${url.split("/").slice(-2).join("/")} failed (HTTP ${response.status}): ${details}`);
+            }
+            return data;
+          }
+
+          const [settings, secrets] = await Promise.all([
+            readJson(`${base}/settings`),
+            readJson(`${base}/secrets`)
+          ]);
+
+          const bindings = settings.result?.bindings;
+          if (!Array.isArray(bindings)) throw new Error("Worker bindings could not be read safely; no changes made.");
+          if (secrets.result?.some((secret) => secret.name === "GA4_MEASUREMENT_ID")) {
+            throw new Error("A secret binding with this name already exists; refusing to create a duplicate.");
+          }
+
+          const old = bindings.find((binding) => binding.name === "GA4_MEASUREMENT_ID");
+          if (old?.type === "plain_text" && old.text === measurementId) {
+            console.log("GA4 measurement ID already configured; no change needed.");
+          } else {
+            const nextBindings = bindings.filter((binding) => binding.name !== "GA4_MEASUREMENT_ID");
+            nextBindings.push({ name: "GA4_MEASUREMENT_ID", type: "plain_text", text: measurementId });
+            const form = new FormData();
+            form.append("settings", new Blob([JSON.stringify({ bindings: nextBindings })], { type: "application/json" }));
+            await readJson(`${base}/settings`, { method: "PATCH", body: form });
+            console.log("GA4 measurement binding updated; all other bindings were retained.");
+          }
+
+          const verify = await readJson(`${base}/settings`);
+          const active = verify.result?.bindings?.find((binding) => binding.name === "GA4_MEASUREMENT_ID");
+          if (active?.type !== "plain_text" || active.text !== measurementId) {
+            throw new Error("Read-back verification failed: the expected GA4 measurement ID is not active.");
+          }
+          console.log("Read-back verification passed for the production Worker.");
+          NODE
