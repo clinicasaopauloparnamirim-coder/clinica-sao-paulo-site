@@ -6,6 +6,8 @@ on:
     branches: ["main"]
     paths:
       - "public/**"
+      - "control-plane/playwright-mcp/src/**"
+      - "wrangler.jsonc"
       - "scripts/semantic-seo-audit.mjs"
       - ".github/workflows/publish-production-website.yml"
 
@@ -71,4 +73,17 @@ jobs:
             if (!Array.isArray(clinic.areaServed) || !clinic.areaServed.some(x => String(x.name || "").includes("Nova Parnamirim"))) throw new Error(path + " missing structured local coverage");
             console.log("PASS " + path + " — HTTP " + response.status + ", " + faq.mainEntity.length + " FAQ answers, GEO/NAP schema checked");
           }
+          NODE
+      - name: Verify www host permanently redirects to canonical host
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          const url = "https://www.clinicasaopauloparnamirim.com.br/aparelho-ortodontico-parnamirim/?utm_source=redirect-test";
+          const response = await fetch(url, { redirect: "manual", cache: "no-store" });
+          const location = response.headers.get("location");
+          if (response.status !== 301) throw new Error("www expected HTTP 301; received " + response.status);
+          if (location !== "https://clinicasaopauloparnamirim.com.br/aparelho-ortodontico-parnamirim/?utm_source=redirect-test") {
+            throw new Error("Unexpected redirect Location: " + location);
+          }
+          console.log("PASS www -> apex 301; path and query string preserved");
           NODE
