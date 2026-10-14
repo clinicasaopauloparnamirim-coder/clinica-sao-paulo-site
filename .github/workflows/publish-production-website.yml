@@ -1,0 +1,74 @@
+name: Publish Production Website
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - "public/**"
+      - "scripts/semantic-seo-audit.mjs"
+      - ".github/workflows/publish-production-website.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install deployment dependencies
+        run: |
+          set -euo pipefail
+          npm install --prefix control-plane/playwright-mcp
+          npm install
+      - name: Build and typecheck Worker
+        working-directory: control-plane/playwright-mcp
+        run: npm run build
+      - name: Run semantic SEO and AEO quality gate
+        run: node scripts/semantic-seo-audit.mjs
+      - name: Deploy public site Worker and assets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --config wrangler.jsonc --name weathered-tree-2839 --keep-vars
+      - name: Verify all nine live pages after deployment
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          const base = "https://clinicasaopauloparnamirim.com.br";
+          const pages = [
+            ["/", "A clínica atende pacientes de quais bairros?"],
+            ["/dentista-parnamirim/", "Como funciona a primeira consulta com o dentista?"],
+            ["/aparelho-ortodontico-parnamirim/", "Quanto custa o aparelho ortodôntico e a manutenção?"],
+            ["/clareamento-dental-parnamirim/", "Clareamento dental causa sensibilidade?"],
+            ["/limpeza-dental-parnamirim/", "A limpeza dental remove tártaro?"],
+            ["/clinica-odontologica-parnamirim/", "Como funciona a primeira avaliação odontológica?"],
+            ["/facetas-de-resina-parnamirim/", "Facetas de resina ou porcelana: qual é a diferença?"],
+            ["/restauracao-estetica-parnamirim/", "O que fazer se uma restauração quebrar ou cair?"],
+            ["/tratamento-de-canal-parnamirim/", "Quais sintomas podem indicar necessidade de canal?"]
+          ];
+          for (let i = 0; i < pages.length; i++) {
+            const [path, expectedQuestion] = pages[i];
+            const url = new URL(path, base);
+            url.searchParams.set("deploy_check", String(Date.now()) + "-" + i);
+            const response = await fetch(url, { cache: "no-store" });
+            const html = await response.text();
+            if (!response.ok) throw new Error(path + " returned HTTP " + response.status);
+            const match = html.match(/<script type="application\\/ld\\+json">([\\s\\S]*?)<\\/script>/);
+            if (!match) throw new Error(path + " missing JSON-LD");
+            const parsed = JSON.parse(match[1]);
+            const nodes = Array.isArray(parsed["@graph"]) ? parsed["@graph"] : [parsed];
+            const faq = nodes.find(n => (Array.isArray(n["@type"]) ? n["@type"] : [n["@type"]]).includes("FAQPage"));
+            const clinic = nodes.find(n => n["@id"] === "https://clinicasaopauloparnamirim.com.br/#clinic");
+            if (!faq || !Array.isArray(faq.mainEntity) || faq.mainEntity.length < 6) throw new Error(path + " missing FAQPage questions");
+            if (!faq.mainEntity.some(q => q.name === expectedQuestion) || !html.includes(expectedQuestion)) throw new Error(path + " missing expected visible AEO question");
+            if (!clinic || clinic.hasMap !== "https://maps.app.goo.gl/VJ3AWx4hMo6gqXRk6") throw new Error(path + " missing verified clinic map reference");
+            if (!Array.isArray(clinic.areaServed) || !clinic.areaServed.some(x => String(x.name || "").includes("Nova Parnamirim"))) throw new Error(path + " missing structured local coverage");
+            console.log("PASS " + path + " — HTTP " + response.status + ", " + faq.mainEntity.length + " FAQ answers, GEO/NAP schema checked");
+          }
+          NODE
