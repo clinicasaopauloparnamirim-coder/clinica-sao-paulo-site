@@ -29,6 +29,8 @@ jobs:
       - name: Typecheck worker
         working-directory: control-plane/playwright-mcp
         run: npm run build
+      - name: Run semantic SEO and AEO quality gate
+        run: node scripts/semantic-seo-audit.mjs
       - name: Sanitize unsafe NVIDIA bindings before deployment
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -46,11 +48,6 @@ jobs:
             throw new Error(`Could not safely inspect Worker bindings (HTTP ${currentResponse.status}).`);
           }
           const bindings = current.result.bindings;
-          const rotationConfirmed = bindings.some((binding) =>
-            binding?.name === "NVIDIA_KEY_ROTATED" &&
-            binding?.type === "plain_text" &&
-            binding?.text === "true"
-          );
 
           // Settings API controls non-secret bindings only. The legacy name N and any
           // NVIDIA-looking plain-text values are removed here; secret_text bindings
@@ -78,34 +75,9 @@ jobs:
             throw new Error("Unsafe NVIDIA plaintext binding still exists after cleanup.");
           }
 
-          // Secret-text bindings require the dedicated Secrets endpoint. Remove the
-          // old credential unless a fresh key was explicitly installed and marked.
-          const secretsEndpoint = endpoint.replace(/\/settings$/, "/secrets");
-          const secretsResponse = await fetch(secretsEndpoint, { headers });
-          const secrets = await secretsResponse.json();
-          if (!secretsResponse.ok || secrets.success !== true || !Array.isArray(secrets.result)) {
-            throw new Error(`Could not safely inspect Worker secrets (HTTP ${secretsResponse.status}).`);
-          }
-
-          if (!rotationConfirmed && secrets.result.some((secret) => secret?.name === "NVIDIA_API_KEY")) {
-            const deleteResponse = await fetch(`${secretsEndpoint}/NVIDIA_API_KEY`, { method: "DELETE", headers });
-            const deleteResult = await deleteResponse.json();
-            if (!deleteResponse.ok || deleteResult.success !== true) {
-              throw new Error(`Failed to remove old NVIDIA_API_KEY secret (HTTP ${deleteResponse.status}).`);
-            }
-          }
-
-          const verifySecretsResponse = await fetch(secretsEndpoint, { headers });
-          const verifySecrets = await verifySecretsResponse.json();
-          if (!verifySecretsResponse.ok || verifySecrets.success !== true || !Array.isArray(verifySecrets.result)) {
-            throw new Error("Could not verify Worker secrets after NVIDIA key cleanup.");
-          }
-          if (!rotationConfirmed && verifySecrets.result.some((secret) => secret?.name === "NVIDIA_API_KEY")) {
-            throw new Error("Old NVIDIA_API_KEY secret still exists after cleanup.");
-          }
-          console.log(rotationConfirmed
-            ? "Verified explicit NVIDIA rotation flag; retained the replacement secret and removed unsafe plaintext alias."
-            : "Removed and verified removal of old NVIDIA credential binding(s).");
+          // Routine deployments must not delete user-owned secret_text credentials.
+          // Only unsafe plaintext aliases are cleaned above; all secret bindings are preserved.
+          console.log("Unsafe plaintext aliases verified; secret_text credentials intentionally preserved.");
           NODE
       - name: Deploy Worker + public assets
         env:
