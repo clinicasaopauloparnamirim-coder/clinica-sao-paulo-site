@@ -413,6 +413,8 @@ export default {
         laya_configured: Boolean(env.LAYA_API_KEY || env.control_tower || env.CONTROL_TOWER),
         whatsapp_signature_configured: Boolean(env.WHATSAPP_APP_SECRET),
         whatsapp_verify_configured: Boolean(env.WHATSAPP_VERIFY_TOKEN),
+        whatsapp_send_configured: Boolean(env.WHATSAPP_ACCESS_TOKEN && env.WHATSAPP_PHONE_NUMBER_ID),
+        whatsapp_autoreply_enabled: env.WHATSAPP_AUTOREPLY_ENABLED === "true",
         brain_count: snapshot.brainCount,
         agent_count: snapshot.agentCount,
         capability_count: snapshot.capabilityCount,
