@@ -4,6 +4,9 @@
   "compatibility_date": "2026-09-25",
   "compatibility_flags": ["nodejs_compat"],
   "keep_vars": true,
+  "vars": {
+    "WHATSAPP_PHONE_NUMBER_ID": "367795153087598"
+  },
   "ai": {
     "binding": "AI"
   },
