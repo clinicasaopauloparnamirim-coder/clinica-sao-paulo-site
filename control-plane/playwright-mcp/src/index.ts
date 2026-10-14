@@ -395,7 +395,18 @@ async function forwardControlAgent(request: Request, env: WhatsAppEnv) {
 
 export default {
   async fetch(request: Request, env: WhatsAppEnv, ctx: ExecutionContext) {
-    const { pathname } = new URL(request.url);
+    const requestUrl = new URL(request.url);
+    if (requestUrl.hostname === "www.clinicasaopauloparnamirim.com.br") {
+      requestUrl.hostname = "clinicasaopauloparnamirim.com.br";
+      return new Response(null, {
+        status: 301,
+        headers: {
+          location: requestUrl.toString(),
+          "cache-control": "public, max-age=86400",
+        },
+      });
+    }
+    const { pathname } = requestUrl;
 
     if (pathname === "/health") {
       const snapshot = specialistSnapshot();
