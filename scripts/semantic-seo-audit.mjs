@@ -5,6 +5,7 @@ const ROOT = process.cwd();
 const DOMAIN = "https://clinicasaopauloparnamirim.com.br";
 const MAPS = "https://maps.app.goo.gl/VJ3AWx4hMo6gqXRk6";
 const CLINIC_ID = DOMAIN + "/#clinic";
+const REQUIRED_NEIGHBORHOODS = ["Centro","Nova Parnamirim","Santos Reis","Monte Castelo","Cohabinal","Rosa dos Ventos","Passagem de Areia","Boa Esperança","Liberdade","Jardim Planalto","Parque de Exposições"];
 const PAGES = [
   { file: "public/index.html", url: DOMAIN + "/", service: false },
   { file: "public/dentista-parnamirim/index.html", url: DOMAIN + "/dentista-parnamirim/", service: true },
@@ -56,6 +57,10 @@ for (const p of PAGES) {
   const clinicTypes = types(clinic);
   const sameAs = Array.isArray(clinic && clinic.sameAs) ? clinic.sameAs : [clinic && clinic.sameAs].filter(Boolean);
   const address = clinic && clinic.address || {};
+  const clinicAreas = Array.isArray(clinic && clinic.areaServed) ? clinic.areaServed : [clinic && clinic.areaServed].filter(Boolean);
+  const faqStart = html.indexOf('<div class="faq-list">');
+  const faqEnd = faqStart >= 0 ? html.indexOf("</div>", faqStart) : -1;
+  const visibleFaqBlock = faqStart >= 0 && faqEnd >= 0 ? html.slice(faqStart, faqEnd + 6) : "";
   const faq = graph.find(n => types(n).includes("FAQPage"));
   const service = graph.find(n => types(n).includes("Service"));
   const breadcrumbs = graph.find(n => types(n).includes("BreadcrumbList"));
@@ -74,8 +79,25 @@ for (const p of PAGES) {
   if (!sameAs.includes(MAPS)) errors.push(p.file + ": sameAs sem o Maps oficial");
   if (!(clinic && clinic.telephone === "+5584998947669")) errors.push(p.file + ": telefone do schema ausente/divergente");
   if (!String(address.streetAddress || "").toLowerCase().includes("rua edgar dantas") || !String(address.streetAddress || "").toLowerCase().includes("sala 7") || address.addressLocality !== "Parnamirim" || address.postalCode !== "59140-290") errors.push(p.file + ": endereço NAP incompleto");
-  if (!faq || !Array.isArray(faq.mainEntity) || !faq.mainEntity.length) errors.push(p.file + ": FAQPage sem perguntas");
+  if (!faq || !Array.isArray(faq.mainEntity) || faq.mainEntity.length < 6) errors.push(p.file + ": FAQPage precisa de pelo menos seis perguntas");
+  for (const item of (faq && Array.isArray(faq.mainEntity) ? faq.mainEntity : [])) {
+    const question = String(item.name || "");
+    const answer = String(item.acceptedAnswer && item.acceptedAnswer.text || "");
+    if (!question || !visibleFaqBlock.includes(question)) errors.push(p.file + ": pergunta AEO não visível/igual ao schema: " + question);
+    if (!answer || !visibleFaqBlock.includes(answer)) errors.push(p.file + ": resposta AEO não visível/igual ao schema: " + question);
+  }
+  for (const neighborhood of REQUIRED_NEIGHBORHOODS) {
+    if (!clinicAreas.some(area => String(area && area.name || "").includes(neighborhood))) errors.push(p.file + ": areaServed não inclui " + neighborhood);
+    if (!html.includes(neighborhood)) errors.push(p.file + ": conteúdo local GEO não inclui " + neighborhood);
+  }
+  if (!(clinic && clinic.hasMap === MAPS)) errors.push(p.file + ": hasMap oficial ausente/divergente");
   if (p.service && (!service || !breadcrumbs || !((service.provider || {})["@id"] === CLINIC_ID))) errors.push(p.file + ": Service/BreadcrumbList/provider não ligado à clínica");
+  if (p.service && service) {
+    const serviceAreas = Array.isArray(service.areaServed) ? service.areaServed : [service.areaServed].filter(Boolean);
+    for (const neighborhood of REQUIRED_NEIGHBORHOODS) {
+      if (!serviceAreas.some(area => String(area && area.name || "").includes(neighborhood))) errors.push(p.file + ": área do Service sem " + neighborhood);
+    }
+  }
   if (!html.includes("maps.app.goo.gl/VJ3AWx4hMo6gqXRk6") || !/toque\s+27/i.test(html)) errors.push(p.file + ": CTA de rota ou interfone ausente");
   if (!/href\s*=\s*["'][^"']*(?:wa\.me|api\.whatsapp\.com)/i.test(html)) errors.push(p.file + ": CTA WhatsApp ausente");
   if (!/Parnamirim/i.test(html)) errors.push(p.file + ": contexto local ausente");
