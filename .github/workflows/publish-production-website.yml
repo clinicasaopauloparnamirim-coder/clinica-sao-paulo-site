@@ -59,7 +59,7 @@ jobs:
             const response = await fetch(url, { cache: "no-store" });
             const html = await response.text();
             if (!response.ok) throw new Error(path + " returned HTTP " + response.status);
-            const match = html.match(/<script type="application\\/ld\\+json">([\\s\\S]*?)<\\/script>/);
+            const match = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
             if (!match) throw new Error(path + " missing JSON-LD");
             const parsed = JSON.parse(match[1]);
             const nodes = Array.isArray(parsed["@graph"]) ? parsed["@graph"] : [parsed];
