@@ -15,9 +15,9 @@ Conexão ativa, repositório existente, endpoint de saúde verde, prompt detalha
 
 ## P0 — Harness / registro
 
-1. `GET /health` deve reportar `brain_count:3`, `capability_count:21` e `autonomous_function_count:20`.
-2. `GET /control/architecture` autenticado deve expor três definições e estados de prontidão com motivo.
-3. O workflow de deploy falha se o runtime retornar qualquer contagem diferente de três cérebros.
+1. `GET /health` público deve retornar somente `{"ok":true}`, sem inventário de agentes, status de provedores ou flags de configuração. `GET /control/health` exige autenticação para expor diagnóstico detalhado.
+2. `GET /control/architecture` autenticado deve expor a arquitetura operacional vigente e seus estados de prontidão com motivo.
+3. O workflow de deploy falha se `/health` público retornar campos extras ou se `/control/health` permitir acesso sem autenticação; contagens de arquitetura não devem ficar na resposta pública.
 4. `npm install && npm run build` dentro de `control-plane/playwright-mcp` precisa passar antes do merge.
 5. CI/smoke de rotas protegidas deve passar após o deploy autorizado.
 6. `/orchestrate` deve distinguir plano de execução, identificar executor real e não declarar tool call concluída sem um resultado.
