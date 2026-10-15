@@ -398,8 +398,31 @@ export default {
     const { pathname } = new URL(request.url);
 
     if (pathname === "/health") {
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        return new Response("Method Not Allowed", {
+          status: 405,
+          headers: { "allow": "GET, HEAD", "cache-control": "no-store" },
+        });
+      }
+      // Public health checks must reveal availability only, never internal configuration.
+      return Response.json({ ok: true }, {
+        headers: {
+          "cache-control": "no-store",
+          "x-content-type-options": "nosniff",
+        },
+      });
+    }
+
+    if (pathname === "/control/health") {
+      if (!authorized(request, env)) return unauthorized();
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        return new Response("Method Not Allowed", {
+          status: 405,
+          headers: { "allow": "GET, HEAD", "cache-control": "no-store" },
+        });
+      }
       const snapshot = specialistSnapshot();
-      return new Response(JSON.stringify({
+      return Response.json({
         ok: true,
         service: "clinica-sao-paulo-playwright-mcp",
         control_agent: true,
@@ -420,9 +443,11 @@ export default {
         capability_count: snapshot.capabilityCount,
         autonomous_function_count: autonomousFunctionSnapshot().count,
         pairings: pairingSnapshot(env),
-      }), {
-        status: 200,
-        headers: { "content-type": "application/json; charset=UTF-8", "cache-control": "no-store" },
+      }, {
+        headers: {
+          "cache-control": "no-store",
+          "x-content-type-options": "nosniff",
+        },
       });
     }
 

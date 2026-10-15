@@ -6,6 +6,7 @@ on:
     branches: ["main"]
     paths:
       - "public/**"
+      - "control-plane/playwright-mcp/src/**"
       - "scripts/semantic-seo-audit.mjs"
       - ".github/workflows/publish-production-website.yml"
 
@@ -71,4 +72,26 @@ jobs:
             if (!Array.isArray(clinic.areaServed) || !clinic.areaServed.some(x => String(x.name || "").includes("Nova Parnamirim"))) throw new Error(path + " missing structured local coverage");
             console.log("PASS " + path + " — HTTP " + response.status + ", " + faq.mainEntity.length + " FAQ answers, GEO/NAP schema checked");
           }
+          NODE
+      - name: Verify public health reveals no internal diagnostics
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          const base = "https://clinicasaopauloparnamirim.com.br";
+          const publicResponse = await fetch(new URL("/health", base), { cache: "no-store" });
+          if (publicResponse.status !== 200) throw new Error("Public health expected HTTP 200; received " + publicResponse.status);
+          const body = await publicResponse.json();
+          const keys = Object.keys(body).sort();
+          if (body.ok !== true || keys.length !== 1 || keys[0] !== "ok") {
+            throw new Error("Public health exposed unexpected fields: " + keys.join(","));
+          }
+          const privateResponse = await fetch(new URL("/control/health", base), { redirect: "manual", cache: "no-store" });
+          if (privateResponse.status !== 401) {
+            throw new Error("Unauthenticated diagnostic endpoint expected HTTP 401; received " + privateResponse.status);
+          }
+          const privateBody = await privateResponse.text();
+          if (privateBody.includes("whatsapp") || privateBody.includes("nvidia") || privateBody.includes("openai")) {
+            throw new Error("Unauthenticated diagnostic response contains internal configuration terms");
+          }
+          console.log("PASS public health is minimal; protected diagnostics reject unauthenticated requests");
           NODE

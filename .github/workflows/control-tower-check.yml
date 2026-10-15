@@ -59,12 +59,24 @@ jobs:
           }
           const pairing = fs.readFileSync('control-plane/playwright-mcp/src/agent-pairing.ts','utf8');
           if (!pairing.includes('model_roles:') || pairing.includes('brain_roles:') || pairing.includes('three-brain policy')) throw new Error('Model-provider metadata must remain distinct from the nine operational brains.');
+          const workerSource = fs.readFileSync('control-plane/playwright-mcp/src/index.ts','utf8');
+          const publicHealthStart = workerSource.indexOf('if (pathname === "/health") {');
+          const privateHealthStart = workerSource.indexOf('if (pathname === "/control/health") {', publicHealthStart);
+          const privateLoginStart = workerSource.indexOf('if (pathname === "/control/login"', privateHealthStart);
+          if (publicHealthStart < 0 || privateHealthStart < 0 || privateLoginStart < 0) throw new Error('Health endpoint routes are missing or out of order.');
+          const publicHealth = workerSource.slice(publicHealthStart, privateHealthStart);
+          const privateHealth = workerSource.slice(privateHealthStart, privateLoginStart);
+          if (!publicHealth.includes('Response.json({ ok: true }') || /brain_count|agent_count|capability_count|pairings|openai_api_configured|whatsapp_send_configured/.test(publicHealth)) {
+            throw new Error('Public /health must expose only service availability, not internal diagnostics.');
+          }
+          if (!privateHealth.includes('if (!authorized(request, env)) return unauthorized();')) throw new Error('Detailed /control/health diagnostics are not behind authorization.');
           const deployWorkflow = fs.readFileSync('.github/workflows/control-plane-deploy-v2.yml','utf8');
-          if (!deployWorkflow.includes('"brain_count":9') || !deployWorkflow.includes('"agent_count":20')) throw new Error('Deployment smoke tests are not aligned with 9 brains / 20 agents.');
+          if (!deployWorkflow.includes('keys.length !== 1') || !deployWorkflow.includes('keys[0] !== "ok"')) throw new Error('Deployment smoke test does not enforce the minimal public health schema.');
+          if (!deployWorkflow.includes('for path in /control/health /mcp/tower')) throw new Error('Unauthenticated diagnostic route is missing from the protected-route smoke loop.');
           if (!deployWorkflow.includes('/control/crm/contacts; do')) throw new Error('Anonymous CRM endpoint is missing from the protected-route smoke loop.');
           const cleanupIndex = deployWorkflow.indexOf('Sanitize unsafe NVIDIA bindings before deployment');
           const deployIndex = deployWorkflow.indexOf('Deploy Worker + public assets');
           const smokeIndex = deployWorkflow.indexOf('Smoke test');
           if (!(cleanupIndex >= 0 && cleanupIndex < deployIndex && deployIndex < smokeIndex)) throw new Error('Unsafe binding cleanup must happen before the final source deploy and smoke test.');
-          console.log(JSON.stringify({ok:true,brainCount,agentCount,crmEndpoints:3,dashboard:'present',deploySmoke:'aligned'},null,2));
+          console.log(JSON.stringify({ok:true,brainCount,agentCount,publicHealth:'minimal',protectedDiagnostics:'auth-required',crmEndpoints:3,dashboard:'present',deploySmoke:'aligned'},null,2));
           NODE
