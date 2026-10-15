@@ -1,11 +1,13 @@
 import { DurableObject } from "cloudflare:workers";
 
 // analytics.edit is required by the protected GA4 key-event cleanup endpoint.
-const GOOGLE_SCOPE = "https://www.googleapis.com/auth/analytics.edit https://www.googleapis.com/auth/webmasters.readonly https://www.googleapis.com/auth/business.manage";
+const GOOGLE_SCOPE = "https://www.googleapis.com/auth/analytics.edit https://www.googleapis.com/auth/webmasters.readonly https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.email";
+const EXPECTED_GOOGLE_ACCOUNT = "clinicasaopauloparnamirim@gmail.com";
 
 type GoogleEnv = {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  GA4_OAUTH_SETUP_TOKEN?: string;
   GOOGLE_OAUTH_STORE: DurableObjectNamespace;
 };
 
@@ -13,10 +15,17 @@ export class GoogleOAuthStore extends DurableObject {
   async fetch(request: Request) {
     const url = new URL(request.url);
     if (request.method === "POST" && url.pathname === "/state") {
-      const body = await request.json() as { state?: string };
+      const body = await request.json() as { state?: string; setup?: boolean };
       if (!body.state) return new Response("Bad Request", { status: 400 });
-      await this.ctx.storage.put(`oauth_state:${body.state}`, { value: body.state, expires: Date.now() + 10 * 60_000 });
+      await this.ctx.storage.put(`oauth_state:${body.state}`, { value: body.state, setup: body.setup === true, expires: Date.now() + 10 * 60_000 });
       return new Response("OK");
+    }
+    if (request.method === "POST" && url.pathname === "/setup-complete") {
+      await this.ctx.storage.put("ga4_setup_complete", true);
+      return new Response("OK");
+    }
+    if (request.method === "GET" && url.pathname === "/setup-complete") {
+      return Response.json({ complete: (await this.ctx.storage.get<boolean>("ga4_setup_complete")) === true });
     }
     if (request.method === "POST" && (url.pathname === "/token" || url.pathname === "/ads-token")) {
       const body = await request.json() as { refresh_token?: string };
@@ -118,15 +127,20 @@ export async function googleAccessToken(env: GoogleEnv) {
   return token.access_token;
 }
 
-export async function googleOAuthStart(request: Request, env: GoogleEnv) {
+export async function googleOAuthStart(request: Request, env: GoogleEnv, setup = false) {
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
     return new Response("Google OAuth client is not configured.", { status: 503 });
+  }
+  if (setup) {
+    const completionResponse = await store(env).fetch("https://store.internal/setup-complete");
+    const completion = await completionResponse.json() as { complete?: boolean };
+    if (completion.complete) return new Response("Este link de configuração já foi utilizado.", { status: 410 });
   }
   const state = crypto.randomUUID();
   await store(env).fetch("https://store.internal/state", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ state }),
+    body: JSON.stringify({ state, setup }),
   });
   const redirectUri = new URL("/google/oauth/callback", request.url).toString();
   const auth = new URL("https://accounts.google.com/o/oauth2/v2/auth");
@@ -137,6 +151,7 @@ export async function googleOAuthStart(request: Request, env: GoogleEnv) {
   auth.searchParams.set("access_type", "offline");
   auth.searchParams.set("prompt", "consent");
   auth.searchParams.set("state", state);
+  auth.searchParams.set("login_hint", EXPECTED_GOOGLE_ACCOUNT);
   return Response.redirect(auth.toString(), 302);
 }
 
@@ -147,14 +162,29 @@ export async function googleOAuthCallback(request: Request, env: GoogleEnv) {
   if (!state || !code) return new Response("Missing OAuth response.", { status: 400 });
 
   const stateResponse = await store(env).fetch(`https://store.internal/state?state=${encodeURIComponent(state)}`);
-  const saved = await stateResponse.json() as { value?: string; expires?: number } | null;
+  const saved = await stateResponse.json() as { value?: string; setup?: boolean; expires?: number } | null;
   if (!saved || saved.value !== state || !saved.expires || saved.expires < Date.now()) {
     return new Response("Invalid or expired OAuth state.", { status: 400 });
   }
   await store(env).fetch(`https://store.internal/state?state=${encodeURIComponent(state)}`, { method: "DELETE" });
 
   const redirectUri = new URL("/google/oauth/callback", request.url).toString();
+  if (saved.setup) {
+    const completionResponse = await store(env).fetch("https://store.internal/setup-complete");
+    const completion = await completionResponse.json() as { complete?: boolean };
+    if (completion.complete) return new Response("Este link de configuração já foi utilizado.", { status: 410 });
+  }
+
   const tokens = await exchangeCode(env, code, redirectUri);
+  if (!tokens.access_token) return new Response("Google did not return an access token.", { status: 502 });
+  const profileResponse = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+    headers: { authorization: `Bearer ${tokens.access_token}` },
+  });
+  if (!profileResponse.ok) return new Response("Não foi possível validar a conta Google autorizada.", { status: 502 });
+  const profile = await profileResponse.json() as { email?: string; verified_email?: boolean };
+  if (profile.email?.toLowerCase() !== EXPECTED_GOOGLE_ACCOUNT || profile.verified_email === false) {
+    return new Response("Conta Google recusada. Autorize com clinicasaopauloparnamirim@gmail.com.", { status: 403 });
+  }
   if (!tokens.refresh_token) return new Response("Google did not return a refresh token. Revoke the previous grant and authorize again.", { status: 400 });
 
   await store(env).fetch("https://store.internal/token", {
@@ -162,6 +192,30 @@ export async function googleOAuthCallback(request: Request, env: GoogleEnv) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ refresh_token: tokens.refresh_token }),
   });
+
+  if (saved.setup) {
+    try {
+      const cleanupResponse = await googleGa4Cleanup(env);
+      const cleanup = await cleanupResponse.json() as { deleted?: string[]; failures?: Array<{ event: string; status: number }>; found?: string[] };
+      if ((cleanup.failures ?? []).length === 0) {
+        await store(env).fetch("https://store.internal/setup-complete", { method: "POST" });
+      }
+      return Response.json({
+        ok: (cleanup.failures ?? []).length === 0,
+        authorized_account: profile.email,
+        cleanup,
+        next: (cleanup.failures ?? []).length === 0 ? "GA4 cleanup completed. Close this tab." : "Authorization succeeded, but some key events need a retry. Do not change Google Ads campaigns.",
+      }, { status: (cleanup.failures ?? []).length === 0 ? 200 : 502, headers: { "cache-control": "no-store" } });
+    } catch (error) {
+      return Response.json({
+        ok: false,
+        authorized_account: profile.email,
+        authorization_saved: true,
+        cleanup_error: error instanceof Error ? error.message : "GA4 cleanup failed",
+        next: "Google authorization is saved; GA4 cleanup did not finish. Do not change Google Ads campaigns.",
+      }, { status: 502, headers: { "cache-control": "no-store" } });
+    }
+  }
   return new Response("Google Analytics + Search Console autorizados. Você pode fechar esta página.", {
     status: 200,
     headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },
