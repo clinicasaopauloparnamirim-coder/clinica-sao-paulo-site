@@ -7,6 +7,7 @@ on:
     paths:
       - "public/**"
       - "control-plane/playwright-mcp/src/**"
+      - "wrangler.jsonc"
       - "scripts/semantic-seo-audit.mjs"
       - ".github/workflows/publish-production-website.yml"
 
@@ -94,4 +95,16 @@ jobs:
             throw new Error("Unauthenticated diagnostic response contains internal configuration terms");
           }
           console.log("PASS public health is minimal; protected diagnostics reject unauthenticated requests");
+          NODE
+      - name: Verify www host permanently redirects to canonical host
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          const url = "https://www.clinicasaopauloparnamirim.com.br/aparelho-ortodontico-parnamirim/?utm_source=redirect-test";
+          const response = await fetch(url, { redirect: "manual", cache: "no-store" });
+          const location = response.headers.get("location");
+          if (response.status !== 301) throw new Error("www expected HTTP 301; received " + response.status);
+          const expected = "https://clinicasaopauloparnamirim.com.br/aparelho-ortodontico-parnamirim/?utm_source=redirect-test";
+          if (location !== expected) throw new Error("Unexpected redirect Location: " + location);
+          console.log("PASS www -> apex 301; path and query string preserved");
           NODE
