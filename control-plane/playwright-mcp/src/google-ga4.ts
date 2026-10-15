@@ -190,43 +190,69 @@ export async function googleOAuthCallback(request: Request, env: GoogleEnv) {
   }
   if (!tokens.refresh_token) return new Response("Google did not return a refresh token. Revoke the previous grant and authorize again.", { status: 400 });
 
+  // Verify the newly issued access token against this GA4 property before replacing the stored refresh token.
+  const validationResponse = await fetch("https://analyticsadmin.googleapis.com/v1beta/properties/552216899/keyEvents", {
+    headers: { authorization: `Bearer ${tokens.access_token}` },
+  });
+  if (!validationResponse.ok) {
+    return Response.json({
+      ok: false,
+      authorized_account: profile.email,
+      validation_status: validationResponse.status,
+      refresh_token_preserved: true,
+      next: "The new grant cannot read the target GA4 property. The previous refresh token was preserved; verify GA4 permissions and consent again.",
+    }, { status: 502, headers: { "cache-control": "no-store" } });
+  }
+
+  if (saved.setup) {
+    try {
+      const cleanup = await googleGa4CleanupWithAccessToken(tokens.access_token);
+      if (cleanup.failures.length > 0) {
+        return Response.json({
+          ok: false,
+          authorized_account: profile.email,
+          cleanup,
+          refresh_token_preserved: true,
+          next: "Some key-event changes failed. The previous refresh token was preserved; correct permissions and retry before marking setup complete.",
+        }, { status: 502, headers: { "cache-control": "no-store" } });
+      }
+      await store(env).fetch("https://store.internal/token", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ refresh_token: tokens.refresh_token }),
+      });
+      await store(env).fetch("https://store.internal/setup-complete", { method: "POST" });
+      return Response.json({
+        ok: true,
+        authorized_account: profile.email,
+        cleanup,
+        refresh_token_rotated: true,
+        next: "GA4 cleanup completed. Close this tab.",
+      }, { status: 200, headers: { "cache-control": "no-store" } });
+    } catch (error) {
+      return Response.json({
+        ok: false,
+        authorized_account: profile.email,
+        refresh_token_preserved: true,
+        cleanup_error: error instanceof Error ? error.message : "GA4 cleanup failed",
+        next: "The new authorization was not saved because cleanup failed. The previous refresh token remains in place.",
+      }, { status: 502, headers: { "cache-control": "no-store" } });
+    }
+  }
+
+  // For the regular OAuth path, only persist the new grant after the GA4 access check above succeeds.
   await store(env).fetch("https://store.internal/token", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ refresh_token: tokens.refresh_token }),
   });
-
-  if (saved.setup) {
-    try {
-      const cleanupResponse = await googleGa4Cleanup(env);
-      const cleanup = await cleanupResponse.json() as { deleted?: string[]; failures?: Array<{ event: string; status: number }>; found?: string[] };
-      if ((cleanup.failures ?? []).length === 0) {
-        await store(env).fetch("https://store.internal/setup-complete", { method: "POST" });
-      }
-      return Response.json({
-        ok: (cleanup.failures ?? []).length === 0,
-        authorized_account: profile.email,
-        cleanup,
-        next: (cleanup.failures ?? []).length === 0 ? "GA4 cleanup completed. Close this tab." : "Authorization succeeded, but some key events need a retry. Do not change Google Ads campaigns.",
-      }, { status: (cleanup.failures ?? []).length === 0 ? 200 : 502, headers: { "cache-control": "no-store" } });
-    } catch (error) {
-      return Response.json({
-        ok: false,
-        authorized_account: profile.email,
-        authorization_saved: true,
-        cleanup_error: error instanceof Error ? error.message : "GA4 cleanup failed",
-        next: "Google authorization is saved; GA4 cleanup did not finish. Do not change Google Ads campaigns.",
-      }, { status: 502, headers: { "cache-control": "no-store" } });
-    }
-  }
   return new Response("Google Analytics + Search Console autorizados. Você pode fechar esta página.", {
     status: 200,
     headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },
   });
 }
 
-export async function googleGa4Cleanup(env: GoogleEnv) {
-  const token = await googleAccessToken(env);
+async function googleGa4CleanupWithAccessToken(token: string) {
   const listResponse = await fetch("https://analyticsadmin.googleapis.com/v1beta/properties/552216899/keyEvents", {
     headers: { authorization: `Bearer ${token}` },
   });
@@ -247,16 +273,26 @@ export async function googleGa4Cleanup(env: GoogleEnv) {
     else failures.push({ event: event.eventName!, status: response.status });
   }
 
-  return Response.json({
+  return {
     property: "properties/552216899",
     requested: [...targets],
     found: candidates.map((event) => event.eventName),
     deleted,
     failures,
     untouched: "clique_whatsapp, qualify_lead, close_convert_lead and Google Ads conversion were preserved. generate_lead was removed because current Zaraz config emits it on a WhatsApp click.",
-  }, { headers: { "cache-control": "no-store" } });
+  };
 }
 
+export async function googleGa4Cleanup(env: GoogleEnv) {
+  const token = await googleAccessToken(env);
+  try {
+    return Response.json(await googleGa4CleanupWithAccessToken(token), {
+      headers: { "cache-control": "no-store" },
+    });
+  } catch (error) {
+    throw error;
+  }
+}
 export async function googleGa4Audit(env: GoogleEnv) {
   const token = await googleAccessToken(env);
 
