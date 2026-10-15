@@ -152,7 +152,10 @@ export async function googleOAuthStart(request: Request, env: GoogleEnv, setup =
   auth.searchParams.set("prompt", "consent");
   auth.searchParams.set("state", state);
   auth.searchParams.set("login_hint", EXPECTED_GOOGLE_ACCOUNT);
-  return Response.redirect(auth.toString(), 302);
+  return new Response(null, {
+    status: 302,
+    headers: { location: auth.toString(), "cache-control": "no-store", "referrer-policy": "no-referrer" },
+  });
 }
 
 export async function googleOAuthCallback(request: Request, env: GoogleEnv) {
