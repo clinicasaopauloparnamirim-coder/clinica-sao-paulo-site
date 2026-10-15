@@ -8,6 +8,7 @@ on:
       - "public/control-tower/**"
       - ".github/workflows/control-tower-check.yml"
       - ".github/workflows/control-plane-deploy-v2.yml"
+      - "wrangler.jsonc"
   push:
     branches: ["feature/9-brains-20-agents-control-tower-crm"]
     paths:
@@ -15,6 +16,7 @@ on:
       - "public/control-tower/**"
       - ".github/workflows/control-tower-check.yml"
       - ".github/workflows/control-plane-deploy-v2.yml"
+      - "wrangler.jsonc"
 
 permissions:
   contents: read
@@ -70,6 +72,11 @@ jobs:
             throw new Error('Public /health must expose only service availability, not internal diagnostics.');
           }
           if (!privateHealth.includes('if (!authorized(request, env)) return unauthorized();')) throw new Error('Detailed /control/health diagnostics are not behind authorization.');
+          const wrangler = JSON.parse(fs.readFileSync('wrangler.jsonc','utf8'));
+          if (wrangler.assets?.run_worker_first !== true) throw new Error('Host-level redirects require the Worker to run before static assets.');
+          const workerSourceForRedirect = fs.readFileSync('control-plane/playwright-mcp/src/index.ts','utf8');
+          if (!workerSourceForRedirect.includes('requestUrl.hostname === "www.clinicasaopauloparnamirim.com.br"') ||
+              !workerSourceForRedirect.includes('status: 301')) throw new Error('Canonical www-to-apex redirect handler is missing.');
           const deployWorkflow = fs.readFileSync('.github/workflows/control-plane-deploy-v2.yml','utf8');
           if (!deployWorkflow.includes('keys.length !== 1') || !deployWorkflow.includes('keys[0] !== "ok"')) throw new Error('Deployment smoke test does not enforce the minimal public health schema.');
           if (!deployWorkflow.includes('for path in /control/health /mcp/tower')) throw new Error('Unauthenticated diagnostic route is missing from the protected-route smoke loop.');
