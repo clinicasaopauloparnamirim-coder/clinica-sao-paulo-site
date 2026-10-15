@@ -175,7 +175,7 @@ export async function googleGa4Cleanup(env: GoogleEnv) {
   });
   if (!listResponse.ok) throw new Error(`GA4 Admin API list failed: ${listResponse.status}`);
   const data = await listResponse.json() as { keyEvents?: Array<{ name?: string; eventName?: string }> };
-  const targets = new Set(["page_view", "session_start", "first_visit", "user_engagement"]);
+  const targets = new Set(["page_view", "session_start", "first_visit", "user_engagement", "generate_lead"]);
   const candidates = (data.keyEvents ?? []).filter((event) => targets.has(event.eventName ?? ""));
   const deleted: string[] = [];
   const failures: Array<{ event: string; status: number }> = [];
@@ -196,7 +196,7 @@ export async function googleGa4Cleanup(env: GoogleEnv) {
     found: candidates.map((event) => event.eventName),
     deleted,
     failures,
-    untouched: "generate_lead and clique_whatsapp were not modified.",
+    untouched: "clique_whatsapp, qualify_lead, close_convert_lead and Google Ads conversion were preserved. generate_lead was removed because current Zaraz config emits it on a WhatsApp click.",
   }, { headers: { "cache-control": "no-store" } });
 }
 
