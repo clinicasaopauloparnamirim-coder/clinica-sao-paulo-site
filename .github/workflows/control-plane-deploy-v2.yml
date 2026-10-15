@@ -87,17 +87,23 @@ jobs:
       - name: Smoke test
         run: |
           set -euo pipefail
-          health_url="https://clinica-sao-paulo-site.clinicasaopauloparnamirim.workers.dev/health?deploy_check=$(date +%s)"
+          base="https://clinica-sao-paulo-site.clinicasaopauloparnamirim.workers.dev"
+          health_url="$base/health?deploy_check=$(date +%s)"
           body="$(curl -sS --retry 5 --retry-delay 2 --connect-timeout 10 --max-time 30 "$health_url")"
-          echo "$body"
-          echo "$body" | grep -q '"ok":true'
-          echo "$body" | grep -q '"brain_count":9'
-          echo "$body" | grep -q '"agent_count":20'
-          echo "$body" | grep -q '"capability_count":21'
-          echo "$body" | grep -q '"autonomous_function_count":20'
-          # Health must expose pairing and auth status without exposing credentials.
-          echo "$body" | grep -q '"openai_api_configured":'
-          echo "$body" | grep -q '"pairings":'
+          BODY="$body" node --input-type=module <<'NODE'
+          const health = JSON.parse(process.env.BODY || "null");
+          const keys = Object.keys(health || {}).sort();
+          if (!health || health.ok !== true || keys.length !== 1 || keys[0] !== "ok") {
+            throw new Error("Public /health must expose only {ok:true}; received keys: " + keys.join(","));
+          }
+          console.log("PASS public /health returns only ok:true");
+          NODE
+          diag_code="$(curl -sS -o /dev/null -w '%{http_code}' --retry 3 --retry-delay 1 --connect-timeout 10 --max-time 30 "$base/control/health")"
+          echo "Unauthenticated /control/health -> HTTP $diag_code"
+          test "$diag_code" = "401"
+          post_health_code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 -X POST "$base/health")"
+          echo "POST /health -> HTTP $post_health_code"
+          test "$post_health_code" = "405"
           # New dashboard and CRM must be present in the release artifact.
           test -f public/control-tower/index.html
           grep -q '20 agentes separados' public/control-tower/index.html
