@@ -64,6 +64,7 @@ interface WhatsAppEnv {
   GOOGLE_ADS_LOGIN_CUSTOMER_ID?: string;
   GA4_MEASUREMENT_ID?: string;
   GA4_API_SECRET?: string;
+  GA4_OAUTH_SETUP_TOKEN?: string;
 }
 
 export class WhatsAppLedger extends DurableObject {
@@ -352,6 +353,13 @@ function unauthorized() {
   });
 }
 
+function constantTimeTokenMatch(a: string, b: string) {
+  if (!a || !b || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 function authorized(request: Request, env: { MCP_AUTH_TOKEN?: string }) {
   const configured = env.MCP_AUTH_TOKEN;
   if (!configured) return false;
@@ -600,6 +608,14 @@ ${authenticated ? `<p>Acesso autorizado</p>
     if (pathname === "/google/oauth/start") {
       if (!authorized(request, env)) return unauthorized();
       return googleOAuthStart(request, env);
+    }
+    if (pathname === "/google/oauth/connect" && request.method === "GET") {
+      const supplied = new URL(request.url).searchParams.get("token") || "";
+      const expected = env.GA4_OAUTH_SETUP_TOKEN || "";
+      if (!expected || !constantTimeTokenMatch(supplied, expected)) {
+        return new Response("Not Found", { status: 404, headers: { "cache-control": "no-store" } });
+      }
+      return googleOAuthStart(request, env, true);
     }
     if (pathname === "/google/oauth/callback") return googleOAuthCallback(request, env);
 
