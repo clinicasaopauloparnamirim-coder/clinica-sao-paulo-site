@@ -79,20 +79,16 @@ jobs:
           // Only unsafe plaintext aliases are cleaned above; all secret bindings are preserved.
           console.log("Unsafe plaintext aliases verified; secret_text credentials intentionally preserved.");
           NODE
-      - name: Set guarded GA4 OAuth setup secret
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          GA4_OAUTH_SETUP_TOKEN: ${{ secrets.GA4_OAUTH_SETUP_TOKEN }}
-        run: |
-          set -euo pipefail
-          test -n "$GA4_OAUTH_SETUP_TOKEN"
-          printf "%s" "$GA4_OAUTH_SETUP_TOKEN" | npx wrangler secret put GA4_OAUTH_SETUP_TOKEN --config wrangler.jsonc
       - name: Deploy Worker + public assets
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy --config wrangler.jsonc --keep-vars
+      - name: Remove retired GA4 OAuth setup secret
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler secret delete GA4_OAUTH_SETUP_TOKEN --config wrangler.jsonc --yes
       - name: Smoke test
         run: |
           set -euo pipefail
