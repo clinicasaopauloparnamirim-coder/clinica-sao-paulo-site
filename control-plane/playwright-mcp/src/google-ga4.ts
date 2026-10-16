@@ -7,7 +7,6 @@ const EXPECTED_GOOGLE_ACCOUNT = "clinicasaopauloparnamirim@gmail.com";
 type GoogleEnv = {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
-  GA4_OAUTH_SETUP_TOKEN?: string;
   GOOGLE_OAUTH_STORE: DurableObjectNamespace;
 };
 

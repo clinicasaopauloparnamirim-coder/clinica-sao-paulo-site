@@ -88,7 +88,39 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: printf 'y\n' | npx wrangler secret delete GA4_OAUTH_SETUP_TOKEN --config wrangler.jsonc
+          WORKER_NAME: clinica-sao-paulo-site
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          const { CLOUDFLARE_API_TOKEN: token, CLOUDFLARE_ACCOUNT_ID: account, WORKER_NAME: workerName } = process.env;
+          const secretName = "GA4_OAUTH_SETUP_TOKEN";
+          if (!token || !account || !workerName) throw new Error("Cloudflare secret cleanup credentials are missing.");
+          const endpoint = `https://api.cloudflare.com/client/v4/accounts/${account}/workers/scripts/${workerName}/secrets`;
+          const headers = { Authorization: `Bearer ${token}` };
+          const listResponse = await fetch(endpoint, { headers });
+          const list = await listResponse.json();
+          if (!listResponse.ok || list.success !== true || !Array.isArray(list.result)) {
+            throw new Error(`Could not safely list Worker secrets (HTTP ${listResponse.status}).`);
+          }
+          if (list.result.some((secret) => secret.name === secretName)) {
+            const deleteResponse = await fetch(`${endpoint}/${encodeURIComponent(secretName)}`, { method: "DELETE", headers });
+            const deleted = await deleteResponse.json();
+            if (!deleteResponse.ok || deleted.success !== true) {
+              throw new Error(`Failed to remove retired GA4 setup secret (HTTP ${deleteResponse.status}).`);
+            }
+          } else {
+            console.log("Retired GA4 setup secret already absent; no deletion needed.");
+          }
+          const verifyResponse = await fetch(endpoint, { headers });
+          const verify = await verifyResponse.json();
+          if (!verifyResponse.ok || verify.success !== true || !Array.isArray(verify.result)) {
+            throw new Error("Could not verify Worker secrets after cleanup.");
+          }
+          if (verify.result.some((secret) => secret.name === secretName)) {
+            throw new Error("Retired GA4 setup secret still exists after cleanup.");
+          }
+          console.log("Retired GA4 setup secret is absent from Worker.");
+          NODE
       - name: Smoke test
         run: |
           set -euo pipefail
