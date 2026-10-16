@@ -598,6 +598,35 @@ ${authenticated ? `<p>Acesso autorizado</p>
       } catch (error) { return new Response(error instanceof Error ? error.message : "Google Ads mutation failed", { status: 400 }); }
     }
 
+    // Google OAuth redirects back here without the Control Tower bearer token.
+    // The callback itself verifies one-time state, the expected Google account,
+    // the token grant, and GA4 access before persisting the refresh token.
+    if (pathname === "/google/oauth/callback") {
+      try {
+        const oauthResponse = await googleOAuthCallback(request, env);
+        const headers = new Headers(oauthResponse.headers);
+        headers.set("x-robots-tag", "noindex, nofollow, noarchive");
+        headers.set("cache-control", "no-store");
+        headers.set("referrer-policy", "no-referrer");
+        return new Response(oauthResponse.body, {
+          status: oauthResponse.status,
+          statusText: oauthResponse.statusText,
+          headers,
+        });
+      } catch (error) {
+        console.error("Google OAuth callback failed", error instanceof Error ? error.name : "unknown error");
+        return new Response("Não foi possível concluir a autorização do Google. Inicie novamente pelo Control Tower.", {
+          status: 502,
+          headers: {
+            "content-type": "text/plain; charset=UTF-8",
+            "cache-control": "no-store",
+            "referrer-policy": "no-referrer",
+            "x-robots-tag": "noindex, nofollow, noarchive",
+          },
+        });
+      }
+    }
+
     if (pathname === "/google/oauth/start") {
       if (!authorized(request, env)) return unauthorized();
       return googleOAuthStart(request, env);
