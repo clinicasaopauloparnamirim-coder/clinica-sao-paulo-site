@@ -413,7 +413,11 @@ export default {
       if (request.method !== "GET" && request.method !== "HEAD") {
         return new Response("Method Not Allowed", {
           status: 405,
-          headers: { "allow": "GET, HEAD", "cache-control": "no-store" },
+          headers: {
+            "allow": "GET, HEAD",
+            "cache-control": "no-store",
+            "x-robots-tag": "noindex, nofollow, noarchive",
+          },
         });
       }
       // Public health checks must reveal availability only, never internal configuration.
@@ -421,6 +425,7 @@ export default {
         headers: {
           "cache-control": "no-store",
           "x-content-type-options": "nosniff",
+          "x-robots-tag": "noindex, nofollow, noarchive",
         },
       });
     }
@@ -725,7 +730,14 @@ ${authenticated ? `<p>Acesso autorizado</p>
 
     if (pathname === "/analytics-config" && request.method === "GET") {
       const measurementId = /^G-[A-Z0-9]{6,20}$/.test(String(env.GA4_MEASUREMENT_ID || "")) ? String(env.GA4_MEASUREMENT_ID) : null;
-      return Response.json({ measurement_id: measurementId }, { headers: { "cache-control": "no-store" } });
+      // Public configuration endpoint consumed by the site script, not a landing page.
+      return Response.json({ measurement_id: measurementId }, {
+        headers: {
+          "cache-control": "no-store",
+          "x-robots-tag": "noindex, nofollow, noarchive",
+          "x-content-type-options": "nosniff",
+        },
+      });
     }
     if (pathname === "/track" && request.method === "POST") {
       const origin = request.headers.get("Origin") || "";
