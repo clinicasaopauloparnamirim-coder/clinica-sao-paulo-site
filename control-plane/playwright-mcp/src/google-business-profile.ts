@@ -44,9 +44,15 @@ export async function googleBusinessAudit(env: BusinessEnv, days = 28) {
   }
 
   const selected = allLocations.filter(({ location }) => {
-    const title = String(location?.title || "").toLowerCase();
+    // Google preserves accents in the official title ("Clínica"); normalize it
+    // before matching the saved business identity.
+    const title = String(location?.title || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
     const website = String(location?.websiteUri || "").toLowerCase();
-    const phone = JSON.stringify(location?.phoneNumbers || "");
+    // Phone numbers can arrive formatted with spaces, +, parentheses, or dashes.
+    const phone = JSON.stringify(location?.phoneNumbers || "").replace(/\D/g, "");
     return title.includes("clinica sao paulo") ||
       website.includes("clinicasaopauloparnamirim.com.br") ||
       phone.includes("5584998947669");
