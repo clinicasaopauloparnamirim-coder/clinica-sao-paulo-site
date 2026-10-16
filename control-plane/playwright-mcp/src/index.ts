@@ -352,6 +352,21 @@ function unauthorized() {
   });
 }
 
+
+function authorized(request: Request, env: { MCP_AUTH_TOKEN?: string }) {
+  const configured = env.MCP_AUTH_TOKEN;
+  if (!configured) return false;
+  const header = request.headers.get("Authorization") || "";
+  if (header === "Bearer " + configured) return true;
+  const cookie = request.headers.get("Cookie") || "";
+  const match = cookie.match(/(?:^|;\\s*)control_session=([^;]+)/);
+  return match?.[1] === encodeURIComponent(configured);
+}
+
+function controlCookie(value: string, maxAge = 3600) {
+  return "control_session=" + encodeURIComponent(value) + "; Max-Age=" + maxAge + "; Path=/; Secure; HttpOnly; SameSite=Strict";
+}
+
 async function validMetaSignature(body: string, signature: string, secret: string) {
   if (!signature.startsWith("sha256=")) return false;
   const key = await crypto.subtle.importKey(
