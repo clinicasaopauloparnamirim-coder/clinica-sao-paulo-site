@@ -117,6 +117,8 @@ const robots = read("public/robots.txt");
 if (!/User-agent:\s*\*/i.test(robots) || !/Allow:\s*\//i.test(robots)) errors.push("robots.txt não permite rastreamento geral");
 if (!robots.includes(DOMAIN + "/sitemap.xml")) errors.push("robots.txt não referencia o sitemap canônico");
 const attribution = read("public/attribution.js");
+if (!attribution.includes('post("/track",payload("page_view"))')) errors.push("First-party page_view attribution is missing");
+if (attribution.includes('gaEvent("page_view"')) errors.push("Duplicate GA4 page_view emitter remains; Zaraz must be the only page_view source");
 for (const host of ["chatgpt\\.com","perplexity\\.ai","gemini\\.google\\.com","copilot\\.microsoft\\.com","claude\\.ai","deepseek\\.com"]) if (!attribution.includes(host)) errors.push("Atribuição IA ausente: " + host);
 if (!attribution.includes('medium="ai-assistant"')) errors.push("Atribuição IA não define ai-assistant");
 console.log("SEMANTIC SEO QUALITY GATE");

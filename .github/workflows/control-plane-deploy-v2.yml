@@ -154,6 +154,11 @@ jobs:
           grep -q '/api/lead-click' public/attribution.js
           grep -q 'CSP-' public/attribution.js
           grep -q 'function adsConversion' public/attribution.js
+          grep -q 'post("/track",payload("page_view"))' public/attribution.js
+          if grep -q 'gaEvent("page_view"' public/attribution.js; then
+            echo "Duplicate direct GA4 page_view emitter remains; Zaraz owns pageview tracking" >&2
+            exit 1
+          fi
           grep -q 'AW-18397134625/VRWxCL-FvuUcEKH-t8RE' public/attribution.js
           grep -q 'whatsapp-cta' public/index.html
           if grep -R --include='*.html' -n 'whatsapp-track' public; then
