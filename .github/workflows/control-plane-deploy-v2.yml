@@ -154,7 +154,7 @@ jobs:
           grep -q '/api/lead-click' public/attribution.js
           grep -q 'CSP-' public/attribution.js
           grep -q 'function adsConversion' public/attribution.js
-          grep -q 'AW-18397134625/VRwxCL-FvuUcEKH-t8RE' public/attribution.js
+          grep -q 'AW-18397134625/VRWxCL-FvuUcEKH-t8RE' public/attribution.js
           grep -q 'whatsapp-cta' public/index.html
           if grep -R --include='*.html' -n 'whatsapp-track' public; then
             echo "Legacy Zaraz selector remains in public HTML" >&2
