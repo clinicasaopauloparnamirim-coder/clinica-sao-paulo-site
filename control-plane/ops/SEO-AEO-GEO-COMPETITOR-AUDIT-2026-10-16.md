@@ -4,7 +4,7 @@
 
 A base on-page está bem construída. O site tem 9 URLs canônicas no sitemap (home + 8 páginas de serviço), páginas indexáveis, títulos/descrições únicos, um H1 por página, conteúdo específico por tratamento e dados estruturados para a entidade local, serviços e FAQs. O maior risco encontrado não é a ausência de SEO básico: é a autoridade local comparativa, a confirmação de acesso administrativo à ficha do Google e a falta de uma medição de posições do Google Maps por coordenada.
 
-**Estado da execução:** a correção do callback OAuth foi preparada nesta branch e precisa passar pelos testes e pelo fluxo de publicação antes da autorização Google poder ser concluída. A ficha pública já foi identificada. Nenhum dado do Perfil da Empresa foi alterado.
+**Estado da execução:** a correção do callback OAuth e os cabeçalhos de não indexação para endpoints técnicos foram preparados nesta branch. As verificações de GitHub Actions (`Control Plane PR Check`, `Control Plane` e `Control Tower feature checks`) passaram no commit `40ddc0b5a2a5004bbdf6bf11ec67831be2cbdd6b`. O código ainda não foi publicado em produção. A ficha pública já foi identificada; nenhum dado do Perfil da Empresa foi alterado.
 
 ## 1. Identidade da ficha GMN confirmada
 
@@ -24,7 +24,7 @@ A função `googleOAuthCallback` já existia em `control-plane/playwright-mcp/sr
 Nesta branch:
 1. A rota de callback foi registrada, reaproveitando a validação existente; resposta de callback recebe `X-Robots-Tag: noindex, nofollow, noarchive`, `Cache-Control: no-store` e `Referrer-Policy: no-referrer`.
 2. A auditoria do perfil agora normaliza acentos no título e pontuação no telefone antes de fazer o match; isso evita perder a ficha por “Clínica” versus “Clinica” ou pelo formato do número.
-3. Os testes e o build precisam passar antes de publicar. Esta alteração ainda **não foi implantada em produção**.
+3. As três verificações de CI/typecheck acima passaram. A alteração ainda **não foi implantada em produção**; a publicação deve respeitar o procedimento de revisão e o erro conhecido nos gatilhos Cloudflare de build por branch.
 
 Após publicação e autorização humana, validar: (a) retorno OAuth bem-sucedido com a conta autorizada, (b) leitura de contas e locais da Business Profile API, (c) correspondência do local por site/telefone/título e (d) métricas do Perfil da Empresa. Consentimento de conta Google não pode ser substituído pela identificação pública do Maps.
 
