@@ -153,6 +153,17 @@ jobs:
           grep -q 'clique_whatsapp' public/attribution.js
           grep -q '/api/lead-click' public/attribution.js
           grep -q 'CSP-' public/attribution.js
+          grep -q 'function adsConversion' public/attribution.js
+          grep -q 'AW-18397134625/VRwxCL-FvuUcEKH-t8RE' public/attribution.js
+          grep -q 'whatsapp-cta' public/index.html
+          if grep -R --include='*.html' -n 'whatsapp-track' public; then
+            echo "Legacy Zaraz selector remains in public HTML" >&2
+            exit 1
+          fi
+          if grep -R --include='*.js' -n 'generate_lead' public; then
+            echo "A generic generate_lead emitter remains in public JavaScript" >&2
+            exit 1
+          fi
           grep -q 'src="/hero-ortho.webp"' public/index.html
           grep -q 'src="/attribution.js' public/index.html
           grep -q 'src="/attribution.js' public/aparelho-ortodontico-parnamirim/index.html
