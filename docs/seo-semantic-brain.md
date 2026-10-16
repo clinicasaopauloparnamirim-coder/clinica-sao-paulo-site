@@ -33,3 +33,16 @@
 3. Testar correções no quality gate e depois no site publicado.
 4. Registrar bloqueios que dependem de plano ou credenciais.
 5. Repetir após recrawl do Google e nova auditoria técnica.
+
+
+## Auditoria operacional e continuidade — 2026-10-16
+
+Registro de evidências e bloqueios da execução das Fases 5 e 6: [SEO-PHASE-5-6-ACTION-2026-10-16.md](../control-plane/ops/SEO-PHASE-5-6-ACTION-2026-10-16.md).
+
+Não marcar as duas fases como concluídas enquanto:
+- a configuração Zaraz obsoleta não for corrigida com acesso de escrita autenticado e confirmação por read-back;
+- o teste de clique WhatsApp não demonstrar um evento-chave coerente e não duplicado;
+- a grade GeoGrid não for executada com dados reais no equipamento Heartseomap ou créditos OpenSEO disponíveis;
+- o Perfil da Empresa correto, as avaliações e a consistência de citações locais não forem comparados de modo direto.
+
+O código e o CI do site aprovados não demonstram, por si só, posição no Local Pack nem melhoria de ranking. Para a implementação CSV/JSON do Heartseomap, acompanhar o [PR #2](https://github.com/clinicasaopauloparnamirim-coder/local-seo-heatmap/pull/2); não considerar integrado ao cérebro local até existir importação/leitura automática validada.
