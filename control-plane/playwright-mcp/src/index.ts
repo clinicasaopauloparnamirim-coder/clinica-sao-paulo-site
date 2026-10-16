@@ -602,6 +602,12 @@ ${authenticated ? `<p>Acesso autorizado</p>
       if (!authorized(request, env)) return unauthorized();
       return googleOAuthStart(request, env);
     }
+    // Google redirects here after consent. The callback validates one-time OAuth state
+    // and the expected Google account before storing the refresh token; it cannot use
+    // the Control Tower bearer header because this request originates from Google's redirect.
+    if (pathname === "/google/oauth/callback") {
+      return googleOAuthCallback(request, env);
+    }
     if (pathname === "/google/ga4/cleanup" && request.method === "POST") {
       if (!authorized(request, env)) return unauthorized();
       let body: { confirm?: boolean } = {};
