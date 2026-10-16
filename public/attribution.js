@@ -1,7 +1,7 @@
 /* First-party attribution. Do not send patient names, phone numbers or message text. */
 (function(){
 "use strict";
-var ATTR_KEY="csp_attribution_v2",SESSION_KEY="csp_session_v2",TOKEN_KEY="csp_lead_token_v2",GA_ID=null,GA_CLIENT_ID="",GA_READY=false,GA_PENDING=[],ADS_ID="AW-18397134625",ADS_SEND_TO="AW-18397134625/VRwxCL-FvuUcEKH-t8RE",ADS_PENDING=[],state;
+var ATTR_KEY="csp_attribution_v2",SESSION_KEY="csp_session_v2",TOKEN_KEY="csp_lead_token_v2",GA_ID=null,GA_CLIENT_ID="",GA_READY=false,GA_PENDING=[],ADS_ID="AW-18397134625",ADS_SEND_TO="AW-18397134625/VRWxCL-FvuUcEKH-t8RE",ADS_PENDING=[],state;
 function uuid(){try{if(crypto&&crypto.randomUUID)return crypto.randomUUID()}catch(e){}return "s-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,10)}
 function token(){var b=new Uint8Array(5);try{crypto.getRandomValues(b)}catch(e){for(var i=0;i<b.length;i++)b[i]=Math.floor(Math.random()*256)}return "CSP-"+Array.from(b).map(function(x){return x.toString(16).padStart(2,"0")}).join("").toUpperCase()}
 function read(k){try{return JSON.parse(localStorage.getItem(k)||"null")||{}}catch(e){return {}}}
