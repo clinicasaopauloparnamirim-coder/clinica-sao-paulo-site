@@ -1,0 +1,40 @@
+name: Temporary GA4 admin authorization link
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/temporary-ga4-admin-link.yml"
+permissions:
+  contents: read
+jobs:
+  generate-link:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create one-time GA4 authorization URL
+        env:
+          SETUP_TOKEN: ${{ secrets.GA4_OAUTH_SETUP_TOKEN }}
+          WORKER_URL: https://clinica-sao-paulo-site.clinicasaopauloparnamirim.workers.dev
+        shell: bash
+        run: |
+          set +x
+          if [ -z "$SETUP_TOKEN" ]; then
+            echo "::error::GA4_OAUTH_SETUP_TOKEN secret is not configured."
+            exit 1
+          fi
+          headers="$(mktemp)"
+          code="$(curl --silent --show-error --output /dev/null --dump-header "$headers" --write-out '%{http_code}' --max-redirs 0 --get --data-urlencode "token=$SETUP_TOKEN" "$WORKER_URL/google/oauth/connect")"
+          location="$(awk 'BEGIN { IGNORECASE=1 } /^location:/ { sub(/\r$/, ""); sub(/^[^:]*:[[:space:]]*/, ""); print; exit }' "$headers")"
+          rm -f "$headers"
+          if [ "$code" != "302" ] || [[ "$location" != https://accounts.google.com/o/oauth2/v2/auth* ]]; then
+            echo "::error::The guarded GA4 OAuth route did not return a Google authorization URL (HTTP $code)."
+            exit 1
+          fi
+          echo "::add-mask::$SETUP_TOKEN"
+          echo "::notice title=GA4 Authorization Link::$location"
+          {
+            echo "### One-time GA4 authorization"
+            echo
+            echo "Open this link and approve with the clinic's Google account. The link expires in about 10 minutes:"
+            echo
+            echo "[Authorize GA4 cleanup]($location)"
+          } >> "$GITHUB_STEP_SUMMARY"
