@@ -1,0 +1,91 @@
+name: Temporary Zaraz GA4 repair
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Read, back up, minimally repair and verify Zaraz
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const zone = "447b130f411b1104a20a3c5ec4297164";
+          const token = process.env.CLOUDFLARE_API_TOKEN;
+          if (!token) throw new Error("CLOUDFLARE_API_TOKEN secret is missing.");
+          async function api(method, path, body) {
+            const response = await fetch("https://api.cloudflare.com/client/v4" + path, {
+              method,
+              headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+              ...(body === undefined ? {} : { body: JSON.stringify(body) })
+            });
+            const data = await response.json();
+            if (!response.ok || data.success !== true) {
+              throw new Error(method + " " + path + " failed (HTTP " + response.status + "): " + JSON.stringify(data.errors || []));
+            }
+            return data.result;
+          }
+          const history = await api("GET", "/zones/" + zone + "/settings/zaraz/history?limit=10&sortField=updated_at&sortOrder=DESC");
+          if (!Array.isArray(history) || history.length === 0) throw new Error("No rollback history exists; refusing to mutate Zaraz.");
+          const config = await api("GET", "/zones/" + zone + "/settings/zaraz/config");
+          const action = config.tools?.tAMq?.actions?.INQv;
+          if (!action || action.data?.en !== "generate_lead" || !action.firingTriggers?.includes("MxOq")) {
+            throw new Error("INQv no longer matches the audited false generate_lead mapping; no change made.");
+          }
+          if (!config.triggers?.MxOq || !config.tools?.yuqQ?.actions?.aAki?.firingTriggers?.includes("MxOq")) {
+            throw new Error("WhatsApp trigger or Google Ads conversion differs from expected state; no change made.");
+          }
+          fs.writeFileSync("zaraz-config-backup.json", JSON.stringify(config, null, 2));
+          const before = structuredClone(config);
+          const beforeAds = JSON.stringify(before.tools.yuqQ.actions.aAki);
+          const beforeTrigger = JSON.stringify(before.triggers.MxOq);
+          const beforeToolIds = Object.keys(before.tools).sort().join(",");
+          const beforeOtherActions = Object.keys(before.tools.tAMq.actions).filter((id) => id !== "INQv").sort().join(",");
+          delete config.tools.tAMq.actions.INQv;
+          await api("PUT", "/zones/" + zone + "/settings/zaraz/config", config);
+          const preview = await api("GET", "/zones/" + zone + "/settings/zaraz/config");
+          const previewChecks = {
+            INQv_removed: !preview.tools?.tAMq?.actions?.INQv,
+            MxOq_preserved: !!preview.triggers?.MxOq,
+            aAki_preserved: !!preview.tools?.yuqQ?.actions?.aAki,
+            AllPageviews_preserved: !!preview.tools?.tAMq?.actions?.AllPageviews,
+            AllTracks_preserved: !!preview.tools?.tAMq?.actions?.AllTracks,
+            Ads_action_unchanged: JSON.stringify(preview.tools?.yuqQ?.actions?.aAki) === beforeAds,
+            WhatsApp_trigger_unchanged: JSON.stringify(preview.triggers?.MxOq) === beforeTrigger,
+            Other_GA4_actions_unchanged: Object.keys(preview.tools?.tAMq?.actions || {}).sort().join(",") === beforeOtherActions,
+            Other_tools_preserved: Object.keys(preview.tools || {}).sort().join(",") === beforeToolIds
+          };
+          if (Object.values(previewChecks).some((v) => !v)) {
+            throw new Error("Preview verification failed: " + JSON.stringify(previewChecks));
+          }
+          await api("POST", "/zones/" + zone + "/settings/zaraz/publish", "Remove false GA4 generate_lead on WhatsApp click; preserve Google Ads conversion and click trigger");
+          const finalConfig = await api("GET", "/zones/" + zone + "/settings/zaraz/config");
+          const productionChecks = {
+            INQv_absent: !finalConfig.tools?.tAMq?.actions?.INQv,
+            MxOq_present: !!finalConfig.triggers?.MxOq,
+            aAki_present: !!finalConfig.tools?.yuqQ?.actions?.aAki,
+            AllPageviews_present: !!finalConfig.tools?.tAMq?.actions?.AllPageviews,
+            AllTracks_present: !!finalConfig.tools?.tAMq?.actions?.AllTracks
+          };
+          const result = { ok: Object.values(productionChecks).every(Boolean), versionBefore: before.zarazVersion, versionAfter: finalConfig.zarazVersion, previewChecks, productionChecks, rollbackHistoryIds: history.map((x) => x.id) };
+          fs.writeFileSync("zaraz-fix-result.json", JSON.stringify(result, null, 2));
+          if (!result.ok) throw new Error("Post-publish verification failed: " + JSON.stringify(result));
+          console.log(JSON.stringify(result));
+          NODE
+      - name: Preserve rollback snapshot and verification result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zaraz-ga4-repair-backup
+          path: |
+            zaraz-config-backup.json
+            zaraz-fix-result.json
+          retention-days: 7
