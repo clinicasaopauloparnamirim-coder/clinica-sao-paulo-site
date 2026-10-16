@@ -359,7 +359,7 @@ function authorized(request: Request, env: { MCP_AUTH_TOKEN?: string }) {
   const header = request.headers.get("Authorization") || "";
   if (header === "Bearer " + configured) return true;
   const cookie = request.headers.get("Cookie") || "";
-  const match = cookie.match(/(?:^|;\\s*)control_session=([^;]+)/);
+  const match = cookie.match(/(?:^|;\s*)control_session=([^;]+)/);
   return match?.[1] === encodeURIComponent(configured);
 }
 
