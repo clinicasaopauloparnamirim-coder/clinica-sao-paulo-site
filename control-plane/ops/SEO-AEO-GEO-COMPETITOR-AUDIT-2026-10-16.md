@@ -39,7 +39,7 @@ Após publicação e autorização humana, validar: (a) retorno OAuth bem-sucedi
 | Title/description | Valores próprios por página, com termos de serviço/localização | Bom |
 | H1 | Um H1 por página de conteúdo examinada | Bom |
 | Hieraquia de headings | H2/H3 com intenção e FAQs; algumas seções genéricas repetidas | Bom, com oportunidade editorial |
-| URLs técnicas | O mapa de URLs revelou `/health`, `/analytics-config`, `/attribution.js` e `/hero-photo.js` fora do sitemap | Aplicar `X-Robots-Tag: noindex` às respostas técnicas apropriadas e confirmar que essas rotas não entram no índice |
+| URLs técnicas | O mapa de URLs revelou `/health`, `/analytics-config`, `/attribution.js` e `/hero-photo.js` fora do sitemap | Nesta branch, `X-Robots-Tag: noindex, nofollow, noarchive` foi adicionado aos endpoints JSON `/health` e `/analytics-config`; validar após publicação. Os arquivos JS não são landing pages e continuam fora do sitemap. |
 | Variações de URL | O mapa encontrou versões www/não-www e slugs com/sem barra final | Canonical está correto na fonte; validar respostas HTTP 301/308 e links internos sempre apontando à forma canônica |
 
 ### Inventário HTML examinado
