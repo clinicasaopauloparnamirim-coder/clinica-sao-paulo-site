@@ -179,6 +179,7 @@ jobs:
             grep -q 'name="description"' "$page"
             grep -q 'Como chegar' "$page"
             grep -q '/attribution.js' "$page"
+            grep -Eq 'attribution\.js\?v=[^"]+' "$page"
           done
           echo "Public HTML, hero, maps, canonical and attribution checks OK"
       - name: Verify protected Control Tower routes
