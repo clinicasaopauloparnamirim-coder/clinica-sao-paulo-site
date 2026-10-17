@@ -18,7 +18,7 @@ const ALLOWED_SPECIALISTS = [
 
 export type OpenExecutiveSpecialist = (typeof ALLOWED_SPECIALISTS)[number];
 
-const REQUEST_TIMEOUT_MS = 18_000;
+const REQUEST_TIMEOUT_MS = 190_000;
 const MAX_RESPONSE_CHARS = 64_000;
 const MAX_QUERY_CHARS = 1_200;
 
