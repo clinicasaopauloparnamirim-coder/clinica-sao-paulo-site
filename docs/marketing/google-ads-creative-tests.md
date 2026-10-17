@@ -83,7 +83,24 @@ A campanha tem quatro grupos de anúncios habilitados no período consultado:
 | Ortodontia | 87 | 6 | R$ 12,33 | 0 | Volume pequeno; não declarar fracasso nem pausar com essa amostra |
 | Serviços | 2 | 0 | R$ 0,00 | 0 | Quase sem entrega no período |
 
-Os dois anúncios responsivos habilitados que foram inspecionados no grupo **Clínica** levam à homepage (https://www.clinicasaopauloparnamirim.com.br/) e usam títulos genéricos repetidos como “Dentista em Parnamirim”, “Agende Sua Avaliação”, “Clínica Odonto Parnamirim” e “Fale no WhatsApp”. Isso cria uma oportunidade concreta de melhorar a correspondência consulta → anúncio → landing page, mas não prova por si só que a página seja a causa do CPA.
+Os **oito anúncios responsivos habilitados** auditados levam à homepage (`https://www.clinicasaopauloparnamirim.com.br/`), inclusive os grupos Ortodontia e Serviços. Esse é o principal desalinhamento consulta → anúncio → landing page encontrado.
+
+| Grupo | ID do anúncio | Impressões | Cliques | Custo | Conversões reportadas |
+|---|---:|---:|---:|---:|---:|
+| Clínica | 826284999581 | 421 | 36 | R$ 65,04 | 4 |
+| Clínica | 826284997430 | 394 | 32 | R$ 59,35 | 2 |
+| Hiperlocal | 826285004051 | 175 | 12 | R$ 24,73 | 1 |
+| Hiperlocal | 826284987788 | 120 | 6 | R$ 12,14 | 0 |
+| Ortodontia | 826285007243 | 34 | 3 | R$ 6,24 | 0 |
+| Ortodontia | 826284999779 | 53 | 3 | R$ 6,09 | 0 |
+| Serviços | 826284999785 | 0 | 0 | R$ 0,00 | 0 |
+| Serviços | 826285007270 | 2 | 0 | R$ 0,00 | 0 |
+
+O anúncio `826284999581` tem CPA aritmético de R$ 16,26 (4 conversões em R$ 65,04) e o `826284997430` de R$ 29,68 (2 em R$ 59,35). A diferença é uma pista, não motivo suficiente para pausar o controle: ambos têm amostras pequenas e devem ser comparados com leads qualificados, não apenas conversões reportadas.
+
+**Risco de clareza local:** os anúncios do grupo Hiperlocal usam os títulos “Dentista em Nova Parnamirim” e “Nova Parnamirim”, enquanto o endereço cadastrado da clínica fica no Centro. Recomenda-se trocar por uma formulação como “Atendimento em Parnamirim” para não sugerir uma unidade física no bairro; nenhuma alteração foi publicada.
+
+Os grupos Ortodontia e Serviços também precisam de destinos coerentes: testar `/aparelho-ortodontico-parnamirim/` para Ortodontia e, para Serviços, dividir por intenção ou direcionar cada anúncio à página específica (clareamento, limpeza, facetas ou restauração). Isso é uma hipótese de melhoria de relevância; não prova, por si só, que a landing page seja a causa do CPA.
 
 ### Próxima versão de criativos e destino sugerido
 - **Clínica / intenção geral:** testar destino /clinica-odontologica-parnamirim/ contra a homepage, mantendo uma versão controle e medindo leads qualificados.
