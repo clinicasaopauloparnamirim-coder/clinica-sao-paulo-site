@@ -93,7 +93,7 @@ jobs:
             'OPENEXECUTIVE_MCP_URL',
             'OPENEXECUTIVE_API_KEY',
             'readOnlyHint !== true',
-            'REQUEST_TIMEOUT_MS = 18_000',
+            'REQUEST_TIMEOUT_MS = 190_000',
             'MAX_RESPONSE_CHARS = 64_000',
             'readBoundedText(response, MAX_RESPONSE_CHARS)',
             'sanitizeAdvisoryText(text.slice(0, 12_000))',
