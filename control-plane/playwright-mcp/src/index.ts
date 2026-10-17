@@ -458,7 +458,7 @@ async function verifyOpenExecutiveGatewayToken(authorization: string | null): Pr
 
 
 async function deriveOpenExecutiveMcpSigningKey(secret: string, extractable: boolean): Promise<CryptoKey> {
-  const seedInput = new TextEncoder().encode("OpenExecutive MCP request signing v1\\0" + secret);
+  const seedInput = new TextEncoder().encode("OpenExecutive MCP request signing v1\0" + secret);
   const seed = new Uint8Array(await crypto.subtle.digest("SHA-256", seedInput));
   const prefix = Uint8Array.from([
     0x30, 0x2e, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06,
