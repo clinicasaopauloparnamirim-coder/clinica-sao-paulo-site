@@ -8,7 +8,7 @@ import crosspage_checks as cross
 class CrossPageTests(unittest.TestCase):
     def test_collects_hreflang_open_graph_and_links(self):
         p=cross.LinkSchemaParser()
-        p.feed('<html><head><meta property="og:title" content="Title"><link rel="alternate" hreflang="pt-BR" href="/pt/"></head><body><a href="/dentista/">Dentista</a><script type="application/ld+json">{"@graph":[{"@type":"Dentist","name":"Dr X","address":{"streetAddress":"Rua"}}]}</script></body></html>')
+        p.feed('<html><head><meta property="og:title" content="Title"><link rel="alternate" hreflang="pt-BR" href="/pt/"></head><body><a href="/dentista/">Dentista</a><script type="application/ld+json">{"@graph":[{"@type":"Dentist","name":"Dr X","telephone":"+5511999999999","address":{"streetAddress":"Rua","addressLocality":"Cidade"}}]}</script></body></html>')
         self.assertEqual(p.meta["og:title"],"Title")
         self.assertEqual(p.hreflang,[{"lang":"pt-BR","href":"/pt/"}])
         self.assertEqual(p.links[0]["href"],"/dentista/")
