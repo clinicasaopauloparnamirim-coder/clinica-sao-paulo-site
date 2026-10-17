@@ -7,7 +7,7 @@ import cloudflare_audit as cf
 class CloudflareAuditTests(unittest.TestCase):
     def test_healthy_worker_zone_has_no_findings(self):
         zone={"name":"example.test","status":"active","paused":False,"plan":{"name":"Free"}}
-        settings=[{"id":"ssl","value":"full"},{"id":"always_use_https","value":"on"},{"id":"automatic_https_rewrites","value":"on"},{"id":"brotli","value":"on"},{"id":"rocket_loader","value":"off"},{"id":"min_tls_version","value":"1.2"}]
+        settings=[{"id":"ssl","value":"full"},{"id":"always_use_https","value":"on"},{"id":"automatic_https_rewrites","value":"on"},{"id":"brotli","value":"on"},{"id":"rocket_loader","value":"off"},{"id":"min_tls_version","value":"1.2"},{"id":"security_header","value":{"strict_transport_security":{"enabled":True,"max_age":31536000},"nosniff":True}}]
         dns=[{"name":"example.test","type":"AAAA","proxied":True},{"name":"www.example.test","type":"AAAA","proxied":True}]
         domains=[{"hostname":"example.test","service":"site-worker","environment":"production"},{"hostname":"www.example.test","service":"site-worker","environment":"production"}]
         scripts=[{"id":"site-worker","etag":"same"}]
@@ -45,7 +45,8 @@ class CloudflareAuditTests(unittest.TestCase):
           {"id":"ssl","value":"flexible"},{"id":"always_use_https","value":"on"},
           {"id":"automatic_https_rewrites","value":"on"},{"id":"brotli","value":"on"},
           {"id":"rocket_loader","value":"off"},{"id":"min_tls_version","value":"1.0"},
-          {"id":"browser_cache_ttl","value":14400},{"id":"cache_level","value":"aggressive"}
+          {"id":"browser_cache_ttl","value":14400},{"id":"cache_level","value":"aggressive"},
+          {"id":"security_header","value":{"strict_transport_security":{"enabled":False,"max_age":0,"include_subdomains":False,"preload":False,"nosniff":False}}}
         ]
         dns=[{"name":"clinicasaopauloparnamirim.com.br","type":"AAAA","proxied":True},
              {"name":"www.clinicasaopauloparnamirim.com.br","type":"AAAA","proxied":True},
@@ -60,7 +61,8 @@ class CloudflareAuditTests(unittest.TestCase):
         self.assertIn("minimum_tls_version_legacy",checks)
         self.assertIn("production_worker_name_mismatch",checks)
         self.assertEqual(r["summary"]["errors"],0)
-        self.assertEqual(r["summary"]["warnings"],3)
+        self.assertEqual(r["summary"]["warnings"],4)
+        self.assertEqual(r["summary"]["info"],1)
 
     def test_dns_record_contents_are_not_in_report(self):
         r=cf.assess_cloudflare({"name":"example.test","status":"active","paused":False},
