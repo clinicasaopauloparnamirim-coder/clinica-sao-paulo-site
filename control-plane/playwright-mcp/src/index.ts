@@ -51,6 +51,7 @@ interface WhatsAppEnv {
   NVIDIA_KEY_ROTATED?: string;
   NVIDIA_BASE_URL?: string;
   NVIDIA_MODEL?: string;
+  OPENEXECUTIVE_GATEWAY_TOKEN?: string;
   TYPESAFE_API_KEY?: string;
   LAYA_HTTP_URL?: string;
   LAYA_API_KEY?: string;
@@ -804,6 +805,63 @@ ${authenticated ? `<p>Acesso autorizado</p>
         return new Response("EVENT_RECEIVED", { status: 200, headers: { "cache-control": "no-store" } });
       }
       return new Response("Method Not Allowed", { status: 405 });
+    }
+
+    // Private OpenExecutive model gateway: keeps the NVIDIA key inside Cloudflare.
+    // Only the pinned Nemotron model is exposed; no arbitrary upstream URL/model forwarding.
+    if (pathname === "/openexecutive/v1/chat/completions") {
+      const gatewayToken = env.OPENEXECUTIVE_GATEWAY_TOKEN;
+      if (!gatewayToken || request.headers.get("authorization") !== `Bearer ${gatewayToken}`) {
+        return new Response("Unauthorized", { status: 401, headers: { "cache-control": "no-store" } });
+      }
+      if (request.method !== "POST") {
+        return new Response("Method Not Allowed", { status: 405, headers: { "allow": "POST", "cache-control": "no-store" } });
+      }
+      if (env.NVIDIA_KEY_ROTATED !== "true" || !env.NVIDIA_API_KEY) {
+        return new Response("Model gateway is not configured", { status: 503, headers: { "cache-control": "no-store" } });
+      }
+      const declaredLength = Number(request.headers.get("content-length") || "0");
+      if (declaredLength > 524288) return new Response("Payload Too Large", { status: 413 });
+      let payload: Record<string, unknown>;
+      try {
+        const text = await request.text();
+        if (text.length > 524288) return new Response("Payload Too Large", { status: 413 });
+        const parsed = JSON.parse(text);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || !Array.isArray((parsed as any).messages)) {
+          return new Response("Invalid chat completion payload", { status: 400 });
+        }
+        payload = parsed as Record<string, unknown>;
+      } catch {
+        return new Response("Invalid JSON", { status: 400 });
+      }
+      const model = "nvidia/nemotron-3.5-lightning-30b-a3b";
+      const base = (env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1").replace(/\/+$/, "");
+      let upstream: URL;
+      try { upstream = new URL(base + "/chat/completions"); }
+      catch { return new Response("Invalid upstream configuration", { status: 503 }); }
+      if (upstream.protocol !== "https:" || !["integrate.api.nvidia.com", "api.nvidia.com"].includes(upstream.hostname)) {
+        return new Response("Upstream host is not allowed", { status: 503 });
+      }
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 190000);
+      try {
+        const response = await fetch(upstream.toString(), {
+          method: "POST",
+          headers: { "content-type": "application/json", "authorization": "Bearer " + env.NVIDIA_API_KEY },
+          body: JSON.stringify({ ...payload, model }),
+          signal: controller.signal,
+          redirect: "error",
+        });
+        const headers = new Headers();
+        headers.set("content-type", response.headers.get("content-type") || "application/json");
+        headers.set("cache-control", "no-store");
+        headers.set("x-content-type-options", "nosniff");
+        return new Response(response.body, { status: response.status, headers });
+      } catch {
+        return new Response("Model gateway request failed", { status: 502, headers: { "cache-control": "no-store" } });
+      } finally {
+        clearTimeout(timeout);
+      }
     }
 
     // Control Tower MCP (Ads / GA4 / GSC) — JSON-RPC HTTP
