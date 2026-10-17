@@ -7,6 +7,7 @@ Ferramenta própria de auditoria técnica de SEO, somente leitura, em Python 3.1
 ```bash
 python tools/seo-gauntlet/seo_audit.py https://clinicasaopauloparnamirim.com.br/ --crawl --max-pages 30
 python tools/seo-gauntlet/advanced_checks.py seo-audit-report.json seo-audit-advanced.json
+python tools/seo-gauntlet/crosspage_checks.py seo-audit-report.json seo-audit-crosspage.json
 python -m unittest discover -s tools/seo-gauntlet -p "test_*.py" -v
 ```
 
@@ -37,7 +38,7 @@ A pontuação é **heurística interna**, não uma pontuação oficial do Google
 | robots.txt | HTTP, regras básicas e diretiva Sitemap | Grupos, RFC 9309, probes por user-agent e cache-edge |
 | Sitemap XML | XML e status das URLs | Sitemap index/gzip/limites, lastmod e amostragem configurável |
 | Links internos | Crawl limitado | Grafo, links quebrados, páginas órfãs e profundidade |
-| Dados estruturados | JSON-LD e extração de tipos | Validação semântica Schema.org / Google Rich Results |
+| Dados estruturados | JSON-LD, tipos e verificações básicas de nome/endereço | Validação semântica Schema.org / Google Rich Results |
 | Performance / CWV | Não implementado | PageSpeed Insights / CrUX; separar lab de field data |
 | Search Console | Não implementado | OAuth e leitura de propriedade autorizada |
 | GA4 | Não implementado | OAuth/property e auditoria de eventos em modo leitura |
