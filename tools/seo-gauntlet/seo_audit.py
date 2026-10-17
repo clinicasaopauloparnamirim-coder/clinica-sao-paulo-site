@@ -167,7 +167,20 @@ def audit_site(url, crawl=False, max_pages=30):
                 u=urllib.parse.urlsplit(dest)
                 if u.scheme in ("http","https") and (u.hostname or "").lower()==host and dest not in seen and dest not in queue: queue.append(dest)
     if parts.scheme!="https": findings.append(Finding("warning","https_preferred","start_url","URL inicial não usa HTTPS",url))
-    security_headers=audit_security_headers(pages[0]["final_url"],pages[0].get("response_headers",{}),findings) if pages else {}
+    security_headers={}
+    collected_header_findings=[]
+    for page in pages:
+        local_findings=[]
+        security_headers[page["url"]]=audit_security_headers(page["final_url"],page.get("response_headers",{}),local_findings)
+        collected_header_findings.extend(local_findings)
+    # Aggregate a zone/Worker-wide header gap instead of subtracting the score once per URL.
+    for check in ("hsts_response_header_missing","nosniff_response_header_missing"):
+        affected=[f for f in collected_header_findings if f.check==check]
+        if affected:
+            first=affected[0]
+            msg=first.message if len(affected)==1 else f"{first.message} Ausente em {len(affected)}/{len(pages)} páginas rastreadas."
+            evidence=", ".join(f.url for f in affected)
+            findings.append(Finding(first.severity,check,first.url,msg,evidence))
     robots=robots_audit(base,findings)
     sitemap_urls=robots["sitemaps"] or [base+"/sitemap.xml"]
     sitemaps=[sitemap_audit(s,findings) for s in sitemap_urls[:5]]
