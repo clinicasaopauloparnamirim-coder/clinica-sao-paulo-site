@@ -35,6 +35,8 @@ Do not add the API key to `wrangler.jsonc`, GitHub files, build logs, health sna
 
 ## Model and policy boundary
 
+OpenExecutive supports an OpenAI-compatible model gateway through `LOCAL_MODELS_ENABLED`, `LOCAL_BASE_URL`, `LOCAL_API_KEY`, and `LOCAL_MODELS`. A future deployment can route its specialist calls to the clinic-approved NVIDIA Nemotron NIM endpoint, but only after the NIM key is provisioned separately in the upstream service's secret store. The Cloudflare Worker secret inventory confirms that the current Worker has no `OPENEXECUTIVE_*` configuration; secret values were not read or copied.
+
 This integration does not call NVIDIA/Nemotron directly and must not be used to bypass the existing Judge/Red Team/Gauntlet policies. The NVIDIA brain remains gated until its own credential rotation and real inference test pass. An OpenExecutive recommendation is evidence to evaluate, not a final decision or an instruction to execute.
 
 ## Acceptance checklist
@@ -46,7 +48,7 @@ This integration does not call NVIDIA/Nemotron directly and must not be used to 
 - [x] Sensitive-pattern rejection for common email, CPF, and credential formats.
 - [x] Upstream tool must advertise `readOnlyHint=true`.
 - [x] `ask_executive` and other non-verified tools are excluded.
-- [ ] PR CI typecheck and architecture checks pass.
+- [x] PR CI typecheck, architecture, and Worker build passed on commit `8922abfea678e6540c4b32913d7a0805d6d84340`.
 - [ ] Upstream authenticated handshake and specialist call pass in staging.
 - [ ] Denied authentication, absent config, malformed MCP response, timeout, and unsafe inputs are tested.
 - [ ] Redacted evidence is recorded from the deployed Worker; no production activation before review.
