@@ -66,6 +66,12 @@ def run_psi(url: str, strategy: str="mobile", api_key: str|None=None, timeout: i
         report=normalize_psi_response(url,strategy,None,{},f"{type(e).__name__}: {e}")
     report["duration_seconds"]=round(time.monotonic()-started,2)
     report["api_key_configured"]=bool(api_key)
+    # A generic HTTP error string may echo the request URL, which contains the key query parameter.
+    # Never persist an API key into a JSON report or CI artifact.
+    if api_key and isinstance(report.get("error"),dict):
+        message=str(report["error"].get("message",""))
+        report["error"]["message"]=message.replace(api_key,"[REDACTED]")
+        report["error"]["message"]=report["error"]["message"].replace(urllib.parse.quote(api_key,safe=""),"[REDACTED]")
     return report
 
 def main():
