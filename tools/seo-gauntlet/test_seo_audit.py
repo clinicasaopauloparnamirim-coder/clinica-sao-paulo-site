@@ -48,6 +48,27 @@ class SEOAuditUnitTests(unittest.TestCase):
         seo_audit.page_audit("https://example.test/", {"status":200,"final_url":"https://example.test/","body":html,"headers":{},"elapsed_ms":1}, findings)
         self.assertIn("jsonld_invalid", {f.check for f in findings})
 
+    def test_security_header_audit_flags_missing_hsts_and_nosniff(self):
+        findings=[]
+        result=seo_audit.audit_security_headers("https://example.test/",{},findings)
+        self.assertNotIn("strict-transport-security",result)
+        self.assertIn("hsts_response_header_missing",{f.check for f in findings})
+        self.assertIn("nosniff_response_header_missing",{f.check for f in findings})
+
+    def test_security_header_audit_accepts_hsts_and_nosniff(self):
+        findings=[]
+        result=seo_audit.audit_security_headers("https://example.test/",{
+            "Strict-Transport-Security":"max-age=31536000; includeSubDomains",
+            "X-Content-Type-Options":"nosniff"
+        },findings)
+        self.assertIn("strict-transport-security",result)
+        self.assertEqual(findings,[])
+
+    def test_http_url_does_not_get_hsts_failure(self):
+        findings=[]
+        seo_audit.audit_security_headers("http://example.test/",{},findings)
+        self.assertEqual(findings,[])
+
     def test_rejects_non_http_scheme(self):
         with self.assertRaises(ValueError):
             seo_audit.audit_site("ftp://example.test/")
