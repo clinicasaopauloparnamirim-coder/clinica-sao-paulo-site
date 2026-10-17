@@ -397,7 +397,7 @@ async function forwardControlAgent(request: Request, env: WhatsAppEnv) {
 
 const OPENEXECUTIVE_GATEWAY_PUBLIC_JWK: JsonWebKey = {
   kty: "RSA",
-  n: "wjzdKybTJiZQ5E_mL3fC6QHbngwLO_ubbcjLuPdUWp89DeC9ewz9qNH42rVl6Zu_HC3Z8VYFqsHqxMtj8dhpWBGZ25pqPupS0fCm-KQPGsFfsvKkDPRrV-mDvMLeQBayhrJXkcn3ONxsRJmvoskgaVSoTIca58FIjjJSr6mmnM5rEWJlD9hRCJZ8gEfN3GOc_dUSLDHnULRycz2SpwLGu5N9ZFRuwZLYc4WYSnl7x2UFrM_1uNEXXeb5NsqaV6GehRwj3Ua2p_2W-3zYCEKgJaZNqKLO5xXPIJeM1PMdPhICgzaCKk1ey178ccStbSTdHBrbN2lTjWnio68sbdKPRQ",
+  n: "uRzX1g7WeaNzPXBJF9Kd1cKukYumCuG40hOit31uzj8C5ZzK44Cuts63eFSVIhFEd4NvlRWxagPGjFG5wELLIwBYuPRo_uaJh0EM5LA-YpaIs_2L-T7hJxwZKJ9KGGbLru427C7Hj4k0jJce9jWwcyX4R7G2aJEuda_UbhmfMmi4ptHrwtup1h9q2to5wUSezX3clrE2eIUXyd5iOh6Mo_buPssJkYLPIk_2One3bhnXmTOVFZ8biWFeUTqSQ3lsIhrS5wnnXeDteoeaZOPFwfPEgJt6q8uVHZ623cWTPKdXgoluZpeFMBWKV7gXeGOSMtFIfTtdHALdxa8GtlioBw",
   e: "AQAB",
   alg: "RS256",
   ext: true,
