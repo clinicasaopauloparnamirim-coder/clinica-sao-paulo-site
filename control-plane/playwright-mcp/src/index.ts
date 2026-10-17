@@ -394,6 +394,82 @@ async function forwardControlAgent(request: Request, env: WhatsAppEnv) {
   return stub.fetch(new Request(target, request));
 }
 
+
+const OPENEXECUTIVE_GATEWAY_PUBLIC_JWK: JsonWebKey = {
+  kty: "RSA",
+  n: "wjzdKybTJiZQ5E_mL3fC6QHbngwLO_ubbcjLuPdUWp89DeC9ewz9qNH42rVl6Zu_HC3Z8VYFqsHqxMtj8dhpWBGZ25pqPupS0fCm-KQPGsFfsvKkDPRrV-mDvMLeQBayhrJXkcn3ONxsRJmvoskgaVSoTIca58FIjjJSr6mmnM5rEWJlD9hRCJZ8gEfN3GOc_dUSLDHnULRycz2SpwLGu5N9ZFRuwZLYc4WYSnl7x2UFrM_1uNEXXeb5NsqaV6GehRwj3Ua2p_2W-3zYCEKgJaZNqKLO5xXPIJeM1PMdPhICgzaCKk1ey178ccStbSTdHBrbN2lTjWnio68sbdKPRQ",
+  e: "AQAB",
+  alg: "RS256",
+  ext: true,
+  key_ops: ["verify"],
+};
+let openExecutiveGatewayPublicKey: Promise<CryptoKey> | null = null;
+
+function decodeOpenExecutiveBase64Url(value: string): Uint8Array {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+  const binary = atob(padded);
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
+async function verifyOpenExecutiveGatewayToken(authorization: string | null): Promise<boolean> {
+  if (!authorization || !authorization.startsWith("Bearer ")) return false;
+  const token = authorization.slice("Bearer ".length);
+  const parts = token.split(".");
+  if (parts.length !== 3 || parts.some((part) => !part)) return false;
+
+  try {
+    const header = JSON.parse(new TextDecoder().decode(decodeOpenExecutiveBase64Url(parts[0]))) as {
+      alg?: string; kid?: string; typ?: string;
+    };
+    const claims = JSON.parse(new TextDecoder().decode(decodeOpenExecutiveBase64Url(parts[1]))) as {
+      iss?: string; aud?: string; exp?: number; nbf?: number; iat?: number;
+    };
+    const now = Math.floor(Date.now() / 1000);
+    if (
+      header.alg !== "RS256" ||
+      header.kid !== "oe-gateway-rs256-20261017" ||
+      claims.iss !== "openexecutive-clinic-gateway" ||
+      claims.aud !== "clinica-sao-paulo-site" ||
+      typeof claims.exp !== "number" ||
+      claims.exp <= now ||
+      (typeof claims.nbf === "number" && claims.nbf > now + 30) ||
+      (typeof claims.iat === "number" && claims.iat > now + 30)
+    ) return false;
+
+    openExecutiveGatewayPublicKey ??= crypto.subtle.importKey(
+      "jwk",
+      OPENEXECUTIVE_GATEWAY_PUBLIC_JWK,
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      false,
+      ["verify"],
+    );
+    const publicKey = await openExecutiveGatewayPublicKey;
+    return await crypto.subtle.verify(
+      { name: "RSASSA-PKCS1-v1_5" },
+      publicKey,
+      decodeOpenExecutiveBase64Url(parts[2]),
+      new TextEncoder().encode(parts[0] + "." + parts[1]),
+    );
+  } catch {
+    return false;
+  }
+}
+
+
+async function deriveOpenExecutiveMcpSigningKey(secret: string, extractable: boolean): Promise<CryptoKey> {
+  const seedInput = new TextEncoder().encode("OpenExecutive MCP request signing v1\0" + secret);
+  const seed = new Uint8Array(await crypto.subtle.digest("SHA-256", seedInput));
+  const prefix = Uint8Array.from([
+    0x30, 0x2e, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06,
+    0x03, 0x2b, 0x65, 0x70, 0x04, 0x22, 0x04, 0x20,
+  ]);
+  const pkcs8 = new Uint8Array(prefix.length + seed.length);
+  pkcs8.set(prefix, 0);
+  pkcs8.set(seed, prefix.length);
+  return crypto.subtle.importKey("pkcs8", pkcs8, { name: "Ed25519" }, extractable, ["sign"]);
+}
+
 export default {
   async fetch(request: Request, env: WhatsAppEnv, ctx: ExecutionContext) {
     const requestUrl = new URL(request.url);
@@ -408,6 +484,27 @@ export default {
       });
     }
     const { pathname } = requestUrl;
+
+    // Expose only the derived Ed25519 public key for authenticating signed MCP calls.
+    // The private key is derived from the existing MCP_AUTH_TOKEN and never leaves this Worker.
+    if (pathname === "/openexecutive/public-key") {
+      if (request.method !== "GET") {
+        return new Response("Method Not Allowed", { status: 405, headers: { "allow": "GET", "cache-control": "no-store" } });
+      }
+      if (!env.MCP_AUTH_TOKEN) {
+        return Response.json({ ok: false, error: "MCP signing is not configured" }, { status: 503, headers: { "cache-control": "no-store" } });
+      }
+      try {
+        const privateKey = await deriveOpenExecutiveMcpSigningKey(env.MCP_AUTH_TOKEN, true);
+        const key = await crypto.subtle.exportKey("jwk", privateKey) as JsonWebKey;
+        if (typeof key.x !== "string" || !key.x) throw new Error("Missing Ed25519 public component");
+        return Response.json({ ok: true, alg: "Ed25519", key_id: "openexecutive-mcp-ed25519-v1", public_key: key.x }, {
+          headers: { "cache-control": "no-store", "x-content-type-options": "nosniff" },
+        });
+      } catch {
+        return Response.json({ ok: false, error: "Public key derivation failed" }, { status: 503, headers: { "cache-control": "no-store" } });
+      }
+    }
 
     if (pathname === "/health") {
       if (request.method !== "GET" && request.method !== "HEAD") {
@@ -804,6 +901,62 @@ ${authenticated ? `<p>Acesso autorizado</p>
         return new Response("EVENT_RECEIVED", { status: 200, headers: { "cache-control": "no-store" } });
       }
       return new Response("Method Not Allowed", { status: 405 });
+    }
+
+    // Private OpenExecutive model gateway: keeps the NVIDIA key inside Cloudflare.
+    // Only the pinned Nemotron model is exposed; no arbitrary upstream URL/model forwarding.
+    if (pathname === "/openexecutive/v1/chat/completions") {
+      if (!(await verifyOpenExecutiveGatewayToken(request.headers.get("authorization")))) {
+        return new Response("Unauthorized", { status: 401, headers: { "cache-control": "no-store" } });
+      }
+      if (request.method !== "POST") {
+        return new Response("Method Not Allowed", { status: 405, headers: { "allow": "POST", "cache-control": "no-store" } });
+      }
+      if (env.NVIDIA_KEY_ROTATED !== "true" || !env.NVIDIA_API_KEY) {
+        return new Response("Model gateway is not configured", { status: 503, headers: { "cache-control": "no-store" } });
+      }
+      const declaredLength = Number(request.headers.get("content-length") || "0");
+      if (declaredLength > 524288) return new Response("Payload Too Large", { status: 413 });
+      let payload: Record<string, unknown>;
+      try {
+        const text = await request.text();
+        if (text.length > 524288) return new Response("Payload Too Large", { status: 413 });
+        const parsed = JSON.parse(text);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || !Array.isArray((parsed as any).messages)) {
+          return new Response("Invalid chat completion payload", { status: 400 });
+        }
+        payload = parsed as Record<string, unknown>;
+      } catch {
+        return new Response("Invalid JSON", { status: 400 });
+      }
+      const model = "nvidia/nemotron-3.5-lightning-30b-a3b";
+      const base = (env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1").replace(/\/+$/, "");
+      let upstream: URL;
+      try { upstream = new URL(base + "/chat/completions"); }
+      catch { return new Response("Invalid upstream configuration", { status: 503 }); }
+      if (upstream.protocol !== "https:" || !["integrate.api.nvidia.com", "api.nvidia.com"].includes(upstream.hostname)) {
+        return new Response("Upstream host is not allowed", { status: 503 });
+      }
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 190000);
+      try {
+        const response = await fetch(upstream.toString(), {
+          method: "POST",
+          headers: { "content-type": "application/json", "authorization": "Bearer " + env.NVIDIA_API_KEY },
+          body: JSON.stringify({ ...payload, model }),
+          signal: controller.signal,
+          redirect: "error",
+        });
+        const headers = new Headers();
+        headers.set("content-type", response.headers.get("content-type") || "application/json");
+        headers.set("cache-control", "no-store");
+        headers.set("x-content-type-options", "nosniff");
+        return new Response(response.body, { status: response.status, headers });
+      } catch {
+        return new Response("Model gateway request failed", { status: 502, headers: { "cache-control": "no-store" } });
+      } finally {
+        clearTimeout(timeout);
+      }
     }
 
     // Control Tower MCP (Ads / GA4 / GSC) — JSON-RPC HTTP

@@ -5,7 +5,9 @@
   "compatibility_flags": ["nodejs_compat"],
   "keep_vars": true,
   "vars": {
-    "WHATSAPP_PHONE_NUMBER_ID": "367795153087598"
+    "WHATSAPP_PHONE_NUMBER_ID": "367795153087598",
+    "OPENEXECUTIVE_ENABLED": "true",
+    "OPENEXECUTIVE_MCP_URL": "https://openexecutive-api-production-3d98.up.railway.app/mcp"
   },
   "ai": {
     "binding": "AI"
