@@ -42,10 +42,11 @@ def assess_cloudflare(zone: dict[str,Any], settings: dict[str,Any], dns_records:
         add("warning","ssl_mode_flexible_review","SSL/TLS está em Flexible. Revisar se há origem HTTP real e se Full (strict) é aplicável; não alterar automaticamente.",{"ssl":ssl,"context":"Custom Worker domains may not use a conventional origin."})
     security_header=setting_map.get("security_header")
     hsts=(security_header or {}).get("strict_transport_security",{}) if isinstance(security_header,dict) else {}
-    if not hsts.get("enabled",False):
-        add("warning","hsts_disabled","HSTS está desativado na configuração de security_header; confirmar que o site e todos os subdomínios necessários suportam HTTPS antes de ativar.",{"enabled":hsts.get("enabled",False),"max_age":hsts.get("max_age",0)})
-    if isinstance(security_header,dict) and not security_header.get("nosniff",False):
-        add("info","nosniff_disabled","X-Content-Type-Options/nosniff está desativado na configuração gerenciada da zona; verificar também os headers emitidos pelo Worker.",{"nosniff":security_header.get("nosniff",False)})
+    if isinstance(security_header,dict):
+        if not hsts.get("enabled",False):
+            add("warning","hsts_disabled","HSTS está desativado na configuração de security_header; confirmar que o site e todos os subdomínios necessários suportam HTTPS antes de ativar.",{"enabled":hsts.get("enabled",False),"max_age":hsts.get("max_age",0)})
+        if not security_header.get("nosniff",False):
+            add("info","nosniff_disabled","X-Content-Type-Options/nosniff está desativado na configuração gerenciada da zona; verificar também os headers emitidos pelo Worker.",{"nosniff":security_header.get("nosniff",False)})
     elif ssl in ("off",None):
         add("error","ssl_mode_weak","SSL/TLS não está em um modo seguro reconhecido",{"ssl":ssl})
     if setting_map.get("always_use_https")!="on":
