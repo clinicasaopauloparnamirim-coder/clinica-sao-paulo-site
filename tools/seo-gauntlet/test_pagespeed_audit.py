@@ -1,5 +1,6 @@
-import sys, unittest
+import io, json, sys, unittest, urllib.error
 from pathlib import Path
+from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import pagespeed_audit as psi
 
@@ -33,6 +34,18 @@ class PageSpeedTests(unittest.TestCase):
         self.assertIsNone(r["field_data"])
         self.assertFalse(r["summary"]["field_data_available"])
         self.assertEqual(r["summary"]["field_data_status"],"no_data")
+
+    def test_api_key_is_redacted_from_generic_http_errors(self):
+        key="PSI_SECRET_TEST_KEY_12345"
+        http_error=urllib.error.HTTPError(
+            "https://www.googleapis.com/pagespeedonline/v5/runPagespeed?key="+key,
+            429,"Too Many Requests",{},io.BytesIO(b'{}'))
+        with patch.object(psi.urllib.request,"urlopen",side_effect=http_error):
+            report=psi.run_psi("https://example.test/","mobile",api_key=key)
+        serialized=json.dumps(report)
+        self.assertNotIn(key,serialized)
+        self.assertIn("[REDACTED]",report["error"]["message"])
+        self.assertEqual(report["status"],"quota_limited")
 
     def test_invalid_url_strategy_rejected(self):
         with self.assertRaises(ValueError): psi.run_psi("file:///etc/passwd")
