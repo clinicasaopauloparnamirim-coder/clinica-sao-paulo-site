@@ -85,5 +85,27 @@ jobs:
           const deployIndex = deployWorkflow.indexOf('Deploy Worker + public assets');
           const smokeIndex = deployWorkflow.indexOf('Smoke test');
           if (!(cleanupIndex >= 0 && cleanupIndex < deployIndex && deployIndex < smokeIndex)) throw new Error('Unsafe binding cleanup must happen before the final source deploy and smoke test.');
-          console.log(JSON.stringify({ok:true,brainCount,agentCount,publicHealth:'minimal',protectedDiagnostics:'auth-required',crmEndpoints:3,dashboard:'present',deploySmoke:'aligned'},null,2));
+          const openExecClient = fs.readFileSync('control-plane/playwright-mcp/src/openexecutive-mcp.ts','utf8');
+          const openExecTools = fs.readFileSync('control-plane/playwright-mcp/src/mcp-tower.ts','utf8');
+          const externalAgents = fs.readFileSync('control-plane/playwright-mcp/src/external-agents.ts','utf8');
+          for (const token of [
+            'OPENEXECUTIVE_ENABLED',
+            'OPENEXECUTIVE_MCP_URL',
+            'OPENEXECUTIVE_API_KEY',
+            'readOnlyHint !== true',
+            'REQUEST_TIMEOUT_MS = 18_000',
+            'MAX_RESPONSE_CHARS = 64_000',
+            'redirect: "error"',
+            'hasSensitiveInput(query)'
+          ]) if (!openExecClient.includes(token)) throw new Error(`OpenExecutive safety contract missing: ${token}`);
+          if (!openExecTools.includes('name: "openexecutive_consult"') ||
+              !openExecTools.includes('return openExecutiveConsult(env, specialist, query)') ||
+              !openExecTools.includes('openexecutive_status')) throw new Error('OpenExecutive tools are not routed through the authenticated Control Tower MCP.');
+          if (!externalAgents.includes('id: "openexecutive"') ||
+              !externalAgents.includes('not-runtime-proven') ||
+              !externalAgents.includes('não cria um novo cérebro')) throw new Error('OpenExecutive must remain a separate advisory external council, not another brain.');
+          if (/name:\\s*["']ask_executive["']/.test(openExecClient)) throw new Error('OpenExecutive ask_executive is excluded because it can write episodic memory.');
+          const oeRuntimeConfig = fs.readFileSync('wrangler.jsonc','utf8');
+          if (oeRuntimeConfig.includes('OPENEXECUTIVE_API_KEY') || oeRuntimeConfig.includes('OPENEXECUTIVE_ENABLED')) throw new Error('OpenExecutive activation/secrets must not be committed to wrangler config.');
+          console.log(JSON.stringify({ok:true,brainCount,agentCount,publicHealth:'minimal',protectedDiagnostics:'auth-required',crmEndpoints:3,dashboard:'present',deploySmoke:'aligned',openExecutive:'default-off/read-only-gated'},null,2));
           NODE
