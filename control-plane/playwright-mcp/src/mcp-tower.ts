@@ -38,7 +38,6 @@ type TowerEnv = {
   NVIDIA_MODEL?: string;
   OPENEXECUTIVE_ENABLED?: string;
   OPENEXECUTIVE_MCP_URL?: string;
-  OPENEXECUTIVE_API_KEY?: string;
 };
 
 const SERVER_INFO = {
