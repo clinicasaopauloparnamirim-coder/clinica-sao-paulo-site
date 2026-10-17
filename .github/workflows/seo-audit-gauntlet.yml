@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AUDIT_URL: ${{ inputs.url || 'https://clinicasaopauloparnamirim.com.br/' }}
-      AUDIT_CRAWL: ${{ inputs.crawl || false }}
+      AUDIT_CRAWL: ${{ github.event_name == 'pull_request' || inputs.crawl }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
