@@ -29,7 +29,8 @@ class CloudflareAPI:
 
 def assess_cloudflare(zone: dict[str,Any], settings: dict[str,Any], dns_records: list[dict[str,Any]],
                       worker_domains: list[dict[str,Any]], worker_scripts: list[dict[str,Any]],
-                      expected_worker: str=DEFAULT_WORKER, domain: str=SITE_DOMAIN) -> dict[str,Any]:
+                      expected_worker: str=DEFAULT_WORKER, domain: str=SITE_DOMAIN,
+                      response_headers: dict[str,Any]|None=None) -> dict[str,Any]:
     findings=[]; setting_map={s.get("id"):s.get("value") for s in settings if isinstance(s,dict)}
     domain_map={d.get("hostname"):d for d in worker_domains if d.get("hostname")}
     scripts={s.get("id") or s.get("script"):s for s in worker_scripts if (s.get("id") or s.get("script"))}
@@ -40,15 +41,21 @@ def assess_cloudflare(zone: dict[str,Any], settings: dict[str,Any], dns_records:
     ssl=setting_map.get("ssl")
     if ssl=="flexible":
         add("warning","ssl_mode_flexible_review","SSL/TLS está em Flexible. Revisar se há origem HTTP real e se Full (strict) é aplicável; não alterar automaticamente.",{"ssl":ssl,"context":"Custom Worker domains may not use a conventional origin."})
+    elif ssl in ("off",None):
+        add("error","ssl_mode_weak","SSL/TLS não está em um modo seguro reconhecido",{"ssl":ssl})
     security_header=setting_map.get("security_header")
     hsts=(security_header or {}).get("strict_transport_security",{}) if isinstance(security_header,dict) else {}
-    if isinstance(security_header,dict):
+    public_headers={str(k).lower():str(v).strip() for k,v in (response_headers or {}).items()}
+    if response_headers is not None:
+        if not public_headers.get("strict-transport-security"):
+            add("warning","hsts_response_header_missing","A resposta HTTPS pública não envia Strict-Transport-Security; conferir Worker e configuração de edge antes de ativar HSTS.",{"zone_hsts_enabled":hsts.get("enabled") if isinstance(hsts,dict) else None})
+        if public_headers.get("x-content-type-options","").lower()!="nosniff":
+            add("info","nosniff_response_header_missing","A resposta pública não envia X-Content-Type-Options: nosniff.")
+    elif isinstance(security_header,dict):
         if not hsts.get("enabled",False):
             add("warning","hsts_disabled","HSTS está desativado na configuração de security_header; confirmar que o site e todos os subdomínios necessários suportam HTTPS antes de ativar.",{"enabled":hsts.get("enabled",False),"max_age":hsts.get("max_age",0)})
         if not security_header.get("nosniff",False):
             add("info","nosniff_disabled","X-Content-Type-Options/nosniff está desativado na configuração gerenciada da zona; verificar também os headers emitidos pelo Worker.",{"nosniff":security_header.get("nosniff",False)})
-    elif ssl in ("off",None):
-        add("error","ssl_mode_weak","SSL/TLS não está em um modo seguro reconhecido",{"ssl":ssl})
     if setting_map.get("always_use_https")!="on":
         add("warning","always_https_off","Always Use HTTPS não está ligado",{"value":setting_map.get("always_use_https")})
     if setting_map.get("automatic_https_rewrites")!="on":
@@ -92,7 +99,8 @@ def assess_cloudflare(zone: dict[str,Any], settings: dict[str,Any], dns_records:
     # DNS content is intentionally omitted from the report.
     safe_dns=[{"type":r.get("type"),"name":r.get("name"),"proxied":r.get("proxied"),"ttl":r.get("ttl")} for r in dns_records]
     safe_settings={k:setting_map.get(k) for k in ("ssl","always_use_https","automatic_https_rewrites","brotli","browser_cache_ttl","cache_level","rocket_loader","http2","http3","min_tls_version","tls_1_3","security_level","security_header")}
-    return {"tool":"Clinica SEO Gauntlet Cloudflare Read-only","version":"0.1.0","read_only":True,"domain":domain,
+    safe_response_headers={k:public_headers[k] for k in ("strict-transport-security","x-content-type-options","x-frame-options","referrer-policy","permissions-policy","cache-control","server") if k in public_headers}
+    return {"tool":"Clinica SEO Gauntlet Cloudflare Read-only","version":"0.1.1","read_only":True,"domain":domain,"public_response_headers":safe_response_headers,
         "zone":{"name":zone.get("name"),"status":zone.get("status"),"paused":zone.get("paused"),"plan":(zone.get("plan") or {}).get("name")},
         "settings":safe_settings,"worker_domains":[{"hostname":d.get("hostname"),"service":d.get("service"),"environment":d.get("environment")} for d in worker_domains],
         "worker_inventory":[{"name":s.get("id") or s.get("script"),"etag":s.get("etag")} for s in worker_scripts],
@@ -122,7 +130,11 @@ def run_live(domain=SITE_DOMAIN,expected_worker=DEFAULT_WORKER):
     scripts_resp=api.get(f"/accounts/{account_id}/workers/scripts",{"per_page":100})
     for name,resp in (("settings",settings_resp),("worker domains",domains_resp),("worker scripts",scripts_resp)):
         if not resp.get("success"): raise RuntimeError(f"Falha lendo {name} na Cloudflare")
-    report=assess_cloudflare(zone,settings_resp.get("result") or [],dns,domains_resp.get("result") or [],scripts_resp.get("result") or [],expected_worker,domain)
+    # Cross-check config against the effective public response, using a GET only.
+    from seo_audit import fetch as fetch_public
+    public=fetch_public("https://"+domain+"/")
+    public_headers=public.get("headers") or {}
+    report=assess_cloudflare(zone,settings_resp.get("result") or [],dns,domains_resp.get("result") or [],scripts_resp.get("result") or [],expected_worker,domain,public_headers)
     report["generated_at_utc"]=time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime())
     return report
 
