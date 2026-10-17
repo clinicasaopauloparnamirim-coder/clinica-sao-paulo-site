@@ -1,10 +1,20 @@
 # Google Ads — brief de melhoria criativa com Taste Skill + Impeccable
 
 ## Estado
-Preparação de criativos e critérios de landing page. Não publicado. A conexão Google Ads disponível nesta sessão não lista contas; portanto, não foi possível ler anúncios ativos nem aplicar mudanças na plataforma.
+Leitura real da conta concluída via conexão Google Ads/Composio; mudanças em anúncios não executadas. A ferramenta de mutação de anúncios foi explicitamente restringida pelo ambiente e não pode ser contornada. Nenhum orçamento, lance, palavra-chave, anúncio ou conversão foi alterado.
+
+## Snapshot de desempenho (últimos 30 dias, consulta feita em 17/10/2026)
+- Conta: `4603647788`.
+- Campanha ativa: `SEARCH | PARNAMIRIM | ALTA INTENÇÃO` (`24289443969`), status `ENABLED`, orçamento nominal consultado: R$ 17/dia.
+- Impressões: 1.199; cliques: 92; CTR: 7,67%; gasto: R$ 173,59; conversões reportadas pelo Google Ads: 7; CPA aritmético: R$ 24,80; CPC médio aproximado: R$ 1,89.
+- `Search-2` (`24146336625`) está `PAUSED`; janela consultada: 943 impressões, 51 cliques, R$ 88,18 de gasto e 5 conversões históricas reportadas. Não foi reativada.
+- A campanha ativa tem vários anúncios habilitados; dois anúncios retornados na leitura foram `826284999581` (36 cliques, 4 conversões, R$ 65,04 de custo, 421 impressões) e `826284997430` (32 cliques, 2 conversões, R$ 59,35 de custo, 394 impressões). Esses números são por anúncio e não devem ser somados como se fossem a campanha inteira.
+- A leitura de termos de pesquisa retornou resultados paginados/limitados; os exemplos visíveis incluem consultas locais de alta intenção. Não concluir desperdício de gasto nem adicionar negativas sem consolidar a lista completa e verificar conversões qualificadas.
+
+**Limite da evidência:** conversões são as reportadas pelo Google Ads; esta consulta, sozinha, não comprova que todas sejam leads reais do WhatsApp. O snapshot é uma janela de 30 dias e não representa necessariamente o dia atual.
 
 ## Campanha de referência
-SEARCH | PARNAMIRIM | ALTA INTENÇÃO (identificador previamente registrado: 24289443969). Não alterar orçamento, segmentação, palavras-chave, lances, negativas nem anúncios existentes sem acesso à conta e leitura do estado atual.
+SEARCH | PARNAMIRIM | ALTA INTENÇÃO (ID `24289443969`). O estado atual foi lido em 17/10/2026. O acesso de leitura está funcionando, mas a mutação de anúncios está bloqueada pelo ambiente Composio. Preservar orçamento, segmentação, palavras-chave, lances, negativas e anúncios existentes até a ferramenta de escrita permitida estar disponível e a mensuração de leads ser validada.
 
 ## Princípios para anúncios de pesquisa
 - Responder à intenção da consulta; evitar slogans vagos.
