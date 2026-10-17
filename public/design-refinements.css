@@ -1,25 +1,21 @@
 /* Clínica São Paulo — Taste Skill art direction + Impeccable mobile polish.
    Keep the established forest/cream/gold identity; vary composition by service. */
-body.page--home{--page-hero-bg:#f5f7f3;--page-photo-position:66% 35%}
-body.page--dentist{--page-hero-bg:#f5f7f3;--page-photo-position:50% center}
-body.page--clinic{--page-hero-bg:#f1efe7;--page-photo-position:55% center}
-body.page--orthodontics{--page-hero-bg:#edf1eb;--page-photo-position:52% center}
-body.page--whitening{--page-hero-bg:#fffdf8;--page-photo-position:54% center}
-body.page--cleaning{--page-hero-bg:#edf0e8;--page-photo-position:50% center}
-body.page--veneers{--page-hero-bg:#f4ede1;--page-photo-position:54% center}
-body.page--restoration{--page-hero-bg:#f5f7f3;--page-photo-position:50% center}
-body.page--root-canal{--page-hero-bg:#e9eee8;--page-photo-position:50% center}
+body.page--home{--page-hero-bg:#f5f7f3}
+body.page--dentist{--page-hero-bg:#f5f7f3}
+body.page--clinic{--page-hero-bg:#f1efe7}
+body.page--orthodontics{--page-hero-bg:#edf1eb}
+body.page--whitening{--page-hero-bg:#fffdf8}
+body.page--cleaning{--page-hero-bg:#edf0e8}
+body.page--veneers{--page-hero-bg:#f4ede1}
+body.page--restoration{--page-hero-bg:#f5f7f3}
+body.page--root-canal{--page-hero-bg:#e9eee8}
 
 .hero{background:var(--page-hero-bg,var(--bg))}
-.hero-photo{object-position:var(--page-photo-position,66% center)}
 .hero h1{text-wrap:balance;max-width:20ch}
 .hero-copy{text-wrap:pretty;max-width:52ch}
-.image-credit{position:absolute;right:12px;bottom:12px;z-index:2;display:inline-block;max-width:calc(100% - 24px);padding:4px 7px;background:rgba(255,253,248,.9);color:#23362d;font-size:12px;line-height:1.35;text-decoration:none}
-.image-credit:hover,.image-credit:focus-visible{text-decoration:underline;background:#fffdf8}
 body.page--dentist .hero,body.page--veneers .hero,body.page--root-canal .hero{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 body.page--dentist .hero-photo,body.page--veneers .hero-photo,body.page--root-canal .hero-photo{grid-column:1;grid-row:1}
 body.page--dentist .hero-inner,body.page--veneers .hero-inner,body.page--root-canal .hero-inner{grid-column:2;grid-row:1}
-body.page--dentist .image-credit,body.page--veneers .image-credit,body.page--root-canal .image-credit{left:12px;right:auto}
 body.page--clinic .hero{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)}
 body.page--orthodontics .hero{grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr)}
 body.page--whitening .hero{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)}
@@ -42,8 +38,6 @@ body.page--restoration .hero{grid-template-columns:minmax(0,.94fr) minmax(0,1.06
   .hero-actions .btn-primary{width:100%;min-height:48px;padding:12px 14px;font-size:13px;text-align:center}
   .hero-actions .btn-map{align-self:flex-start;min-height:38px;padding:6px 0;border:0;background:transparent;font-size:13px;justify-content:flex-start}
   .proof-row{gap:7px 12px;font-size:12px;margin-top:12px}
-  .image-credit{right:8px;bottom:8px;max-width:calc(100% - 16px);padding:4px 6px;font-size:12px}
-  body.page--dentist .image-credit,body.page--veneers .image-credit,body.page--root-canal .image-credit{left:8px;right:auto}
 }
 @media(max-width:380px){
   .hero-inner{padding:20px 14px 18px!important}
@@ -51,7 +45,7 @@ body.page--restoration .hero{grid-template-columns:minmax(0,.94fr) minmax(0,1.06
   .hero-copy{font-size:15px!important}
 }
 @media(prefers-reduced-motion:reduce){
-  .hero-photo,.image-credit,.hero-actions .btn{transition:none!important}
+  .hero-photo,.hero-actions .btn{transition:none!important}
 }
 
 .location-panel a:not(.btn),.location-panel h2{color:#fff}
