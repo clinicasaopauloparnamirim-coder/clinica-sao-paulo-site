@@ -104,6 +104,7 @@ try {
       if (!metrics.designStylesheetLoaded) failures.push({ route, width: viewport.width, issue: 'design-stylesheet-not-loaded' });
       if (!metrics.whatsappTargetValid) failures.push({ route, width: viewport.width, issue: 'invalid-whatsapp-cta' });
       if (metrics.h1Lines > 2) failures.push({ route, width: viewport.width, issue: 'headline-over-two-lines', detail: metrics.h1Lines });
+      if (viewport.width === 1440 && metrics.heroHeight > 700) failures.push({ route, width: viewport.width, issue: 'desktop-hero-too-tall', detail: metrics.heroHeight });
       if (viewport.width === 390 && (metrics.primaryCta === null || metrics.primaryCta.top > 620)) {
         failures.push({ route, width: viewport.width, issue: 'primary-cta-too-low', detail: metrics.primaryCta });
       }
