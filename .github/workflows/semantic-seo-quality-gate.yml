@@ -130,10 +130,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Install Playwright
-        run: npm install --no-save --package-lock=false playwright
+      - name: Install Playwright in an isolated prefix
+        run: |
+          mkdir -p /tmp/playwright-run
+          npm install --prefix /tmp/playwright-run --no-save --package-lock=false --no-audit --no-fund playwright
+          ln -s /tmp/playwright-run/node_modules node_modules
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: ./node_modules/.bin/playwright install --with-deps chromium
       - name: Audit all clinic pages at three viewports
         run: node scripts/design-viewport-audit.mjs
       - name: Upload browser audit screenshots and metrics
