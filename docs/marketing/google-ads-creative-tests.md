@@ -71,3 +71,24 @@ Descrições candidatas:
 4. Criar novos anúncios como teste sem pausar o controle, se a estrutura e o orçamento permitirem.
 5. Comparar CTR, taxa de conversão e custo por lead qualificado; não declarar vencedor com volume insuficiente.
 6. Confirmar que conversões representam leads reais, e não apenas cliques no botão de WhatsApp.
+
+## Diagnóstico da estrutura ativa
+
+A campanha tem quatro grupos de anúncios habilitados no período consultado:
+
+| Grupo | Impressões | Cliques | Custo | Conversões reportadas | Leitura inicial |
+|---|---:|---:|---:|---:|---|
+| Clínica | 815 | 68 | R$ 124,39 | 6 | Maior volume e principal fonte de conversões no snapshot |
+| Hiperlocal | 295 | 18 | R$ 36,87 | 1 | 18 cliques; revisar consultas e correspondência de destino antes de mexer |
+| Ortodontia | 87 | 6 | R$ 12,33 | 0 | Volume pequeno; não declarar fracasso nem pausar com essa amostra |
+| Serviços | 2 | 0 | R$ 0,00 | 0 | Quase sem entrega no período |
+
+Os dois anúncios responsivos habilitados que foram inspecionados no grupo **Clínica** levam à homepage (https://www.clinicasaopauloparnamirim.com.br/) e usam títulos genéricos repetidos como “Dentista em Parnamirim”, “Agende Sua Avaliação”, “Clínica Odonto Parnamirim” e “Fale no WhatsApp”. Isso cria uma oportunidade concreta de melhorar a correspondência consulta → anúncio → landing page, mas não prova por si só que a página seja a causa do CPA.
+
+### Próxima versão de criativos e destino sugerido
+- **Clínica / intenção geral:** testar destino /clinica-odontologica-parnamirim/ contra a homepage, mantendo uma versão controle e medindo leads qualificados.
+- **Hiperlocal / dentista por bairro:** testar /dentista-parnamirim/; manter localização, endereço e CTA consistentes com a consulta.
+- **Ortodontia:** direcionar o anúncio específico para /aparelho-ortodontico-parnamirim/; a consulta de 30 dias tem apenas 6 cliques, então primeiro acumular amostra suficiente.
+- **Serviços:** as palavras-chave de clareamento, limpeza, facetas e restauração têm entrega muito baixa no snapshot. Não concluir falta de demanda sem conferir cobertura de impressões, orçamento, elegibilidade, termos e lances; mapear cada intenção à sua página antes de ampliar.
+
+**Regra de publicação:** criar teste com novos IDs e controle preservado, validar destino/UTM e confirmar que a conversão principal é lead qualificado antes de comparar CTR ou CPA. Nenhuma dessas alterações foi publicada nesta execução.
