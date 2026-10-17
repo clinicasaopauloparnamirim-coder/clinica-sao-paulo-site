@@ -55,14 +55,19 @@ class CloudflareAuditTests(unittest.TestCase):
                  {"hostname":"www.clinicasaopauloparnamirim.com.br","service":"weathered-tree-2839","environment":"production"}]
         scripts=[{"id":"clinica-sao-paulo-site","etag":"same-live-etag"},
                  {"id":"weathered-tree-2839","etag":"same-live-etag"}]
-        r=cf.assess_cloudflare(zone,settings,dns,domains,scripts,"clinica-sao-paulo-site","clinicasaopauloparnamirim.com.br")
+        public_headers={"x-content-type-options":"nosniff","x-frame-options":"SAMEORIGIN","referrer-policy":"strict-origin-when-cross-origin"}
+        r=cf.assess_cloudflare(zone,settings,dns,domains,scripts,"clinica-sao-paulo-site","clinicasaopauloparnamirim.com.br",public_headers)
         checks={x["check"] for x in r["findings"]}
         self.assertIn("ssl_mode_flexible_review",checks)
         self.assertIn("minimum_tls_version_legacy",checks)
         self.assertIn("production_worker_name_mismatch",checks)
+        self.assertIn("hsts_response_header_missing",checks)
+        self.assertNotIn("nosniff_response_header_missing",checks)
+        self.assertNotIn("nosniff_disabled",checks)
+        self.assertEqual(r["public_response_headers"]["x-content-type-options"],"nosniff")
         self.assertEqual(r["summary"]["errors"],0)
         self.assertEqual(r["summary"]["warnings"],4)
-        self.assertEqual(r["summary"]["info"],1)
+        self.assertEqual(r["summary"]["info"],0)
 
     def test_dns_record_contents_are_not_in_report(self):
         r=cf.assess_cloudflare({"name":"example.test","status":"active","paused":False},
