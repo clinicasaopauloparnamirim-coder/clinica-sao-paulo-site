@@ -58,3 +58,5 @@ body.page--restoration .hero{grid-template-columns:minmax(0,.94fr) minmax(0,1.06
 .location-panel .btn-map{background:#fffdf8;color:#153a2e}
 .location-panel .btn-primary{background:#153a2e;color:#fff}
 .step>span{color:#75501f}
+
+@media(min-width:951px){.hero{min-height:0!important}.hero-photo{height:clamp(540px,62vh,680px);min-height:0}.hero-inner{padding:clamp(34px,4.5vw,64px)}}
