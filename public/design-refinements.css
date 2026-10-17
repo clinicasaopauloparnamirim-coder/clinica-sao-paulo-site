@@ -1,0 +1,55 @@
+/* Clínica São Paulo — Taste Skill art direction + Impeccable mobile polish.
+   Keep the established forest/cream/gold identity; vary composition by service. */
+body.page--home{--page-hero-bg:#f8f6f0;--page-photo-position:66% 35%}
+body.page--dentist{--page-hero-bg:#f8f6f0;--page-photo-position:50% center}
+body.page--clinic{--page-hero-bg:#f1efe7;--page-photo-position:55% center}
+body.page--orthodontics{--page-hero-bg:#edf1eb;--page-photo-position:52% center}
+body.page--whitening{--page-hero-bg:#fffdf8;--page-photo-position:54% center}
+body.page--cleaning{--page-hero-bg:#edf0e8;--page-photo-position:50% center}
+body.page--veneers{--page-hero-bg:#f4ede1;--page-photo-position:54% center}
+body.page--restoration{--page-hero-bg:#f8f6f0;--page-photo-position:50% center}
+body.page--root-canal{--page-hero-bg:#e9eee8;--page-photo-position:50% center}
+
+.hero{background:var(--page-hero-bg,var(--bg))}
+.hero-photo{object-position:var(--page-photo-position,66% center)}
+.hero h1{text-wrap:balance;max-width:14ch}
+.hero-copy{text-wrap:pretty;max-width:52ch}
+.image-credit{position:absolute;right:12px;bottom:12px;z-index:2;display:inline-block;max-width:calc(100% - 24px);padding:4px 7px;background:rgba(255,253,248,.9);color:#23362d;font-size:10px;line-height:1.35;text-decoration:none}
+.image-credit:hover,.image-credit:focus-visible{text-decoration:underline;background:#fffdf8}
+body.page--dentist .hero,body.page--veneers .hero,body.page--root-canal .hero{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+body.page--dentist .hero-photo,body.page--veneers .hero-photo,body.page--root-canal .hero-photo{grid-column:1;grid-row:1}
+body.page--dentist .hero-inner,body.page--veneers .hero-inner,body.page--root-canal .hero-inner{grid-column:2;grid-row:1}
+body.page--dentist .image-credit,body.page--veneers .image-credit,body.page--root-canal .image-credit{left:12px;right:auto}
+body.page--clinic .hero{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)}
+body.page--orthodontics .hero{grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr)}
+body.page--whitening .hero{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)}
+body.page--cleaning .hero{grid-template-columns:minmax(0,.96fr) minmax(0,1.04fr)}
+body.page--restoration .hero{grid-template-columns:minmax(0,.94fr) minmax(0,1.06fr)}
+
+@media(max-width:950px) and (min-width:651px){
+  .hero{min-height:0}
+  .hero-inner{padding:clamp(24px,4vw,42px)}
+  .hero h1{font-size:clamp(38px,4.8vw,56px)}
+  .hero-photo{min-height:520px}
+}
+@media(max-width:650px){
+  .hero{display:flex!important;flex-direction:column;align-items:stretch;min-height:0!important}
+  .hero-inner{order:0!important;width:100%;padding:22px 16px 20px!important;background:var(--page-hero-bg,var(--bg))!important}
+  .hero h1{max-width:16ch;margin:0 0 12px!important;font-size:clamp(31px,8.5vw,36px)!important;line-height:1.04!important;letter-spacing:-.035em!important}
+  .hero-copy{max-width:52ch;font-size:16px!important;line-height:1.5!important;margin:0 0 14px!important}
+  .hero-photo{order:1!important;position:relative;inset:auto;display:block;width:100%;height:auto;min-height:0!important;max-height:260px;aspect-ratio:16/9;object-fit:cover;filter:none}
+  .hero-actions{display:flex!important;flex-direction:column;align-items:stretch;gap:7px!important}
+  .hero-actions .btn-primary{width:100%;min-height:48px;padding:12px 14px;font-size:13px;text-align:center}
+  .hero-actions .btn-map{align-self:flex-start;min-height:38px;padding:6px 0;border:0;background:transparent;font-size:13px;justify-content:flex-start}
+  .proof-row{gap:7px 12px;font-size:11px;margin-top:12px}
+  .image-credit{right:8px;bottom:8px;max-width:calc(100% - 16px);padding:4px 6px;font-size:10px}
+  body.page--dentist .image-credit,body.page--veneers .image-credit,body.page--root-canal .image-credit{left:8px;right:auto}
+}
+@media(max-width:380px){
+  .hero-inner{padding:20px 14px 18px!important}
+  .hero h1{font-size:31px!important;max-width:15ch}
+  .hero-copy{font-size:15px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .hero-photo,.image-credit,.hero-actions .btn{transition:none!important}
+}
