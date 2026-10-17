@@ -39,10 +39,10 @@ A pontuação é **heurística interna**, não uma pontuação oficial do Google
 | Sitemap XML | XML e status das URLs | Sitemap index/gzip/limites, lastmod e amostragem configurável |
 | Links internos | Crawl limitado | Grafo, links quebrados, páginas órfãs e profundidade |
 | Dados estruturados | JSON-LD, tipos e verificações básicas de nome/endereço | Validação semântica Schema.org / Google Rich Results |
-| Performance / CWV | Não implementado | PageSpeed Insights / CrUX; separar lab de field data |
+| Performance / CWV | PENDENTE de métricas Lighthouse/CrUX confiáveis | Configurar quota PSI / API key ou ferramenta de auditoria disponível; lab versus field data |
 | Search Console | Não implementado | OAuth e leitura de propriedade autorizada |
 | GA4 | Não implementado | OAuth/property e auditoria de eventos em modo leitura |
-| Cloudflare | Não implementado | Token mínimo, leitura de regras/cache/headers; sem writes |
+| Cloudflare | Módulo GET-only de zona/DNS/settings/Worker domains; auditoria de headers HTTP em CI | Ampliar cache rules/security settings; API token de leitura em CI é opcional e não foi configurado |
 | IndexNow | Não implementado | Auditoria de configuração; nunca enviar sem autorização |
 | AI citation / keyword research | Não implementado | Definir fonte, limites e critérios de evidência |
 | SEO local / Google Maps | Heartseomap permanece separado | Integrar como fonte de dados local, não criar outro cérebro |
@@ -51,12 +51,12 @@ O inventário das 70 ferramentas e 13 prompts está em [PARITY_ROADMAP.md](PARIT
 
 ## GitHub Actions
 
-O workflow `SEO Gauntlet (read-only)` roda os testes unitários e uma auditoria pública de leitura em pull requests. A auditoria também pode ser executada manualmente via **Actions → SEO Gauntlet (read-only) → Run workflow**, informando URL e opção de crawl. Os relatórios JSON e Markdown são publicados como artefato da execução.
+O workflow `SEO Gauntlet (read-only)` roda testes unitários e uma auditoria pública de leitura (SEO, redirect chain, security headers, sitemap e grafo interno) em pull requests. A auditoria também pode ser executada manualmente via **Actions → SEO Gauntlet (read-only) → Run workflow**, informando URL e opção de crawl. Os relatórios JSON e Markdown são publicados como artefato da execução.
 
 ## Segurança e limitações
 
 - Não configure segredos no código nem use credenciais de produção em testes unitários.
-- Integrações autenticadas futuras devem usar permissões somente leitura por padrão; writes devem ficar fora do fluxo normal e exigir aprovação separada.
+- `cloudflare_audit.py` exige um API Token Cloudflare com permissões de leitura mínima (`Zone:Read`, `DNS:Read`, `Zone Settings:Read`, `Workers Scripts:Read`/`Workers Routes:Read` conforme endpoint); não executa writes. Não adicione o token ao repositório nem a artefatos.\n- Integrações autenticadas futuras devem usar permissões somente leitura por padrão; writes devem ficar fora do fluxo normal e exigir aprovação separada.
 - O crawler limita-se ao host inicial e a no máximo 30 páginas.
 - Sitemap index, JavaScript que injeta metadados depois do carregamento e renderização completa em navegador não são totalmente avaliados nesta versão.
 - Resultados variam com CDN, cache, região, user-agent e momento do teste; compare execuções e fontes antes de declarar regressão.
