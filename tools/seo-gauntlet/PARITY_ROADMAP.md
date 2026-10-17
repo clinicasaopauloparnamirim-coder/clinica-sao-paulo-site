@@ -43,36 +43,36 @@ Status key:
 - `ga4_landing_page_conversions` — BLOQUEADO POR CREDENCIAL
 
 ### PageSpeed Insights (2)
-- `psi_analyze` — PENDENTE: consultar dados de laboratório e distinguir de dados de campo
-- `psi_opportunities` — PENDENTE: oportunidades Lighthouse, sem prometer posição no Google
+- `psi_analyze` — PARCIAL: adapter `pagespeed_audit.py` extrai scores Lighthouse e CrUX se retornados; live scores bloqueados hoje por quota zero do endpoint público e HYPD Free plan
+- `psi_opportunities` — PENDENTE: extrair oportunidades/audits Lighthouse acionáveis após restabelecer quota PSI
 
 ### Cloudflare (13)
-- `cf_list_zones` — BLOQUEADO POR CREDENCIAL
-- `cf_zone_info` — BLOQUEADO POR CREDENCIAL
-- `cf_list_dns` — BLOQUEADO POR CREDENCIAL
+- `cf_list_zones` — PARCIAL: testado por conexão Cloudflare read-only; zona ativa
+- `cf_zone_info` — PARCIAL: testado por conexão Cloudflare read-only; zona Free Website ativa
+- `cf_list_dns` — PARCIAL: testado em modo leitura; 3 registros DNS, raiz e www proxied
 - `cf_web_analytics` — BLOQUEADO POR CREDENCIAL
 - `cf_purge_cache` — NÃO AUTOMATIZAR
 - `cf_purge_cache_all` — NÃO AUTOMATIZAR
-- `cf_settings_audit` — BLOQUEADO POR CREDENCIAL; leitura apenas
+- `cf_settings_audit` — PARCIAL: módulo GET-only `cloudflare_audit.py` + leitura real do conector; SSL Flexible, TLS mínimo 1.0, HSTS desligado, nosniff desligado e binding do Worker divergente exigem revisão
 - `cf_settings_update` — NÃO AUTOMATIZAR
-- `cf_list_redirects` — BLOQUEADO POR CREDENCIAL; leitura apenas
+- `cf_list_redirects` — PARCIAL: Workers custom domains inspecionados; entrypoint rulesets zone-level consultados, alguns inexistentes; Worker custom domain é a rota efetiva do site
 - `cf_create_redirect` — NÃO AUTOMATIZAR
 - `cf_delete_redirect` — NÃO AUTOMATIZAR
 - `cf_bulk_redirect_upsert` — NÃO AUTOMATIZAR
-- `cf_managed_robots` — somente leitura por padrão; qualquer configure/disable exige aprovação separada
+- `cf_managed_robots` — PENDENTE: leitura do estado managed robots ainda não implementada; qualquer configure/disable exige aprovação separada
 
 ### IndexNow (2)
 - `indexnow_submit` — NÃO AUTOMATIZAR
 - `indexnow_bulk_submit` — NÃO AUTOMATIZAR
 
 ### Technical SEO (8)
-- `inspect_meta` — PARCIAL: title/description/robots/OG; expandir Twitter/hreflang
-- `check_canonical` — PARCIAL: presença/duplicidade; ampliar checagem de destino e host
-- `mixed_content_check` — PARCIAL: segunda passagem detecta recursos HTTP em páginas HTTPS
-- `redirect_chain_audit` — PARCIAL: cadeia por URL; comparar variantes www/raiz e HTTP/HTTPS
+- `inspect_meta` — PARCIAL: title/description/robots/OG + Twitter Card na camada cross-page; hreflang é extraído
+- `check_canonical` — PARCIAL: presença/duplicidade/host/destino e status 200 verificadas
+- `mixed_content_check` — PARCIAL: segunda passagem sem recursos HTTP inseguros nas 9 páginas
+- `redirect_chain_audit` — PARCIAL: cadeia e 4 variantes host testadas; raiz HTTPS final, sem loops
 - `robots_txt_validate` — PARCIAL: HTTP, regras básicas e Sitemap; implementar grupos, RFC 9309 e cache-edge
-- `sitemap_validate` — PARCIAL: XML e URLs; ampliar sitemap index/gzip/limites e lastmod
-- `sitemap_health` — PARCIAL: verificação de status das URLs; adicionar amostragem/configuração e histograma
+- `sitemap_validate` — PARCIAL: XML válido, 9 URLs same-host e status 200; suporte sitemap index/gzip ainda pendente
+- `sitemap_health` — PARCIAL: todas as 9 URLs listadas responderam HTTP 200
 - `robots_ai_posture` — PENDENTE: gerador offline de recomendações, sem gravar robots.txt
 
 ### Chrome UX Report (2)
@@ -80,10 +80,10 @@ Status key:
 - `crux_snapshot` — PENDENTE: métricas de campo p75, com sinalização de ausência de dados
 
 ### Structured data / cross-site / on-page (7)
-- `inspect_schema` — PARCIAL: tipos JSON-LD identificados na segunda passagem
-- `validate_schema` — PARCIAL: sintaxe JSON-LD; validação semântica Google pendente
+- `inspect_schema` — PARCIAL: JSON-LD extraído nas 9 páginas, tipos identificados
+- `validate_schema` — PARCIAL: sintaxe JSON-LD válida e checks conservadores de campos type-specific; teste oficial Rich Results pendente
 - `hreflang_consistency_check` — PARCIAL: extrai hreflang; reciprocidade e alvos pendentes
-- `internal_link_graph` — PARCIAL: crawl interno limitado; grau, órfãs, profundidade e links quebrados pendentes
+- `internal_link_graph` — PARCIAL: grafo 9 páginas, 9 destinos internos, sem destinos quebrados; profundidade detalhada pendente
 - `lighthouse_budget` — PENDENTE
 - `internal_link_recommend` — PENDENTE; precisa combinar grafo interno com dados GSC
 - `onpage_serp_gap` — PENDENTE; precisa SERP/concorrentes e comparação semântica
