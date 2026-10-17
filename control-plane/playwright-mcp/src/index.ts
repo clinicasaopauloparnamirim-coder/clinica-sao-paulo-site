@@ -456,6 +456,20 @@ async function verifyOpenExecutiveGatewayToken(authorization: string | null): Pr
   }
 }
 
+
+async function deriveOpenExecutiveMcpSigningKey(secret: string, extractable: boolean): Promise<CryptoKey> {
+  const seedInput = new TextEncoder().encode("OpenExecutive MCP request signing v1\\0" + secret);
+  const seed = new Uint8Array(await crypto.subtle.digest("SHA-256", seedInput));
+  const prefix = Uint8Array.from([
+    0x30, 0x2e, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06,
+    0x03, 0x2b, 0x65, 0x70, 0x04, 0x22, 0x04, 0x20,
+  ]);
+  const pkcs8 = new Uint8Array(prefix.length + seed.length);
+  pkcs8.set(prefix, 0);
+  pkcs8.set(seed, prefix.length);
+  return crypto.subtle.importKey("pkcs8", pkcs8, { name: "Ed25519" }, extractable, ["sign"]);
+}
+
 export default {
   async fetch(request: Request, env: WhatsAppEnv, ctx: ExecutionContext) {
     const requestUrl = new URL(request.url);
@@ -470,6 +484,27 @@ export default {
       });
     }
     const { pathname } = requestUrl;
+
+    // Expose only the derived Ed25519 public key for authenticating signed MCP calls.
+    // The private key is derived from the existing MCP_AUTH_TOKEN and never leaves this Worker.
+    if (pathname === "/openexecutive/public-key") {
+      if (request.method !== "GET") {
+        return new Response("Method Not Allowed", { status: 405, headers: { "allow": "GET", "cache-control": "no-store" } });
+      }
+      if (!env.MCP_AUTH_TOKEN) {
+        return Response.json({ ok: false, error: "MCP signing is not configured" }, { status: 503, headers: { "cache-control": "no-store" } });
+      }
+      try {
+        const privateKey = await deriveOpenExecutiveMcpSigningKey(env.MCP_AUTH_TOKEN, true);
+        const key = await crypto.subtle.exportKey("jwk", privateKey);
+        if (typeof key.x !== "string" || !key.x) throw new Error("Missing Ed25519 public component");
+        return Response.json({ ok: true, alg: "Ed25519", key_id: "openexecutive-mcp-ed25519-v1", public_key: key.x }, {
+          headers: { "cache-control": "no-store", "x-content-type-options": "nosniff" },
+        });
+      } catch {
+        return Response.json({ ok: false, error: "Public key derivation failed" }, { status: 503, headers: { "cache-control": "no-store" } });
+      }
+    }
 
     if (pathname === "/health") {
       if (request.method !== "GET" && request.method !== "HEAD") {
