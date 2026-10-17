@@ -12,11 +12,11 @@ class LinkSchemaParser(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.links=[]; self.meta={}; self.canonicals=[]; self.hreflang=[]; self.jsonld=[]
-        self._in_script=False; self._script_type=""; self._buf=[]
+        self._in_script=False; self._script_type=""; self._buf=[]; self._active_link=None
     def handle_starttag(self,tag,attrs):
         a=dict(attrs)
         if tag=="a" and a.get("href"):
-            self.links.append({"href":a["href"],"rel":a.get("rel",""),"text":""})
+            self.links.append({"href":a["href"],"rel":a.get("rel",""),"text":""}); self._active_link=len(self.links)-1
         if tag=="meta":
             if a.get("name"): self.meta[a["name"].lower()]=a.get("content","")
             if a.get("property"): self.meta[a["property"].lower()]=a.get("content","")
@@ -27,12 +27,13 @@ class LinkSchemaParser(HTMLParser):
         if tag=="script":
             self._in_script=True; self._script_type=(a.get("type") or "").lower(); self._buf=[]
     def handle_endtag(self,tag):
+        if tag=="a": self._active_link=None
         if tag=="script" and self._in_script:
             if self._script_type=="application/ld+json": self.jsonld.append("".join(self._buf))
             self._in_script=False; self._script_type=""; self._buf=[]
     def handle_data(self,data):
         if self._in_script: self._buf.append(data)
-        if self.links: self.links[-1]["text"] += data
+        if self._active_link is not None: self.links[self._active_link]["text"] += data
 
 def walk_nodes(obj):
     if isinstance(obj,dict):
@@ -153,7 +154,13 @@ def audit(report_path="seo-audit-report.json", output_path="seo-audit-crosspage.
             if up.scheme not in ("http","https"): continue
             if (up.hostname or "").lower()==host:
                 outgoing.append(dest); counts[dest]=counts.get(dest,0)+1
-                unique_internal.setdefault(dest,{"source":url,"anchor":link["text"].strip()[:140]})
+                if dest in unique_internal:
+                    continue
+                if len(unique_internal) < MAX_INTERNAL_LINKS:
+                    unique_internal[dest]={"source":url,"anchor":link["text"].strip()[:140]}
+                elif not any(f.get("check")=="internal_link_target_limit" for f in findings):
+                    findings.append({"severity":"info","check":"internal_link_target_limit","url":url,
+                        "message":f"Alcançado limite de {MAX_INTERNAL_LINKS} destinos internos únicos; os restantes não foram consultados"})
             else: external.append(dest)
         typelist,jsonld_errors,schema_missing=schema_issues(parser.jsonld)
         if jsonld_errors:
