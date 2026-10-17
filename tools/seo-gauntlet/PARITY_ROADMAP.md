@@ -53,7 +53,7 @@ Status key:
 - `cf_web_analytics` — BLOQUEADO POR CREDENCIAL
 - `cf_purge_cache` — NÃO AUTOMATIZAR
 - `cf_purge_cache_all` — NÃO AUTOMATIZAR
-- `cf_settings_audit` — PARCIAL: módulo GET-only `cloudflare_audit.py` + leitura real do conector; SSL Flexible, TLS mínimo 1.0, HSTS desligado, nosniff desligado e binding do Worker divergente exigem revisão
+- `cf_settings_audit` — PARCIAL: módulo GET-only `cloudflare_audit.py` + leitura real do conector; revisar SSL Flexible, TLS mínimo 1.0, HSTS desligado e nome do Worker de produção. O header HTTP efetivo X-Content-Type-Options: nosniff já é enviado pelo Worker, embora a opção gerenciada na zona esteja off.
 - `cf_settings_update` — NÃO AUTOMATIZAR
 - `cf_list_redirects` — PARCIAL: Workers custom domains inspecionados; entrypoint rulesets zone-level consultados, alguns inexistentes; Worker custom domain é a rota efetiva do site
 - `cf_create_redirect` — NÃO AUTOMATIZAR
