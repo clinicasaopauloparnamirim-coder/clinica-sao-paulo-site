@@ -91,7 +91,9 @@ jobs:
           for (const token of [
             'OPENEXECUTIVE_ENABLED',
             'OPENEXECUTIVE_MCP_URL',
-            'OPENEXECUTIVE_API_KEY',
+            'MCP_AUTH_TOKEN',
+            'signedMcpHeaders',
+            'x-openexecutive-signature',
             'readOnlyHint !== true',
             'REQUEST_TIMEOUT_MS = 190_000',
             'MAX_RESPONSE_CHARS = 64_000',
@@ -108,6 +110,6 @@ jobs:
               !externalAgents.includes('não cria um novo cérebro')) throw new Error('OpenExecutive must remain a separate advisory external council, not another brain.');
           if (openExecClient.includes('name: "ask_executive"') || openExecClient.includes("name: 'ask_executive'")) throw new Error('OpenExecutive ask_executive is excluded because it can write episodic memory.');
           const oeRuntimeConfig = fs.readFileSync('wrangler.jsonc','utf8');
-          if (oeRuntimeConfig.includes('OPENEXECUTIVE_API_KEY') || oeRuntimeConfig.includes('OPENEXECUTIVE_ENABLED')) throw new Error('OpenExecutive activation/secrets must not be committed to wrangler config.');
+          if (oeRuntimeConfig.includes('OPENEXECUTIVE_API_KEY') || /"(?:MCP_AUTH_TOKEN|NVIDIA_API_KEY|BACKEND_SHARED_SECRET|OPENEXECUTIVE_CALLER_PUBLIC_KEY)"/.test(oeRuntimeConfig)) throw new Error('OpenExecutive/NVIDIA credentials and runtime caller identity must not be committed to wrangler config.');
           console.log(JSON.stringify({ok:true,brainCount,agentCount,publicHealth:'minimal',protectedDiagnostics:'auth-required',crmEndpoints:3,dashboard:'present',deploySmoke:'aligned',openExecutive:'default-off/read-only-gated'},null,2));
           NODE
