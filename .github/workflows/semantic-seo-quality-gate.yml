@@ -38,3 +38,43 @@ jobs:
           node-version: "22"
       - name: Run semantic SEO quality gate
         run: node scripts/semantic-seo-audit.mjs
+
+  design-skill-audit:
+    name: Taste Skill and Impeccable static design audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run Taste Skill source lint
+        shell: bash
+        run: |
+          set -u
+          git clone --depth 1 https://github.com/Leonxlnx/taste-skill /tmp/taste-skill
+          node /tmp/taste-skill/skills/taste-skill/scripts/lint.mjs public --json > taste-lint.json 2> taste-lint.stderr || true
+          echo "Taste Skill lint output:"
+          cat taste-lint.json
+          cat taste-lint.stderr
+      - name: Run Impeccable deterministic detector
+        shell: bash
+        run: |
+          set -u
+          npx --yes impeccable detect public --json > impeccable-detect.json 2> impeccable-detect.stderr || true
+          echo "Impeccable detector output:"
+          cat impeccable-detect.json
+          cat impeccable-detect.stderr
+      - name: Upload design audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: taste-impeccable-design-audit
+          path: |
+            taste-lint.json
+            taste-lint.stderr
+            impeccable-detect.json
+            impeccable-detect.stderr
+          if-no-files-found: warn
