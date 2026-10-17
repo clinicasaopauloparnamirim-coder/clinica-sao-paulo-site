@@ -1,7 +1,7 @@
 export type ExternalAgentStatus = "integrated" | "requires-host-runtime" | "not-runtime-proven" | "configured-unverified";
 
 export type ExternalAgentDefinition = {
-  id: "hermes" | "jev" | "laya" | "nvidia-nim";
+  id: "hermes" | "jev" | "laya" | "nvidia-nim" | "openexecutive";
   name: string;
   role: string;
   repository: string;
@@ -41,6 +41,16 @@ export const EXTERNAL_AGENTS: ExternalAgentDefinition[] = [
     status: "not-runtime-proven",
     controlTowerRole: "candidato a decision engine; NVIDIA NIM analisa riscos sem alterar a decisão tipada",
     runtimeRequirement: "O Worker reporta laya_configured=false. A API hospedada documenta https://api.laya-ai.com/v1/systemone e exige bearer key; alternativamente, é preciso hospedar laya-serve e provar uma inferência.",
+  },
+  {
+    id: "openexecutive",
+    name: "OpenExecutive Advisory Council",
+    role: "Conselho consultivo externo para análise de negócio por especialista; não cria um novo cérebro nem agente operacional.",
+    repository: "SenteLabsAI/OpenExecutive",
+    integrationPath: "Control Tower MCP -> HTTPS Streamable HTTP /mcp -> consult_specialist com readOnlyHint=true",
+    status: "not-runtime-proven",
+    controlTowerRole: "camada consultiva subordinada ao Control Tower/Nemotron; não executa ações e não substitui os 9 cérebros/20 agentes",
+    runtimeRequirement: "Habilitar OPENEXECUTIVE_ENABLED=true e definir OPENEXECUTIVE_MCP_URL + OPENEXECUTIVE_API_KEY no runtime secret store; provar initialize, auth e annotation readOnlyHint em chamada real. ask_executive fica fora do escopo inicial porque grava memória episódica.",
   },
   {
     id: "nvidia-nim",

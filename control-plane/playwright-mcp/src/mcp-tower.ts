@@ -16,6 +16,7 @@ import {
 import { googleGa4Audit, googleOAuthStart } from "./google-ga4";
 import { googleGscAudit } from "./google-gsc";
 import { runAdsMutateJudgment } from "./judgment-gate";
+import { openExecutiveConsult, openExecutiveStatus } from "./openexecutive-mcp";
 
 type TowerEnv = {
   GOOGLE_ADS_REFRESH_TOKEN?: string;
@@ -35,6 +36,8 @@ type TowerEnv = {
   NVIDIA_API_KEY?: string;
   NVIDIA_BASE_URL?: string;
   NVIDIA_MODEL?: string;
+  OPENEXECUTIVE_ENABLED?: string;
+  OPENEXECUTIVE_MCP_URL?: string;
 };
 
 const SERVER_INFO = {
@@ -175,6 +178,24 @@ const TOOLS = [
     name: "nvidia_test",
     description: "Teste ponta a ponta de inferencia NVIDIA NIM usando a chave privada do Worker. Nao retorna secrets.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "openexecutive_status",
+    description: "Mostra se o conselho consultivo OpenExecutive está habilitado e configurado; nunca revela credenciais.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "openexecutive_consult",
+    description: "Consulta um especialista OpenExecutive em modo consultivo, sem executar ações. Não envie dados pessoais de pacientes, credenciais ou segredos.",
+    inputSchema: {
+      type: "object",
+      required: ["specialist", "query"],
+      properties: {
+        specialist: { type: "string", enum: ["board_comms", "cfo", "chro", "cmo", "coo", "cpo", "cso", "gc", "sales", "triage"] },
+        query: { type: "string", minLength: 1, maxLength: 1200, description: "Pergunta de negócio sem dados pessoais, dados de pacientes nem segredos." },
+      },
+      additionalProperties: false,
+    },
   },
   {
     name: "marketing_social_snapshot_write",
@@ -326,6 +347,7 @@ async function callTool(request: Request, env: TowerEnv, name: string, args: Rec
           base_url: env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1",
           model: env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b",
         },
+        openexecutive: openExecutiveStatus(env),
         judgment: {
           laya_configured: Boolean(env.LAYA_API_KEY || env.control_tower || env.CONTROL_TOWER),
           laya_http_url: env.LAYA_HTTP_URL || "https://api.laya-ai.com",
@@ -504,6 +526,13 @@ async function callTool(request: Request, env: TowerEnv, name: string, args: Rec
         body: JSON.stringify({ pair, state }),
       });
       return responseToJson(response);
+    }
+    case "openexecutive_status":
+      return openExecutiveStatus(env);
+    case "openexecutive_consult": {
+      const specialist = typeof args.specialist === "string" ? args.specialist : "";
+      const query = typeof args.query === "string" ? args.query : "";
+      return openExecutiveConsult(env, specialist, query);
     }
     case "nvidia_test": {
       const apiKey = env.NVIDIA_API_KEY;
