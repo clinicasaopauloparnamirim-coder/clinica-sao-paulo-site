@@ -5,21 +5,29 @@ on:
     branches: ["main"]
     paths:
       - "public/**/*.html"
+      - "public/**/*.css"
       - "public/sitemap.xml"
       - "public/robots.txt"
       - "public/attribution.js"
       - "scripts/semantic-seo-audit.mjs"
+      - "scripts/design-viewport-audit.mjs"
       - ".github/workflows/semantic-seo-quality-gate.yml"
   pull_request:
     branches: ["main"]
     paths:
       - "public/**/*.html"
+      - "public/**/*.css"
       - "public/sitemap.xml"
       - "public/robots.txt"
       - "public/attribution.js"
       - "scripts/semantic-seo-audit.mjs"
+      - "scripts/design-viewport-audit.mjs"
       - ".github/workflows/semantic-seo-quality-gate.yml"
   workflow_dispatch:
+
+concurrency:
+  group: clinic-design-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -38,3 +46,105 @@ jobs:
           node-version: "22"
       - name: Run semantic SEO quality gate
         run: node scripts/semantic-seo-audit.mjs
+
+  design-skill-audit:
+    name: Taste Skill and Impeccable static design audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run Taste Skill source lint on the nine clinic pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/Leonxlnx/taste-skill /tmp/taste-skill
+          node /tmp/taste-skill/skills/taste-skill/scripts/lint.mjs \
+            public/index.html \
+            public/dentista-parnamirim/index.html \
+            public/clinica-odontologica-parnamirim/index.html \
+            public/aparelho-ortodontico-parnamirim/index.html \
+            public/clareamento-dental-parnamirim/index.html \
+            public/limpeza-dental-parnamirim/index.html \
+            public/facetas-de-resina-parnamirim/index.html \
+            public/restauracao-estetica-parnamirim/index.html \
+            public/tratamento-de-canal-parnamirim/index.html \
+            public/design-refinements.css --json > taste-lint.json
+          cat taste-lint.json
+      - name: Run Impeccable detector for clinic pages
+        shell: bash
+        run: |
+          set -u
+          for file in \
+            public/index.html \
+            public/dentista-parnamirim/index.html \
+            public/clinica-odontologica-parnamirim/index.html \
+            public/aparelho-ortodontico-parnamirim/index.html \
+            public/clareamento-dental-parnamirim/index.html \
+            public/limpeza-dental-parnamirim/index.html \
+            public/facetas-de-resina-parnamirim/index.html \
+            public/restauracao-estetica-parnamirim/index.html \
+            public/tratamento-de-canal-parnamirim/index.html; do
+            name=$(basename "$(dirname "$file")")
+            if [ "$file" = "public/index.html" ]; then name=home; fi
+            npx --yes impeccable detect "$file" --json > "report-$name.json" 2>> impeccable-detect.stderr || true
+          done
+          node --input-type=module <<'NODE'
+          import { readFileSync, readdirSync } from 'node:fs';
+          const files = readdirSync('.').filter(f => f.startsWith('report-') && f.endsWith('.json'));
+          const findings = files.flatMap(file => {
+            try {
+              const parsed = JSON.parse(readFileSync(file, 'utf8'));
+              return Array.isArray(parsed) ? parsed : (parsed.findings || []);
+            } catch { return []; }
+          });
+          const counts = {};
+          for (const f of findings) counts[f.antipattern || f.name || 'unknown'] = (counts[f.antipattern || f.name || 'unknown'] || 0) + 1;
+          console.log(JSON.stringify({reports: files.length, findingCount: findings.length, counts, examples: findings.slice(0, 30)}, null, 2));
+          const severe = findings.filter(f => f.severity === 'error' || ['low-contrast', 'undersized-ui-text', 'tiny-text'].includes(f.antipattern));
+          if (severe.length) { console.error('Impeccable blocking findings:', JSON.stringify(severe, null, 2)); process.exit(1); }
+          NODE
+      - name: Upload static design audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: taste-impeccable-design-audit
+          path: |
+            taste-lint.json
+            impeccable-detect.stderr
+            report-*.json
+          if-no-files-found: warn
+
+  browser-viewport-audit:
+    name: Playwright mobile, tablet and desktop regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Playwright in an isolated prefix
+        run: |
+          mkdir -p /tmp/playwright-run
+          npm install --prefix /tmp/playwright-run --no-save --package-lock=false --no-audit --no-fund playwright
+          ln -s /tmp/playwright-run/node_modules node_modules
+      - name: Install Chromium
+        run: ./node_modules/.bin/playwright install --with-deps chromium
+      - name: Audit all clinic pages at three viewports
+        run: node scripts/design-viewport-audit.mjs
+      - name: Upload browser audit screenshots and metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clinic-design-viewport-audit
+          path: |
+            design-viewport-audit.json
+            artifacts/design-audit/*.png
+          if-no-files-found: warn
