@@ -72,6 +72,48 @@ export function openExecutiveStatus(env: OpenExecutiveEnv) {
   };
 }
 
+async function readBoundedText(response: Response, maxChars: number): Promise<string> {
+  const declaredLength = Number(response.headers.get("content-length") || "0");
+  // UTF-8 can use up to four bytes per Unicode code point.
+  if (Number.isFinite(declaredLength) && declaredLength > maxChars * 4) {
+    await response.body?.cancel().catch(() => {});
+    throw new Error("OpenExecutive MCP response exceeded the size limit");
+  }
+  if (!response.body) {
+    const raw = await response.text();
+    if (raw.length > maxChars) throw new Error("OpenExecutive MCP response exceeded the size limit");
+    return raw;
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let raw = "";
+  try {
+    while (true) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      raw += decoder.decode(chunk.value, { stream: true });
+      if (raw.length > maxChars) {
+        await reader.cancel().catch(() => {});
+        throw new Error("OpenExecutive MCP response exceeded the size limit");
+      }
+    }
+    raw += decoder.decode();
+    if (raw.length > maxChars) throw new Error("OpenExecutive MCP response exceeded the size limit");
+    return raw;
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+function sanitizeAdvisoryText(value: string): string {
+  return value
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[e-mail ocultado]")
+    .replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, "[CPF ocultado]")
+    .replace(/(?:\+?55\s*)?\(?\d{2}\)?[\s.-]?9?\d{4}[\s.-]?\d{4}\b/g, "[telefone ocultado]")
+    .replace(/\b(api[_ -]?key|access[_ -]?token|client[_ -]?secret|password|bearer)\s*[:=]\s*[^\s,;]+/gi, "$1=[segredo ocultado]")
+    .replace(/\b(?:sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9_]{20,})\b/g, "[token ocultado]");
+}
+
 async function postMcp(
   endpoint: URL,
   apiKey: string,
@@ -96,10 +138,7 @@ async function postMcp(
     throw new Error("OpenExecutive MCP returned HTTP " + response.status);
   }
   const contentType = response.headers.get("content-type") || "";
-  const raw = await response.text();
-  if (raw.length > MAX_RESPONSE_CHARS) {
-    throw new Error("OpenExecutive MCP response exceeded the size limit");
-  }
+  const raw = await readBoundedText(response, MAX_RESPONSE_CHARS);
   if (!raw.trim()) return null;
 
   let decoded: any;
@@ -146,7 +185,7 @@ function toolText(result: any): string {
     .join("\n")
     .trim();
   if (!text) throw new Error("OpenExecutive specialist returned no text");
-  return text.slice(0, 12_000);
+  return sanitizeAdvisoryText(text.slice(0, 12_000));
 }
 
 export async function openExecutiveConsult(
