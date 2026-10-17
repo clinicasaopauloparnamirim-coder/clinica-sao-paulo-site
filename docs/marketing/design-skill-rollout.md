@@ -44,7 +44,7 @@ Aplicar direção de arte deliberada e revisão de interface às páginas públi
 - Auditoria real do site publicado em 390 × 844 px antes da alteração: H1 da home em 4 linhas, hero com cerca de 697 px e CTA primário próximo de y=619 px.
 - Criado `scripts/design-viewport-audit.mjs`, que abre as nove rotas em Chromium a 390, 768 e 1440 px, mede linhas do H1, posição do CTA, overflow, carregamento das imagens e stylesheet, e captura screenshots para artefato do CI.
 - Atualizado o workflow para executar o lint estático oficial do Taste Skill, o detector Impeccable e a regressão Playwright. O primeiro workflow de SEO continuou passando; a nova execução de regressão está em andamento. **Ainda não declaro aprovação visual final até a nova execução concluir.**
-- A captura via Cloudflare Browser Rendering falhou por autenticação; o teste Playwright no GitHub Actions passa a ser a via de validação para o branch.
+- A captura via Cloudflare Browser Rendering falhou por autenticação; o teste Playwright no GitHub Actions validou a branch. Em paralelo, os checks automáticos de Cloudflare Workers Builds continuam falhando antes de executar o código porque os triggers da branch estão configurados com `npx wrangler preview`, comando inexistente no Wrangler 4. O conector Cloudflare disponível só tem permissões de leitura, então não consegui corrigir essa configuração externa. Isso não alterou produção; a publicação oficial continua no workflow GitHub `publish-production-website.yml`, que executa build, gate SEO e verificações pós-deploy.
 
 A produção não foi alterada: as mudanças estão somente na branch/PR.
 
@@ -65,7 +65,7 @@ A produção não foi alterada: as mudanças estão somente na branch/PR.
 - Registrar URLs, commit, screenshots e resultados de regressão no relatório final.
 
 ## Bloqueios atuais
-- A conexão HYPD continua sem conta Ads e os recursos de auditoria de landing page estão bloqueados pelo plano Free. Uma conexão Google Ads separada via Composio está ativa e permitiu leitura de campanha, anúncios e termos.
-- Os recursos de mutação de anúncios do Google Ads foram explicitamente marcados como restritos no ambiente Composio; não é permitido contornar essa restrição. Por isso, nenhum anúncio foi publicado ou editado.
-- A API Cloudflare Browser Rendering respondeu erro 10000 de autenticação para screenshot; falta uma captura visual automatizada válida antes de afirmar aprovação de layout.
-- Próximo gate: concluir CI, validar preview visual real em 390px/tablet/desktop e só então decidir publicação. Nenhum deploy/merge foi feito.
+- A conexão HYPD continua sem conta Ads e os recursos de auditoria de landing page estão bloqueados pelo plano Free. A conexão Google Ads via Composio permitiu leitura, mas o ambiente restringiu explicitamente as ferramentas de mutação de anúncios. Nenhum anúncio, orçamento, lance, palavra-chave ou tracking foi alterado.
+- Os dois anúncios responsivos inspecionados no grupo Clínica e os anúncios lidos na campanha usam a homepage como destino. A melhoria de landing pages está preparada; a atualização de anúncios exige uma conexão de escrita autorizada.
+- Os checks de Cloudflare Builds na branch usam o comando inválido `npx wrangler preview`; a conexão disponível não tem permissão de escrita para corrigir os triggers. A regressão Playwright local da branch e os gates de SEO/schema/attribution passaram.
+- Produção permanece sem alterações até o merge; o workflow de publicação oficial tem validação e verificações pós-deploy.
