@@ -8,7 +8,7 @@
 export type OpenExecutiveEnv = {
   OPENEXECUTIVE_ENABLED?: string;
   OPENEXECUTIVE_MCP_URL?: string;
-  OPENEXECUTIVE_API_KEY?: string;
+  MCP_AUTH_TOKEN?: string;
 };
 
 const ALLOWED_SPECIALISTS = [
@@ -51,7 +51,7 @@ function hasSensitiveInput(value: string): boolean {
 
 export function openExecutiveStatus(env: OpenExecutiveEnv) {
   const endpoint = getEndpoint(env.OPENEXECUTIVE_MCP_URL);
-  const keyConfigured = Boolean(env.OPENEXECUTIVE_API_KEY);
+  const keyConfigured = Boolean(env.MCP_AUTH_TOKEN);
   const featureFlag = String(env.OPENEXECUTIVE_ENABLED || "").toLowerCase() === "true";
   const configured = Boolean(endpoint && keyConfigured);
   const enabled = featureFlag && configured;
@@ -68,7 +68,7 @@ export function openExecutiveStatus(env: OpenExecutiveEnv) {
       ? "Configuration is present only; connectivity, authentication and the read-only annotation are checked during each live consultation."
       : !featureFlag
         ? "OPENEXECUTIVE_ENABLED is not true; integration is disabled by default."
-        : "Requires a valid HTTPS /mcp endpoint and OPENEXECUTIVE_API_KEY in runtime secrets.",
+        : "Requires a valid HTTPS /mcp endpoint and the existing MCP_AUTH_TOKEN secret.",
   };
 }
 
@@ -114,23 +114,65 @@ function sanitizeAdvisoryText(value: string): string {
     .replace(/\b(?:sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9_]{20,})\b/g, "[token ocultado]");
 }
 
+function encodeOpenExecutiveBase64Url(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
+}
+
+async function openExecutiveSigningKey(secret: string): Promise<CryptoKey> {
+  const seedInput = new TextEncoder().encode("OpenExecutive MCP request signing v1\\0" + secret);
+  const seed = new Uint8Array(await crypto.subtle.digest("SHA-256", seedInput));
+  const prefix = Uint8Array.from([
+    0x30, 0x2e, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06,
+    0x03, 0x2b, 0x65, 0x70, 0x04, 0x22, 0x04, 0x20,
+  ]);
+  const pkcs8 = new Uint8Array(prefix.length + seed.length);
+  pkcs8.set(prefix, 0);
+  pkcs8.set(seed, prefix.length);
+  return crypto.subtle.importKey("pkcs8", pkcs8, { name: "Ed25519" }, false, ["sign"]);
+}
+
+async function signedMcpHeaders(
+  endpoint: URL,
+  rawBody: string,
+  secret: string,
+  protocolVersion?: string,
+): Promise<Record<string, string>> {
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const nonce = crypto.randomUUID();
+  const bodyBytes = new TextEncoder().encode(rawBody);
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bodyBytes));
+  const digestHex = Array.from(digest, (value) => value.toString(16).padStart(2, "0")).join("");
+  const message = ["POST", endpoint.pathname, timestamp, nonce, digestHex].join("\\n");
+  const key = await openExecutiveSigningKey(secret);
+  const signature = new Uint8Array(await crypto.subtle.sign(
+    { name: "Ed25519" }, key, new TextEncoder().encode(message),
+  ));
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    accept: "application/json, text/event-stream",
+    "x-openexecutive-timestamp": timestamp,
+    "x-openexecutive-nonce": nonce,
+    "x-openexecutive-signature": encodeOpenExecutiveBase64Url(signature),
+  };
+  if (protocolVersion) headers["mcp-protocol-version"] = protocolVersion;
+  return headers;
+}
+
 async function postMcp(
   endpoint: URL,
-  apiKey: string,
+  signingSecret: string,
   body: Record<string, unknown>,
   signal: AbortSignal,
   protocolVersion?: string,
 ): Promise<any> {
-  const headers: Record<string, string> = {
-    "content-type": "application/json",
-    accept: "application/json, text/event-stream",
-    "x-api-key": apiKey,
-  };
-  if (protocolVersion) headers["mcp-protocol-version"] = protocolVersion;
+  const rawBody = JSON.stringify(body);
+  const headers = await signedMcpHeaders(endpoint, rawBody, signingSecret, protocolVersion);
   const response = await fetch(endpoint.toString(), {
     method: "POST",
     headers,
-    body: JSON.stringify(body),
+    body: rawBody,
     signal,
     redirect: "error",
   });
@@ -215,15 +257,15 @@ export async function openExecutiveConsult(
   }
 
   const endpoint = getEndpoint(env.OPENEXECUTIVE_MCP_URL);
-  const apiKey = env.OPENEXECUTIVE_API_KEY;
-  if (!endpoint || !apiKey) {
+  const signingSecret = env.MCP_AUTH_TOKEN;
+  if (!endpoint || !signingSecret) {
     return { ok: false, blocked: true, error: "OpenExecutive endpoint or credential is invalid." };
   }
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const initialized = await postMcp(endpoint, apiKey, {
+    const initialized = await postMcp(endpoint, signingSecret, {
       jsonrpc: "2.0",
       id: 1,
       method: "initialize",
@@ -242,12 +284,12 @@ export async function openExecutiveConsult(
       throw new Error("OpenExecutive MCP negotiated an invalid protocol version");
     }
 
-    await postMcp(endpoint, apiKey, {
+    await postMcp(endpoint, signingSecret, {
       jsonrpc: "2.0",
       method: "notifications/initialized",
     }, controller.signal, protocolVersion);
 
-    const listed = await postMcp(endpoint, apiKey, {
+    const listed = await postMcp(endpoint, signingSecret, {
       jsonrpc: "2.0",
       id: 2,
       method: "tools/list",
@@ -260,7 +302,7 @@ export async function openExecutiveConsult(
       throw new Error("OpenExecutive consult_specialist is missing or not explicitly read-only");
     }
 
-    const called = await postMcp(endpoint, apiKey, {
+    const called = await postMcp(endpoint, signingSecret, {
       jsonrpc: "2.0",
       id: 3,
       method: "tools/call",
