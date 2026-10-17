@@ -23,12 +23,30 @@ Aplicar direção de arte deliberada e revisão de interface às páginas públi
 
 ## Execução atual — branch `feat/impeccable-taste-site-ads`
 
-Aplicado um primeiro passe de Impeccable nas nove páginas HTML públicas: link para pular ao conteúdo, destino `#main-content`, foco visível consistente, estados hover discretos, melhorias de toque/mobile, menu rolável em telas pequenas e respeito a `prefers-reduced-motion`. A alteração é aditiva e não remove conteúdo, JSON-LD, canonical, NAP, CTAs WhatsApp nem `attribution.js`.
+### Alterações reais feitas
+- Criado `public/design-refinements.css` com direção de arte por serviço, variações discretas de composição, crops e fundos dentro da identidade verde-floresta/dourado da clínica.
+- Reordenado o hero em mobile: mensagem e CTA vêm antes da imagem. O H1 da home foi reduzido para “Dentista em Parnamirim”; a página de dentista usa “Um dentista que ouve você.” com a localização mantida no texto.
+- Ajustada a escala tipográfica em mobile, aumentados textos funcionais pequenos, melhorado o contraste de elementos e trocada a família de texto para Source Sans 3 com `display=swap`.
+- Removidos rótulos em caixa alta acima dos títulos, numeração decorativa 01/02/03 e sombras decorativas. Preservados canonical, JSON-LD, NAP, links de WhatsApp, UTM e `attribution.js`.
+- Adicionadas fotos ilustrativas específicas por serviço, com links de crédito/licença; as fotos não representam pacientes nem resultados da Clínica São Paulo:
+  - Dentista: Shvets Production / Pexels (foto gratuita).
+  - Clínica odontológica: Harrison Keely / Wikimedia Commons, CC BY 4.0.
+  - Ortodontia: Dr-Taher / Wikimedia Commons, domínio público.
+  - Clareamento: Kindel Media / Pexels (foto gratuita).
+  - Limpeza: Wsiegmund / Wikimedia Commons, CC BY 2.5.
+  - Facetas: Shiny Diamond / Pexels (foto gratuita).
+  - Restauração: JoeyC773 / Pexels (foto gratuita).
+  - Canal: Pearson Scott Foresman / Wikimedia Commons, domínio público.
+  - Home: ativo local existente `/hero-ortho.webp`.
+- As oito URLs de imagem externas foram verificadas com resposta HTTP 200; as páginas de origem Pexels também responderam 200 e são listadas como fotos gratuitas.
 
-Validação estática no momento do commit: os nove arquivos contêm o skip link, o `main` nomeado e a regra de movimento reduzido. O workflow `Semantic SEO Quality Gate` foi iniciado e estava `queued` na última leitura; ainda não há resultado final de CI. A captura visual via Cloudflare Browser Rendering falhou com erro de autenticação da API; por isso, não alego aprovação visual real em viewport. O site de produção não foi alterado; as mudanças estão somente na branch/PR.
+### Evidência de navegador e testes
+- Auditoria real do site publicado em 390 × 844 px antes da alteração: H1 da home em 4 linhas, hero com cerca de 697 px e CTA primário próximo de y=619 px.
+- Criado `scripts/design-viewport-audit.mjs`, que abre as nove rotas em Chromium a 390, 768 e 1440 px, mede linhas do H1, posição do CTA, overflow, carregamento das imagens e stylesheet, e captura screenshots para artefato do CI.
+- Atualizado o workflow para executar o lint estático oficial do Taste Skill, o detector Impeccable e a regressão Playwright. O primeiro workflow de SEO continuou passando; a nova execução de regressão está em andamento. **Ainda não declaro aprovação visual final até a nova execução concluir.**
+- A captura via Cloudflare Browser Rendering falhou por autenticação; o teste Playwright no GitHub Actions passa a ser a via de validação para o branch.
 
-## Primeira constatação de código
-As páginas públicas são HTML estático e usam `/hero-ortho.webp` como imagem principal compartilhada. O repositório só contém esse arquivo visual e o favicon na pasta public. Portanto, não trocar a imagem por uma foto clínica inventada ou por um ativo inexistente; planejar um conjunto de imagens próprias e autorizadas antes de diferenciar os heróis visualmente.
+A produção não foi alterada: as mudanças estão somente na branch/PR.
 
 ## Direção de design e critérios
 1. Manter o tom acessível, profissional e acolhedor da clínica; evitar aparência genérica de template e estética artificialmente luxuosa.
