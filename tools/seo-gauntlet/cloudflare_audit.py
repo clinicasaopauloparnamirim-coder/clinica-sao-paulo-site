@@ -50,6 +50,12 @@ def assess_cloudflare(zone: dict[str,Any], settings: dict[str,Any], dns_records:
         add("info","brotli_off","Brotli está desligado",{"value":setting_map.get("brotli")})
     if setting_map.get("rocket_loader")=="on":
         add("info","rocket_loader_on","Rocket Loader está ligado; verificar scripts/tags e conversões",{"value":"on"})
+    tls_version=setting_map.get("min_tls_version")
+    try:
+        if tls_version is not None and float(tls_version)<1.2:
+            add("warning","minimum_tls_version_legacy","A versão mínima de TLS está abaixo de 1.2; avaliar elevação após validar compatibilidade dos clientes.",{"min_tls_version":tls_version})
+    except (TypeError,ValueError):
+        add("info","minimum_tls_version_unknown","A versão mínima de TLS não pôde ser interpretada",{"min_tls_version":tls_version})
     apex=domain
     www="www."+domain
     apex_domain=domain_map.get(apex); www_domain=domain_map.get(www)
