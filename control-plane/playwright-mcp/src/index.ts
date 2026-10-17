@@ -51,7 +51,6 @@ interface WhatsAppEnv {
   NVIDIA_KEY_ROTATED?: string;
   NVIDIA_BASE_URL?: string;
   NVIDIA_MODEL?: string;
-  OPENEXECUTIVE_GATEWAY_TOKEN?: string;
   TYPESAFE_API_KEY?: string;
   LAYA_HTTP_URL?: string;
   LAYA_API_KEY?: string;
@@ -393,6 +392,68 @@ async function forwardControlAgent(request: Request, env: WhatsAppEnv) {
   const target = new URL(incoming.pathname + incoming.search, "https://control.internal");
   const stub = env.CONTROL_AGENT.get(env.CONTROL_AGENT.idFromName("control-tower"));
   return stub.fetch(new Request(target, request));
+}
+
+
+const OPENEXECUTIVE_GATEWAY_PUBLIC_JWK: JsonWebKey = {
+  kty: "RSA",
+  n: "wjzdKybTJiZQ5E_mL3fC6QHbngwLO_ubbcjLuPdUWp89DeC9ewz9qNH42rVl6Zu_HC3Z8VYFqsHqxMtj8dhpWBGZ25pqPupS0fCm-KQPGsFfsvKkDPRrV-mDvMLeQBayhrJXkcn3ONxsRJmvoskgaVSoTIca58FIjjJSr6mmnM5rEWJlD9hRCJZ8gEfN3GOc_dUSLDHnULRycz2SpwLGu5N9ZFRuwZLYc4WYSnl7x2UFrM_1uNEXXeb5NsqaV6GehRwj3Ua2p_2W-3zYCEKgJaZNqKLO5xXPIJeM1PMdPhICgzaCKk1ey178ccStbSTdHBrbN2lTjWnio68sbdKPRQ",
+  e: "AQAB",
+  alg: "RS256",
+  ext: true,
+  key_ops: ["verify"],
+};
+let openExecutiveGatewayPublicKey: Promise<CryptoKey> | null = null;
+
+function decodeOpenExecutiveBase64Url(value: string): Uint8Array {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+  const binary = atob(padded);
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
+async function verifyOpenExecutiveGatewayToken(authorization: string | null): Promise<boolean> {
+  if (!authorization || !authorization.startsWith("Bearer ")) return false;
+  const token = authorization.slice("Bearer ".length);
+  const parts = token.split(".");
+  if (parts.length !== 3 || parts.some((part) => !part)) return false;
+
+  try {
+    const header = JSON.parse(new TextDecoder().decode(decodeOpenExecutiveBase64Url(parts[0]))) as {
+      alg?: string; kid?: string; typ?: string;
+    };
+    const claims = JSON.parse(new TextDecoder().decode(decodeOpenExecutiveBase64Url(parts[1]))) as {
+      iss?: string; aud?: string; exp?: number; nbf?: number; iat?: number;
+    };
+    const now = Math.floor(Date.now() / 1000);
+    if (
+      header.alg !== "RS256" ||
+      header.kid !== "oe-gateway-rs256-20261017" ||
+      claims.iss !== "openexecutive-clinic-gateway" ||
+      claims.aud !== "clinica-sao-paulo-site" ||
+      typeof claims.exp !== "number" ||
+      claims.exp <= now ||
+      (typeof claims.nbf === "number" && claims.nbf > now + 30) ||
+      (typeof claims.iat === "number" && claims.iat > now + 30)
+    ) return false;
+
+    openExecutiveGatewayPublicKey ??= crypto.subtle.importKey(
+      "jwk",
+      OPENEXECUTIVE_GATEWAY_PUBLIC_JWK,
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      false,
+      ["verify"],
+    );
+    const publicKey = await openExecutiveGatewayPublicKey;
+    return await crypto.subtle.verify(
+      { name: "RSASSA-PKCS1-v1_5" },
+      publicKey,
+      decodeOpenExecutiveBase64Url(parts[2]),
+      new TextEncoder().encode(parts[0] + "." + parts[1]),
+    );
+  } catch {
+    return false;
+  }
 }
 
 export default {
@@ -810,8 +871,7 @@ ${authenticated ? `<p>Acesso autorizado</p>
     // Private OpenExecutive model gateway: keeps the NVIDIA key inside Cloudflare.
     // Only the pinned Nemotron model is exposed; no arbitrary upstream URL/model forwarding.
     if (pathname === "/openexecutive/v1/chat/completions") {
-      const gatewayToken = env.OPENEXECUTIVE_GATEWAY_TOKEN;
-      if (!gatewayToken || request.headers.get("authorization") !== `Bearer ${gatewayToken}`) {
+      if (!(await verifyOpenExecutiveGatewayToken(request.headers.get("authorization")))) {
         return new Response("Unauthorized", { status: 401, headers: { "cache-control": "no-store" } });
       }
       if (request.method !== "POST") {
