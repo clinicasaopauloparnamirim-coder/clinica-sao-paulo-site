@@ -5,52 +5,57 @@ Ferramenta própria de auditoria técnica de SEO, somente leitura, em Python 3.1
 ## Uso local
 
 ```bash
-python tools/seo-gauntlet/seo_audit.py https://clinicasaopauloparnamirim.com.br/
 python tools/seo-gauntlet/seo_audit.py https://clinicasaopauloparnamirim.com.br/ --crawl --max-pages 30
+python tools/seo-gauntlet/advanced_checks.py seo-audit-report.json seo-audit-advanced.json
 python -m unittest discover -s tools/seo-gauntlet -p "test_*.py" -v
 ```
 
-Gera relatório JSON e Markdown. O modo padrão consulta a página inicial, robots.txt e sitemap.xml; `--crawl` segue links internos até 30 páginas. Limites, timeout e tamanho máximo de resposta são intencionais para reduzir carga. A ferramenta não submete sitemaps, não solicita indexação, não altera Cloudflare, não publica deploy e não grava no site auditado.
+O primeiro comando gera relatório JSON e Markdown; o segundo acrescenta verificações de status das URLs do sitemap, variantes HTTP/HTTPS e www, canonical, conteúdo misto e tipos Schema.org em JSON-LD. O modo crawl segue links internos até 30 páginas. Limites, timeout e tamanho máximo de resposta são intencionais para reduzir carga.
+
+A ferramenta não submete sitemaps, não solicita indexação, não altera Cloudflare, não publica deploy e não grava no site auditado.
 
 ## Testes cobertos na primeira versão
 
-- Status HTTP da página e do robots.txt/sitemap.
-- Title, meta description, meta robots e idioma do documento.
+- Status HTTP, title, meta description, meta robots e idioma do documento.
 - Canonical ausente/duplicada e resolução de URLs relativas.
 - H1 ausente/múltiplo, imagens sem atributo alt e JSON-LD inválido.
 - Leitura de regras robots.txt e extração de URLs do sitemap XML.
-- Verificação da cadeia de redirecionamento com limite de saltos.
-- Relatórios JSON/Markdown e execução de testes unitários em CI.
+- Cadeia de redirecionamento e variantes HTTP/HTTPS e www.
+- Status HTTP das URLs listadas no sitemap.
+- Recursos HTTP em páginas HTTPS e extração de tipos Schema.org em JSON-LD.
+- Relatórios JSON/Markdown e testes unitários em CI.
 
-A pontuação é **heurística interna**, não uma pontuação oficial do Google. O relatório distingue achados automáticos; revisão humana continua necessária.
+A pontuação é **heurística interna**, não uma pontuação oficial do Google. Um resultado sem achados significa apenas que os testes implementados não detectaram problemas no escopo executado; não prova que o site inteiro está perfeito nem que o Google o indexou.
 
 ## Matriz de paridade — SEO Monster
 
 | Área | Estado do Gauntlet | Próxima etapa |
 |---|---|---|
-| Metadados / HTML | Implementado | Conferir OG/Twitter, headings e duplicidade no crawl |
-| Canonical | Presença, duplicidade e URL resolvida | Verificar canonical cruzada e destino/status |
-| Redirecionamentos | Cadeia e status por salto | Comparar variantes HTTP/HTTPS e www/raiz |
-| robots.txt | HTTP, regras e diretiva Sitemap | Testar URLs específicas contra regras |
-| Sitemap XML | HTTP, parse XML, contagem e URLs | Verificar status de cada URL e lastmod |
-| Links internos | Coleta no modo crawl | Checagem 4xx/5xx, loops e profundidade |
-| Dados estruturados | JSON-LD parseável | Validação de tipos/campos Schema.org e rich results |
-| Performance / CWV | Não implementado nesta versão | PageSpeed Insights / CrUX; separar lab de field data |
+| Metadados / HTML | Parcialmente implementado | Twitter Cards, hreflang e verificação em navegador renderizado |
+| Canonical | Presença, duplicidade, host e alvo | Aprofundar normalização e conflitos por página |
+| Redirecionamentos | Cadeia por URL e quatro variantes do host | Protocol downgrade, cache e cenários de migração adicionais |
+| robots.txt | HTTP, regras básicas e diretiva Sitemap | Grupos, RFC 9309, probes por user-agent e cache-edge |
+| Sitemap XML | XML e status das URLs | Sitemap index/gzip/limites, lastmod e amostragem configurável |
+| Links internos | Crawl limitado | Grafo, links quebrados, páginas órfãs e profundidade |
+| Dados estruturados | JSON-LD e extração de tipos | Validação semântica Schema.org / Google Rich Results |
+| Performance / CWV | Não implementado | PageSpeed Insights / CrUX; separar lab de field data |
 | Search Console | Não implementado | OAuth e leitura de propriedade autorizada |
 | GA4 | Não implementado | OAuth/property e auditoria de eventos em modo leitura |
-| Cloudflare | Não implementado | API token mínimo, leitura de regras/cache/headers; sem writes |
+| Cloudflare | Não implementado | Token mínimo, leitura de regras/cache/headers; sem writes |
 | IndexNow | Não implementado | Auditoria de configuração; nunca enviar sem autorização |
 | AI citation / keyword research | Não implementado | Definir fonte, limites e critérios de evidência |
 | SEO local / Google Maps | Heartseomap permanece separado | Integrar como fonte de dados local, não criar outro cérebro |
 
+O inventário das 70 ferramentas e 13 prompts está em [PARITY_ROADMAP.md](PARITY_ROADMAP.md), com status por capacidade e regras de segurança.
+
 ## GitHub Actions
 
-O workflow `SEO Gauntlet (read-only)` roda testes unitários em pull requests. A auditoria pública completa é manual via **Actions → SEO Gauntlet (read-only) → Run workflow**; informe a URL e opcionalmente habilite o crawl. Os relatórios são publicados como artefato da execução.
+O workflow `SEO Gauntlet (read-only)` roda os testes unitários e uma auditoria pública de leitura em pull requests. A auditoria também pode ser executada manualmente via **Actions → SEO Gauntlet (read-only) → Run workflow**, informando URL e opção de crawl. Os relatórios JSON e Markdown são publicados como artefato da execução.
 
 ## Segurança e limitações
 
 - Não configure segredos no código nem use credenciais de produção em testes unitários.
-- Não há mutações remotas. Integrações autenticadas futuras devem usar permissões somente leitura por padrão e bloquear operações de escrita.
+- Integrações autenticadas futuras devem usar permissões somente leitura por padrão; writes devem ficar fora do fluxo normal e exigir aprovação separada.
 - O crawler limita-se ao host inicial e a no máximo 30 páginas.
-- Sitemap index, JavaScript que injeta metadados depois do carregamento e renderização real de navegador não são totalmente avaliados nesta versão.
-- Resultados variam com CDN, cache, região, user-agent e momento do teste; compare várias execuções antes de declarar regressão.
+- Sitemap index, JavaScript que injeta metadados depois do carregamento e renderização completa em navegador não são totalmente avaliados nesta versão.
+- Resultados variam com CDN, cache, região, user-agent e momento do teste; compare execuções e fontes antes de declarar regressão.
