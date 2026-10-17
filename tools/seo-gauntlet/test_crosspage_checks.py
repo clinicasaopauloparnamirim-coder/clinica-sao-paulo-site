@@ -18,6 +18,22 @@ class CrossPageTests(unittest.TestCase):
         self.assertEqual(errors,[])
         self.assertEqual(missing,[])
 
+    def test_faq_and_breadcrumb_use_type_specific_required_fields(self):
+        valid = '{"@graph":[{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Q?","acceptedAnswer":{"@type":"Answer","text":"A"}}]},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"item":"https://example.test/"}]}]}'
+        types, errors, missing = cross.schema_issues([valid])
+        self.assertIn("FAQPage", types)
+        self.assertIn("BreadcrumbList", types)
+        self.assertEqual(errors, [])
+        self.assertEqual(missing, [])
+
+    def test_missing_structured_data_required_field_is_flagged(self):
+        payload = '{"@graph":[{"@type":"FAQPage"},{"@type":"Question","name":"Q without answer"},{"@type":"GeoCoordinates","latitude":1}]}'
+        _, errors, missing = cross.schema_issues([payload])
+        self.assertEqual(errors, [])
+        self.assertTrue(any("FAQPage: mainEntity ausente" in m for m in missing))
+        self.assertTrue(any("Question: acceptedAnswer/suggestedAnswer ausente" in m for m in missing))
+        self.assertTrue(any("GeoCoordinates: longitude ausente" in m for m in missing))
+
     def test_schema_missing_address_flag(self):
         types, errors, missing=cross.schema_issues(['{"@type":"MedicalClinic","name":"Clinic"}'])
         self.assertIn("MedicalClinic",types)
