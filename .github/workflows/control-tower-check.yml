@@ -95,6 +95,8 @@ jobs:
             'readOnlyHint !== true',
             'REQUEST_TIMEOUT_MS = 18_000',
             'MAX_RESPONSE_CHARS = 64_000',
+            'readBoundedText(response, MAX_RESPONSE_CHARS)',
+            'sanitizeAdvisoryText(text.slice(0, 12_000))',
             'redirect: "error"',
             'hasSensitiveInput(query)'
           ]) if (!openExecClient.includes(token)) throw new Error(`OpenExecutive safety contract missing: ${token}`);
