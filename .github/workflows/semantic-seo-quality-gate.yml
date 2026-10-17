@@ -100,7 +100,9 @@ jobs:
           });
           const counts = {};
           for (const f of findings) counts[f.antipattern || f.name || 'unknown'] = (counts[f.antipattern || f.name || 'unknown'] || 0) + 1;
-          console.log(JSON.stringify({reports: files.length, findingCount: findings.length, counts, examples: findings.filter(f => f.severity === 'error' || f.antipattern === 'low-contrast' || f.antipattern === 'undersized-ui-text').slice(0, 30)}, null, 2));
+          console.log(JSON.stringify({reports: files.length, findingCount: findings.length, counts, examples: findings.slice(0, 30)}, null, 2));
+          const severe = findings.filter(f => f.severity === 'error' || ['low-contrast', 'undersized-ui-text', 'tiny-text'].includes(f.antipattern));
+          if (severe.length) { console.error('Impeccable blocking findings:', JSON.stringify(severe, null, 2)); process.exit(1); }
           NODE
       - name: Upload static design audit evidence
         if: always()
