@@ -40,8 +40,8 @@ A pontuação é **heurística interna**, não uma pontuação oficial do Google
 | Links internos | Crawl limitado | Grafo, links quebrados, páginas órfãs e profundidade |
 | Dados estruturados | JSON-LD, tipos e verificações básicas de nome/endereço | Validação semântica Schema.org / Google Rich Results |
 | Performance / CWV | PENDENTE de métricas Lighthouse/CrUX confiáveis | Configurar quota PSI / API key ou ferramenta de auditoria disponível; lab versus field data |
-| Search Console | Não implementado | OAuth e leitura de propriedade autorizada |
-| GA4 | Não implementado | OAuth/property e auditoria de eventos em modo leitura |
+| Search Console | Não implementado; conexão disponível via ferramenta externa não expôs propriedades | OAuth e leitura de propriedade autorizada |
+| GA4 | Não implementado; conexão disponível via ferramenta externa não expôs propriedades | OAuth/property e auditoria de eventos em modo leitura |
 | Cloudflare | Módulo GET-only de zona/DNS/settings/Worker domains; auditoria de headers HTTP em CI | Ampliar cache rules/security settings; API token de leitura em CI é opcional e não foi configurado |
 | IndexNow | Não implementado | Auditoria de configuração; nunca enviar sem autorização |
 | AI citation / keyword research | Não implementado | Definir fonte, limites e critérios de evidência |
