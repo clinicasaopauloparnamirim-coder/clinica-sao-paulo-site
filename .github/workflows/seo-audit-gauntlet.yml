@@ -53,6 +53,33 @@ jobs:
         run: python tools/seo-gauntlet/advanced_checks.py seo-audit-report.json seo-audit-advanced.json
       - name: Run cross-page checks
         run: python tools/seo-gauntlet/crosspage_checks.py seo-audit-report.json seo-audit-crosspage.json
+      - name: Optional Cloudflare read-only audit
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_ZONE_NAME: clinicasaopauloparnamirim.com.br
+          CF_EXPECTED_WORKER: clinica-sao-paulo-site
+        shell: bash
+        run: |
+          if [[ -n "$CF_API_TOKEN" ]]; then
+            if ! python tools/seo-gauntlet/cloudflare_audit.py --domain "$CF_ZONE_NAME" --expected-worker "$CF_EXPECTED_WORKER" --json cloudflare-audit-report.json --markdown cloudflare-audit-report.md; then
+              printf '{"status":"failed","read_only":true,"message":"Cloudflare audit did not complete; consult workflow logs. No writes were executed."}\n' > cloudflare-audit-report.json
+            fi
+          else
+            printf '{"status":"skipped_no_token","read_only":true,"message":"CF_API_TOKEN is not configured as a GitHub Actions secret."}\n' > cloudflare-audit-report.json
+          fi
+      - name: Optional PageSpeed Insights audit
+        env:
+          PSI_API_KEY: ${{ secrets.PSI_API_KEY }}
+        shell: bash
+        run: |
+          if [[ -n "$PSI_API_KEY" ]]; then
+            if ! python tools/seo-gauntlet/pagespeed_audit.py "$AUDIT_URL" --strategy mobile --json pagespeed-report.json; then
+              echo "PageSpeed report recorded an unavailable/quota-limited state; see pagespeed-report.json."
+            fi
+          else
+            printf '{"status":"skipped_no_api_key","url":"%s","strategy":"mobile","scores":{},"summary":{"score_count":0,"field_data_available":false,"status":"not_measured"},"message":"PSI_API_KEY is not configured as a GitHub Actions secret."}\n' "$AUDIT_URL" > pagespeed-report.json
+          fi
       - name: Upload audit reports
         uses: actions/upload-artifact@v4
         with:
@@ -62,4 +89,7 @@ jobs:
             seo-audit-report.md
             seo-audit-advanced.json
             seo-audit-crosspage.json
+            cloudflare-audit-report.json
+            cloudflare-audit-report.md
+            pagespeed-report.json
           if-no-files-found: error
