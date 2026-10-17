@@ -104,7 +104,7 @@ jobs:
           if (!externalAgents.includes('id: "openexecutive"') ||
               !externalAgents.includes('not-runtime-proven') ||
               !externalAgents.includes('não cria um novo cérebro')) throw new Error('OpenExecutive must remain a separate advisory external council, not another brain.');
-          if (/name:\\s*["']ask_executive["']/.test(openExecClient)) throw new Error('OpenExecutive ask_executive is excluded because it can write episodic memory.');
+          if (openExecClient.includes('name: "ask_executive"') || openExecClient.includes("name: 'ask_executive'")) throw new Error('OpenExecutive ask_executive is excluded because it can write episodic memory.');
           const oeRuntimeConfig = fs.readFileSync('wrangler.jsonc','utf8');
           if (oeRuntimeConfig.includes('OPENEXECUTIVE_API_KEY') || oeRuntimeConfig.includes('OPENEXECUTIVE_ENABLED')) throw new Error('OpenExecutive activation/secrets must not be committed to wrangler config.');
           console.log(JSON.stringify({ok:true,brainCount,agentCount,publicHealth:'minimal',protectedDiagnostics:'auth-required',crmEndpoints:3,dashboard:'present',deploySmoke:'aligned',openExecutive:'default-off/read-only-gated'},null,2));
