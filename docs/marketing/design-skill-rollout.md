@@ -21,6 +21,12 @@ Aplicar direção de arte deliberada e revisão de interface às páginas públi
 - /restauracao-estetica-parnamirim/
 - /tratamento-de-canal-parnamirim/
 
+## Execução atual — branch `feat/impeccable-taste-site-ads`
+
+Aplicado um primeiro passe de Impeccable nas nove páginas HTML públicas: link para pular ao conteúdo, destino `#main-content`, foco visível consistente, estados hover discretos, melhorias de toque/mobile, menu rolável em telas pequenas e respeito a `prefers-reduced-motion`. A alteração é aditiva e não remove conteúdo, JSON-LD, canonical, NAP, CTAs WhatsApp nem `attribution.js`.
+
+Validação estática no momento do commit: os nove arquivos contêm o skip link, o `main` nomeado e a regra de movimento reduzido. O workflow `Semantic SEO Quality Gate` foi iniciado e estava `queued` na última leitura; ainda não há resultado final de CI. A captura visual via Cloudflare Browser Rendering falhou com erro de autenticação da API; por isso, não alego aprovação visual real em viewport. O site de produção não foi alterado; as mudanças estão somente na branch/PR.
+
 ## Primeira constatação de código
 As páginas públicas são HTML estático e usam `/hero-ortho.webp` como imagem principal compartilhada. O repositório só contém esse arquivo visual e o favicon na pasta public. Portanto, não trocar a imagem por uma foto clínica inventada ou por um ativo inexistente; planejar um conjunto de imagens próprias e autorizadas antes de diferenciar os heróis visualmente.
 
@@ -41,6 +47,7 @@ As páginas públicas são HTML estático e usam `/hero-ortho.webp` como imagem 
 - Registrar URLs, commit, screenshots e resultados de regressão no relatório final.
 
 ## Bloqueios atuais
-- A conexão HYPD disponível nesta sessão retorna plano Free sem acesso aos recursos de auditoria de landing page e não lista nenhuma conta Google Ads.
-- Assim, a campanha e os dados de conversão não podem ser editados/verificados por essa conexão nesta execução.
-- Não alterar campanha, orçamento, lances, palavras-chave, anúncios ativos ou tracking sem acesso funcional à conta.
+- A conexão HYPD continua sem conta Ads e os recursos de auditoria de landing page estão bloqueados pelo plano Free. Uma conexão Google Ads separada via Composio está ativa e permitiu leitura de campanha, anúncios e termos.
+- Os recursos de mutação de anúncios do Google Ads foram explicitamente marcados como restritos no ambiente Composio; não é permitido contornar essa restrição. Por isso, nenhum anúncio foi publicado ou editado.
+- A API Cloudflare Browser Rendering respondeu erro 10000 de autenticação para screenshot; falta uma captura visual automatizada válida antes de afirmar aprovação de layout.
+- Próximo gate: concluir CI, validar preview visual real em 390px/tablet/desktop e só então decidir publicação. Nenhum deploy/merge foi feito.
