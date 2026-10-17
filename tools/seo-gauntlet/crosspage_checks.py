@@ -42,24 +42,55 @@ def walk_nodes(obj):
         for v in obj: yield from walk_nodes(v)
 
 def schema_issues(blobs):
+    """Syntax-check JSON-LD and apply conservative, type-specific field checks."""
     types=set(); entities=[]; errors=[]
     for raw in blobs:
         try: payload=json.loads(raw)
         except Exception as e: errors.append(f"JSON-LD inválido: {e}"); continue
         for node in walk_nodes(payload):
+            if not isinstance(node,dict): continue
             typ=node.get("@type")
-            if isinstance(typ,str): types.add(typ); entities.append((typ,node))
-            elif isinstance(typ,list):
-                types.update(str(x) for x in typ)
-                entities.extend((str(t),node) for t in typ)
+            if isinstance(typ,str): type_names=[typ]
+            elif isinstance(typ,list): type_names=[str(t) for t in typ]
+            else: continue
+            types.update(type_names)
+            for type_name in type_names: entities.append((type_name,node))
     missing=[]
     for typ,node in entities:
         name=node.get("name")
-        if not name and typ in {"Dentist","MedicalClinic","LocalBusiness","Organization","WebSite","WebPage","Service","BreadcrumbList","FAQPage"}:
+        if typ in {"Dentist","MedicalClinic","LocalBusiness","Organization","WebSite","WebPage","Service","Product"} and not name:
             missing.append(f"{typ}: campo name ausente")
-        if typ in {"Dentist","MedicalClinic","LocalBusiness"} and not node.get("address"):
-            missing.append(f"{typ}: campo address ausente")
-    return sorted(types), errors, missing
+        if typ in {"Dentist","MedicalClinic","LocalBusiness"}:
+            address=node.get("address")
+            if not address or not isinstance(address,(dict,str)):
+                missing.append(f"{typ}: campo address ausente")
+            elif isinstance(address,dict):
+                for field in ("streetAddress","addressLocality"):
+                    if not address.get(field):
+                        missing.append(f"{typ}.address: campo {field} ausente")
+            if not node.get("telephone"):
+                missing.append(f"{typ}: telefone ausente (recomendado para SEO local)")
+        if typ=="BreadcrumbList" and not node.get("itemListElement"):
+            missing.append("BreadcrumbList: itemListElement ausente")
+        if typ=="FAQPage" and not node.get("mainEntity"):
+            missing.append("FAQPage: mainEntity ausente")
+        if typ=="Question":
+            if not (node.get("name") or node.get("text")): missing.append("Question: name/text ausente")
+            if not (node.get("acceptedAnswer") or node.get("suggestedAnswer")):
+                missing.append("Question: acceptedAnswer/suggestedAnswer ausente")
+        if typ=="Answer" and not node.get("text"): missing.append("Answer: text ausente")
+        if typ=="GeoCoordinates":
+            if node.get("latitude") is None: missing.append("GeoCoordinates: latitude ausente")
+            if node.get("longitude") is None: missing.append("GeoCoordinates: longitude ausente")
+        if typ=="OpeningHoursSpecification":
+            for field in ("dayOfWeek","opens","closes"):
+                if not node.get(field): missing.append(f"OpeningHoursSpecification: {field} ausente")
+        if typ=="PostalAddress":
+            for field in ("streetAddress","addressLocality"):
+                if not node.get(field): missing.append(f"PostalAddress: {field} ausente")
+        if typ=="ListItem" and node.get("position") is None:
+            missing.append("ListItem: position ausente")
+    return sorted(types), errors, sorted(set(missing))
 
 def parse_sitemap(url):
     result=fetch(url)
