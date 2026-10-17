@@ -40,6 +40,12 @@ def assess_cloudflare(zone: dict[str,Any], settings: dict[str,Any], dns_records:
     ssl=setting_map.get("ssl")
     if ssl=="flexible":
         add("warning","ssl_mode_flexible_review","SSL/TLS está em Flexible. Revisar se há origem HTTP real e se Full (strict) é aplicável; não alterar automaticamente.",{"ssl":ssl,"context":"Custom Worker domains may not use a conventional origin."})
+    security_header=setting_map.get("security_header")
+    hsts=(security_header or {}).get("strict_transport_security",{}) if isinstance(security_header,dict) else {}
+    if not hsts.get("enabled",False):
+        add("warning","hsts_disabled","HSTS está desativado na configuração de security_header; confirmar que o site e todos os subdomínios necessários suportam HTTPS antes de ativar.",{"enabled":hsts.get("enabled",False),"max_age":hsts.get("max_age",0)})
+    if isinstance(security_header,dict) and not security_header.get("nosniff",False):
+        add("info","nosniff_disabled","X-Content-Type-Options/nosniff está desativado na configuração gerenciada da zona; verificar também os headers emitidos pelo Worker.",{"nosniff":security_header.get("nosniff",False)})
     elif ssl in ("off",None):
         add("error","ssl_mode_weak","SSL/TLS não está em um modo seguro reconhecido",{"ssl":ssl})
     if setting_map.get("always_use_https")!="on":
@@ -84,7 +90,7 @@ def assess_cloudflare(zone: dict[str,Any], settings: dict[str,Any], dns_records:
             add("info","dns_not_proxied",f"Nenhum registro de {hostname} está proxied",{"types":sorted({x.get("type","") for x in recs})})
     # DNS content is intentionally omitted from the report.
     safe_dns=[{"type":r.get("type"),"name":r.get("name"),"proxied":r.get("proxied"),"ttl":r.get("ttl")} for r in dns_records]
-    safe_settings={k:setting_map.get(k) for k in ("ssl","always_use_https","automatic_https_rewrites","brotli","browser_cache_ttl","cache_level","rocket_loader","http2","http3","min_tls_version","tls_1_3","security_level")}
+    safe_settings={k:setting_map.get(k) for k in ("ssl","always_use_https","automatic_https_rewrites","brotli","browser_cache_ttl","cache_level","rocket_loader","http2","http3","min_tls_version","tls_1_3","security_level","security_header")}
     return {"tool":"Clinica SEO Gauntlet Cloudflare Read-only","version":"0.1.0","read_only":True,"domain":domain,
         "zone":{"name":zone.get("name"),"status":zone.get("status"),"paused":zone.get("paused"),"plan":(zone.get("plan") or {}).get("name")},
         "settings":safe_settings,"worker_domains":[{"hostname":d.get("hostname"),"service":d.get("service"),"environment":d.get("environment")} for d in worker_domains],
