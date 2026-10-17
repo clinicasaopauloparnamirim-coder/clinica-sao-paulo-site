@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from advanced_checks import ResourceParser
+from advanced_checks import ResourceParser, extract_schema_types
 
 class AdvancedSEOTests(unittest.TestCase):
     def test_detects_http_resources_on_parser_input(self):
@@ -20,6 +20,10 @@ class AdvancedSEOTests(unittest.TestCase):
         self.assertEqual(p.hreflang,[{"lang":"pt-BR","url":"https://example.test/pt/"}])
         self.assertEqual(len(p.jsonld),1)
         self.assertIn("Dentist",p.jsonld[0])
+
+    def test_extracts_types_from_nested_schema_graph(self):
+        payload={"@context":"https://schema.org","@graph":[{"@type":"Dentist"},{"@type":["LocalBusiness","Organization"]}]}
+        self.assertEqual(sorted(extract_schema_types(payload)),["Dentist","LocalBusiness","Organization"])
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
