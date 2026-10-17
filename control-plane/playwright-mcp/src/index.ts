@@ -496,7 +496,7 @@ export default {
       }
       try {
         const privateKey = await deriveOpenExecutiveMcpSigningKey(env.MCP_AUTH_TOKEN, true);
-        const key = await crypto.subtle.exportKey("jwk", privateKey);
+        const key = await crypto.subtle.exportKey("jwk", privateKey) as JsonWebKey;
         if (typeof key.x !== "string" || !key.x) throw new Error("Missing Ed25519 public component");
         return Response.json({ ok: true, alg: "Ed25519", key_id: "openexecutive-mcp-ed25519-v1", public_key: key.x }, {
           headers: { "cache-control": "no-store", "x-content-type-options": "nosniff" },
