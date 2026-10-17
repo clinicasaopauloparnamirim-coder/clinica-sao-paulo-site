@@ -121,7 +121,7 @@ function encodeOpenExecutiveBase64Url(bytes: Uint8Array): string {
 }
 
 async function openExecutiveSigningKey(secret: string): Promise<CryptoKey> {
-  const seedInput = new TextEncoder().encode("OpenExecutive MCP request signing v1\\0" + secret);
+  const seedInput = new TextEncoder().encode("OpenExecutive MCP request signing v1\0" + secret);
   const seed = new Uint8Array(await crypto.subtle.digest("SHA-256", seedInput));
   const prefix = Uint8Array.from([
     0x30, 0x2e, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06,
@@ -144,7 +144,7 @@ async function signedMcpHeaders(
   const bodyBytes = new TextEncoder().encode(rawBody);
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bodyBytes));
   const digestHex = Array.from(digest, (value) => value.toString(16).padStart(2, "0")).join("");
-  const message = ["POST", endpoint.pathname, timestamp, nonce, digestHex].join("\\n");
+  const message = ["POST", endpoint.pathname, timestamp, nonce, digestHex].join("\n");
   const key = await openExecutiveSigningKey(secret);
   const signature = new Uint8Array(await crypto.subtle.sign(
     { name: "Ed25519" }, key, new TextEncoder().encode(message),
