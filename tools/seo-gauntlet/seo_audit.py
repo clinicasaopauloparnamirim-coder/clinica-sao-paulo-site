@@ -167,7 +167,7 @@ def audit_site(url, crawl=False, max_pages=30):
                 u=urllib.parse.urlsplit(dest)
                 if u.scheme in ("http","https") and (u.hostname or "").lower()==host and dest not in seen and dest not in queue: queue.append(dest)
     if parts.scheme!="https": findings.append(Finding("warning","https_preferred","start_url","URL inicial não usa HTTPS",url))
-    security_headers=audit_security_headers(page_results[0]["final_url"],page_results[0].get("response_headers",{}),findings) if page_results else {}
+    security_headers=audit_security_headers(pages[0]["final_url"],pages[0].get("response_headers",{}),findings) if pages else {}
     robots=robots_audit(base,findings)
     sitemap_urls=robots["sitemaps"] or [base+"/sitemap.xml"]
     sitemaps=[sitemap_audit(s,findings) for s in sitemap_urls[:5]]
