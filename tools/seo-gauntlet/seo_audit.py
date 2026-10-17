@@ -102,7 +102,21 @@ def page_audit(url, response, findings):
         "title":title,"title_length":len(title),"description":desc,"description_length":len(desc),"robots":robots,
         "canonical":canonical,"html_lang":p.lang,"h1_count":h1,"headings":p.headings,"image_count":len(p.images),
         "images_missing_alt":missing_alt,"jsonld_blocks":len(p.jsonld),"og_title":p.meta.get("og:title",""),
-        "og_description":p.meta.get("og:description",""),"links":p.links,"content_type":next((v for k,v in response["headers"].items() if k.lower()=="content-type"),"")}
+        "og_description":p.meta.get("og:description",""),"links":p.links,"content_type":next((v for k,v in response["headers"].items() if k.lower()=="content-type"),""),
+        "response_headers":{k.lower():v for k,v in response.get("headers",{}).items() if k.lower() in {"strict-transport-security","x-content-type-options","content-security-policy","x-frame-options","referrer-policy","permissions-policy","server","content-type","cache-control"}}}
+
+def audit_security_headers(url, headers, findings):
+    """Check key response security headers on the public HTTPS response (not just zone settings)."""
+    normalized={str(k).lower():str(v).strip() for k,v in (headers or {}).items()}
+    scheme=urllib.parse.urlsplit(url).scheme.lower()
+    keys=("strict-transport-security","x-content-type-options","content-security-policy","x-frame-options","referrer-policy","permissions-policy","cache-control","server")
+    reported={k:normalized.get(k) for k in keys if normalized.get(k) is not None}
+    if scheme=="https":
+        if not normalized.get("strict-transport-security"):
+            findings.append(Finding("warning","hsts_response_header_missing",url,"Resposta HTTPS não enviou Strict-Transport-Security; validar a configuração gerenciada e os headers do Worker antes de ativar HSTS.", ""))
+        if normalized.get("x-content-type-options","").lower()!="nosniff":
+            findings.append(Finding("info","nosniff_response_header_missing",url,"Resposta pública não envia X-Content-Type-Options: nosniff."))
+    return reported
 
 def robots_audit(base, findings):
     url=base.rstrip("/")+"/robots.txt"; r=fetch(url); sitemaps=[]; disallow=[]
@@ -153,6 +167,7 @@ def audit_site(url, crawl=False, max_pages=30):
                 u=urllib.parse.urlsplit(dest)
                 if u.scheme in ("http","https") and (u.hostname or "").lower()==host and dest not in seen and dest not in queue: queue.append(dest)
     if parts.scheme!="https": findings.append(Finding("warning","https_preferred","start_url","URL inicial não usa HTTPS",url))
+    security_headers=audit_security_headers(page_results[0]["final_url"],page_results[0].get("response_headers",{}),findings) if page_results else {}
     robots=robots_audit(base,findings)
     sitemap_urls=robots["sitemaps"] or [base+"/sitemap.xml"]
     sitemaps=[sitemap_audit(s,findings) for s in sitemap_urls[:5]]
@@ -166,7 +181,7 @@ def audit_site(url, crawl=False, max_pages=30):
     score=max(0,100-sum(weights.get(f.severity,0) for f in findings))
     return {"tool":"Clinica SEO Gauntlet","version":"0.1.0","read_only":True,"start_url":url,
         "generated_at_utc":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime()),"pages_checked":len(pages),
-        "robots":robots,"sitemaps":sitemaps,"redirect_checks":redirect_checks,"pages":pages,
+        "robots":robots,"sitemaps":sitemaps,"redirect_checks":redirect_checks,"security_headers":security_headers,"pages":pages,
         "findings":[asdict(f) for f in findings],"summary":{"score_heuristic":score,
         "critical":sum(f.severity=="critical" for f in findings),"errors":sum(f.severity=="error" for f in findings),
         "warnings":sum(f.severity=="warning" for f in findings),"info":sum(f.severity=="info" for f in findings)}}
