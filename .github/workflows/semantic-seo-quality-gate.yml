@@ -25,6 +25,10 @@ on:
       - ".github/workflows/semantic-seo-quality-gate.yml"
   workflow_dispatch:
 
+concurrency:
+  group: clinic-design-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
