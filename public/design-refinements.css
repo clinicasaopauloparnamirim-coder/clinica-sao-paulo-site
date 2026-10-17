@@ -41,7 +41,7 @@ body.page--restoration .hero{grid-template-columns:minmax(0,.94fr) minmax(0,1.06
   .hero-actions{display:flex!important;flex-direction:column;align-items:stretch;gap:7px!important}
   .hero-actions .btn-primary{width:100%;min-height:48px;padding:12px 14px;font-size:13px;text-align:center}
   .hero-actions .btn-map{align-self:flex-start;min-height:38px;padding:6px 0;border:0;background:transparent;font-size:13px;justify-content:flex-start}
-  .proof-row{gap:7px 12px;font-size:11px;margin-top:12px}
+  .proof-row{gap:7px 12px;font-size:12px;margin-top:12px}
   .image-credit{right:8px;bottom:8px;max-width:calc(100% - 16px);padding:4px 6px;font-size:12px}
   body.page--dentist .image-credit,body.page--veneers .image-credit,body.page--root-canal .image-credit{left:8px;right:auto}
 }
