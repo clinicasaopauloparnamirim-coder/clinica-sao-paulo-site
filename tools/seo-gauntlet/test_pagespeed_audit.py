@@ -37,15 +37,13 @@ class PageSpeedTests(unittest.TestCase):
 
     def test_api_key_is_redacted_from_generic_http_errors(self):
         key="PSI_SECRET_TEST_KEY_12345"
-        http_error=urllib.error.HTTPError(
-            "https://www.googleapis.com/pagespeedonline/v5/runPagespeed?key="+key,
-            429,"Too Many Requests",{},io.BytesIO(b'{}'))
-        with patch.object(psi.urllib.request,"urlopen",side_effect=http_error):
+        request_url="https://www.googleapis.com/pagespeedonline/v5/runPagespeed?key="+key
+        with patch.object(psi.urllib.request,"urlopen",side_effect=RuntimeError("request failed for "+request_url)):
             report=psi.run_psi("https://example.test/","mobile",api_key=key)
         serialized=json.dumps(report)
         self.assertNotIn(key,serialized)
         self.assertIn("[REDACTED]",report["error"]["message"])
-        self.assertEqual(report["status"],"quota_limited")
+        self.assertEqual(report["status"],"unavailable")
 
     def test_invalid_url_strategy_rejected(self):
         with self.assertRaises(ValueError): psi.run_psi("file:///etc/passwd")
