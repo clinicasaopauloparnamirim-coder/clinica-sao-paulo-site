@@ -33,6 +33,7 @@ const CRM_SOURCES: CrmSource[] = ["google_ads", "meta_ads", "organic", "instagra
 
 interface WhatsAppEnv {
   MCP_AUTH_TOKEN?: string;
+  CONTROL_SESSION_TOKEN?: string;
   WHATSAPP_VERIFY_TOKEN?: string;
   WHATSAPP_APP_SECRET?: string;
   WHATSAPP_AUTOREPLY_ENABLED?: string;
@@ -558,14 +559,18 @@ function unauthorized() {
 }
 
 
-function authorized(request: Request, env: { MCP_AUTH_TOKEN?: string }) {
+function authorized(request: Request, env: { MCP_AUTH_TOKEN?: string; CONTROL_SESSION_TOKEN?: string }) {
   const configured = env.MCP_AUTH_TOKEN;
   if (!configured) return false;
   const header = request.headers.get("Authorization") || "";
   if (header === "Bearer " + configured) return true;
   const cookie = request.headers.get("Cookie") || "";
   const match = cookie.match(/(?:^|;\s*)control_session=([^;]+)/);
-  return match?.[1] === encodeURIComponent(configured);
+  const cookieToken = match?.[1];
+  return Boolean(cookieToken && (
+    cookieToken === encodeURIComponent(configured) ||
+    (env.CONTROL_SESSION_TOKEN && cookieToken === encodeURIComponent(env.CONTROL_SESSION_TOKEN))
+  ));
 }
 
 function controlCookie(value: string, maxAge = 31536000) {
@@ -768,7 +773,10 @@ export default {
     if (pathname === "/control/login" && request.method === "POST") {
       const form = await request.formData();
       const token = String(form.get("token") || "");
-      if (!env.MCP_AUTH_TOKEN || token !== env.MCP_AUTH_TOKEN) {
+      const tokenAccepted = Boolean(token && (
+        token === env.MCP_AUTH_TOKEN || token === env.CONTROL_SESSION_TOKEN
+      ));
+      if (!tokenAccepted) {
         return new Response("Acesso negado: MCP Auth Token invalido.", {
           status: 401,
           headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },
@@ -778,7 +786,7 @@ export default {
         status: 303,
         headers: {
           "Location": "/control-tower/",
-          "Set-Cookie": controlCookie(token, 31536000),
+          "Set-Cookie": controlCookie(env.CONTROL_SESSION_TOKEN || token, 31536000),
           "cache-control": "no-store",
         },
       });
