@@ -103,8 +103,14 @@ export class WhatsAppLedger extends DurableObject {
       try { payload = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
       const transactionId = String(payload?.transaction_id || "");
       const contactId = String(payload?.contact_id || "");
+      const saleValue = Number(payload?.conversion_value);
+      const saleTimestamp = String(payload?.event_timestamp || "");
       if (!/^[A-Za-z0-9_-]{6,80}$/.test(transactionId)) return Response.json({ ok: false, error: "INVALID_TRANSACTION_ID" }, { status: 400 });
       if (!/^[a-zA-Z0-9_-]{8,80}$/.test(contactId)) return Response.json({ ok: false, error: "INVALID_CONTACT_ID" }, { status: 400 });
+      if (!Number.isFinite(saleValue) || saleValue <= 0 || saleValue > 1_000_000 || payload?.currency !== "BRL") return Response.json({ ok: false, error: "INVALID_SALE_VALUE" }, { status: 400 });
+      if (!Number.isFinite(new Date(saleTimestamp).getTime())) return Response.json({ ok: false, error: "INVALID_SALE_TIMESTAMP" }, { status: 400 });
+      if (payload?.ad_user_data_consent !== "CONSENT_GRANTED" || payload?.legal_basis_confirmed !== true) return Response.json({ ok: false, error: "RECORDED_CONSENT_REQUIRED" }, { status: 403 });
+      if (!["CONSENT_GRANTED", "CONSENT_DENIED"].includes(String(payload?.ad_personalization_consent))) return Response.json({ ok: false, error: "INVALID_AD_PERSONALIZATION_CONSENT" }, { status: 400 });
 
       // Claim and deduplication are atomic inside the Durable Object so concurrent
       // operator clicks cannot submit the same transaction twice.
@@ -131,6 +137,12 @@ export class WhatsAppLedger extends DurableObject {
         const claimToken = crypto.randomUUID();
         await txn.put(`ads-sale:${transactionId}`, {
           status: "processing", transaction_id: transactionId, contact_id: contactId,
+          conversion_value: Math.round(saleValue * 100) / 100, currency: "BRL",
+          event_timestamp: new Date(saleTimestamp).toISOString(),
+          ad_user_data_consent: "CONSENT_GRANTED",
+          ad_personalization_consent: String(payload.ad_personalization_consent),
+          legal_basis_confirmed: true,
+          consent_confirmed_at: new Date().toISOString(),
           claim_token: claimToken, claimed_at: new Date().toISOString(), retryable: false,
         });
         return { ok: true, claim_token: claimToken, contact: {
