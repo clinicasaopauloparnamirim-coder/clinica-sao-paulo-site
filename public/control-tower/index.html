@@ -257,6 +257,26 @@ function renderAds(){
  const body=add(t,"tbody");
  keywords.slice(0,12).forEach(r=>{const tr=add(body,"tr");const key=r.adGroupCriterion?.keyword?.text??r.ad_group_criterion?.keyword?.text??"—";const m=r.metrics||{};add(tr,"td","",key);add(tr,"td","",num(m.clicks));add(tr,"td","",brl(micros(m.costMicros??m.cost_micros)));add(tr,"td","",num(m.conversions));});
 }
+function hasGoogleClickIdentifier(contact){
+ const attribution=contact&&contact.attribution&&typeof contact.attribution==="object"?contact.attribution:{};
+ return ["gclid","gbraid","wbraid"].some(k=>typeof attribution[k]==="string"&&attribution[k].trim().length>0);
+}
+function renderConfirmedSaleContacts(){
+ const select=$("sale-contact-id");if(!select)return;
+ const previous=select.value;
+ select.replaceChildren();
+ const eligible=(Array.isArray(state.crm)?state.crm:[]).filter(c=>c.stage==="patient"&&c.source==="google_ads"&&hasGoogleClickIdentifier(c));
+ add(select,"option","",eligible.length?"Selecione um paciente Google Ads…":"Nenhum paciente elegível com identificador de clique salvo").value="";
+ eligible.forEach(contact=>{
+  const option=add(select,"option","",(contact.name||"Paciente")+" · "+String(contact.id).slice(0,8)+"…");
+  option.value=contact.id;
+ });
+ if(eligible.some(c=>c.id===previous))select.value=previous;
+ const help=$("sale-contact-help");
+ if(help)help.textContent=eligible.length
+  ? eligible.length+" paciente(s) elegível(is). GCLID/GBRAID/WBRAID ficam no servidor e não são exibidos."
+  : "Contato precisa estar em 'Paciente', ter origem Google Ads e preservar um GCLID, GBRAID ou WBRAID real.";
+}
 function renderCRM(){
  const root=$("crm-board");root.replaceChildren();
  const contacts=Array.isArray(state.crm)?state.crm:[];
@@ -278,6 +298,7 @@ function renderCRM(){
    select.addEventListener("change",async()=>{select.disabled=true;try{await postJson("/control/crm/contacts/"+encodeURIComponent(c.id),"PATCH",{stage:select.value});await loadCRM();showCRMMessage("Etapa atualizada.");}catch(e){showCRMMessage(e.message,true);select.value=c.stage;}finally{select.disabled=false;}});
   });
  });
+ renderConfirmedSaleContacts();
 }
 function showCRMMessage(t,err=false){const n=$("crm-message");n.textContent=t;n.classList.toggle("hidden",!t);n.classList.toggle("error",!!err);}
 async function loadCRM(){const data=await getJson("/control/crm/contacts");state.crm=Array.isArray(data.contacts)?data.contacts:[];renderCRM();}
