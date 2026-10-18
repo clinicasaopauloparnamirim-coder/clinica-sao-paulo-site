@@ -14,7 +14,7 @@ import { specialistSnapshot } from "./agent-registry";
 import { googleAdsAuthCheck, googleAdsAudit, googleAdsBatchMutate, googleAdsMutate, googleAdsSearch, googleAdsOAuthStart, googleAdsOAuthCallback } from "./google-ads";
 
 type CrmStage = "new" | "contacted" | "qualified" | "scheduled" | "patient" | "lost";
-type CrmSource = "google_ads" | "organic" | "instagram" | "whatsapp" | "referral" | "unknown";
+type CrmSource = "google_ads" | "meta_ads" | "organic" | "instagram" | "whatsapp" | "referral" | "unknown";
 type CrmContact = {
   id: string;
   name: string;
@@ -28,7 +28,7 @@ type CrmContact = {
 };
 
 const CRM_STAGES: CrmStage[] = ["new", "contacted", "qualified", "scheduled", "patient", "lost"];
-const CRM_SOURCES: CrmSource[] = ["google_ads", "organic", "instagram", "whatsapp", "referral", "unknown"];
+const CRM_SOURCES: CrmSource[] = ["google_ads", "meta_ads", "organic", "instagram", "whatsapp", "referral", "unknown"];
 
 interface WhatsAppEnv {
   MCP_AUTH_TOKEN?: string;
@@ -144,7 +144,7 @@ export class WhatsAppLedger extends DurableObject {
       return Response.json({ ok: true, lead_id: payload.lead_id, recorded: "click" });
     }
 
-    const messages = Array.isArray(payload?.entry)
+    const incomingMessages: any[] = Array.isArray(payload?.entry)
       ? payload.entry.flatMap((entry: any) =>
           Array.isArray(entry?.changes)
             ? entry.changes.flatMap((change: any) =>
@@ -153,6 +153,21 @@ export class WhatsAppLedger extends DurableObject {
             : [],
         )
       : [];
+
+    // Meta retries webhook deliveries. Ignore message IDs already committed to
+    // the ledger so sequential retries do not inflate attributed counts or repeat
+    // downstream work. The Durable Object is the single source of truth.
+    const messages: any[] = [];
+    const seenMessageIds = new Set<string>();
+    for (const candidate of incomingMessages) {
+      const messageId = typeof candidate?.id === "string" ? candidate.id : "";
+      if (messageId) {
+        if (seenMessageIds.has(messageId)) continue;
+        seenMessageIds.add(messageId);
+        if (await this.ctx.storage.get(`message:${messageId}`)) continue;
+      }
+      messages.push(candidate);
+    }
 
     let attributedMessages = 0;
     const attributed: Array<{lead_id:string; attribution:Record<string,unknown>}> = [];
@@ -165,22 +180,88 @@ export class WhatsAppLedger extends DurableObject {
       const click = ref
         ? (await this.ctx.storage.get(`click:${ref}`)) as { attribution?: Record<string, unknown> } | null
         : null;
-      if (click) { attributedMessages++; attributed.push({ lead_id: ref!, attribution: click.attribution ?? {} }); }
+
+      const ctwaRaw = referral?.ctwa_clid ?? referral?.ctwaClid;
+      const ctwaClid = typeof ctwaRaw === "string" ? ctwaRaw.trim().slice(0, 500) : "";
+      const referralSourceType = String(referral?.source_type ?? referral?.sourceType ?? "").trim().slice(0, 80);
+      const referralSourceId = String(referral?.source_id ?? referral?.sourceId ?? "").trim().slice(0, 250);
+      const referralHeadline = String(referral?.headline ?? "").trim().slice(0, 300);
+      const sourceUrlRaw = referral?.source_url ?? referral?.sourceUrl;
+      let sourceUrl: string | null = null;
+      if (typeof sourceUrlRaw === "string") {
+        try {
+          const parsedUrl = new URL(sourceUrlRaw);
+          if (parsedUrl.protocol === "https:" || parsedUrl.protocol === "http:") {
+            sourceUrl = (parsedUrl.origin + parsedUrl.pathname).slice(0, 500);
+          }
+        } catch {
+          // Ignore malformed or untrusted source URLs.
+        }
+      }
+      const hasReferral = Boolean(
+        referral && (ctwaClid || referralSourceType || referralSourceId || sourceUrl || referralHeadline),
+      );
+      const isPaidMetaReferral = Boolean(
+        ctwaClid || referralSourceType.toLowerCase() === "ad",
+      );
+      const referralAttribution: Record<string, unknown> | null = hasReferral
+        ? {
+            source: isPaidMetaReferral ? "meta_ads" : "referral",
+            utm_source: isPaidMetaReferral ? "meta" : "referral",
+            utm_medium: isPaidMetaReferral ? "paid_social" : "referral",
+            ctwa_clid: ctwaClid || undefined,
+            referral_source_type: referralSourceType || undefined,
+            referral_source_id: referralSourceId || undefined,
+            referral_source_url: sourceUrl || undefined,
+            referral_headline: referralHeadline || undefined,
+          }
+        : null;
+      const clickAttribution = click?.attribution ?? null;
+      const associated = Boolean(click || hasReferral);
+      const attribution: Record<string, unknown> | null = clickAttribution || referralAttribution
+        ? {
+            ...(clickAttribution ?? {}),
+            ...(referralAttribution ? {
+              ctwa_clid: ctwaClid || undefined,
+              meta_referral: referralAttribution,
+            } : {}),
+            attribution_basis: click && hasReferral
+              ? "prefill_code+ctwa_referral"
+              : click ? "prefill_code" : "ctwa_referral",
+          }
+        : null;
+      const sourceOverride: CrmSource | undefined =
+        !click && hasReferral ? (isPaidMetaReferral ? "meta_ads" : "referral") : undefined;
+      const contact = associated
+        ? await this.upsertAttributedContact(message, attribution, receivedAt, sourceOverride)
+        : null;
+      const leadId = ref ?? contact?.id ??
+        (typeof message?.id === "string" ? `WA-${message.id.slice(-100)}` : null);
+      if (associated && leadId && attribution) {
+        attributedMessages++;
+        attributed.push({
+          lead_id: leadId,
+          attribution: {
+            ...attribution,
+            lead_id: leadId,
+            whatsapp_message_id: typeof message?.id === "string" ? message.id : undefined,
+          },
+        });
+      }
       const record = {
         received_at: receivedAt,
         message_id: message?.id ?? null,
         type: message?.type ?? null,
-        lead_id: ref,
-        attributed: Boolean(click || referral),
-        attribution: click?.attribution ?? null,
-        source_type: referral?.source_type ?? referral?.sourceType ?? null,
-        source_id: referral?.source_id ?? referral?.sourceId ?? null,
-        source_url: referral?.source_url ?? referral?.sourceUrl ?? null,
-        headline: referral?.headline ?? null,
-        ctwa_clid: referral?.ctwa_clid ?? referral?.ctwaClid ?? null,
+        lead_id: ref ?? contact?.id ?? null,
+        attributed: associated,
+        attribution,
+        source_type: referralSourceType || null,
+        source_id: referralSourceId || null,
+        source_url: sourceUrl,
+        headline: referralHeadline || null,
+        ctwa_clid: ctwaClid || null,
       };
       await this.ctx.storage.put(`message:${message?.id ?? crypto.randomUUID()}`, record);
-      if (click || referral) await this.upsertAttributedContact(message, click?.attribution ?? null, receivedAt);
 
       // Auto-replies are explicitly opt-in; webhook verification alone never enables sending.
       const messageId = typeof message?.id === "string" ? message.id : "";
@@ -227,30 +308,43 @@ export class WhatsAppLedger extends DurableObject {
     });
   }
 
-  private async upsertAttributedContact(message: any, attribution: Record<string, unknown> | null, at: string) {
+  private async upsertAttributedContact(
+    message: any,
+    attribution: Record<string, unknown> | null,
+    at: string,
+    sourceOverride?: CrmSource,
+  ): Promise<{ id: string; source: CrmSource } | null> {
     const phone = String(message?.from ?? "").replace(/[^0-9]/g, "").slice(0, 24);
-    if (phone.length < 8) return;
+    if (phone.length < 8) return null;
     const linkedId = await this.ctx.storage.get<string>(`crm:phone:${phone}`);
     const existing = linkedId ? await this.ctx.storage.get(`crm:contact:${linkedId}`) as CrmContact | undefined : undefined;
     const profileName = String(message?.contacts?.[0]?.profile?.name ?? "").trim().slice(0, 120);
     const rawSource = String((attribution as any)?.utm_source ?? (attribution as any)?.source ?? "").toLowerCase();
-    const source: CrmSource = rawSource.includes("google") || rawSource.includes("adwords") ? "google_ads"
-      : rawSource.includes("instagram") || rawSource.includes("facebook") ? "instagram"
-      : rawSource ? "organic" : "whatsapp";
-    const id = existing?.id ?? crypto.randomUUID();
+    const source: CrmSource = sourceOverride
+      ?? (rawSource.includes("google") || rawSource.includes("adwords") ? "google_ads"
+        : rawSource.includes("meta") || rawSource.includes("facebook_ads") ? "meta_ads"
+        : rawSource.includes("instagram") ? "instagram"
+        : rawSource.includes("facebook") ? "meta_ads"
+        : rawSource ? "organic" : "whatsapp");
+    const existingSource = existing?.source;
+    const preserveExisting = Boolean(
+      existingSource && existingSource !== "unknown" &&
+      !(sourceOverride && (existingSource === "whatsapp" || existingSource === "referral")),
+    );
     const contact: CrmContact = {
-      id,
+      id: existing?.id ?? crypto.randomUUID(),
       name: profileName || existing?.name || "Lead WhatsApp",
       phone,
       stage: existing?.stage ?? "new",
-      source: existing?.source === "unknown" ? source : existing?.source ?? source,
+      source: preserveExisting ? existingSource! : source,
       notes: existing?.notes ?? "",
       created_at: existing?.created_at ?? at,
       updated_at: at,
       last_contact_at: at,
     };
-    await this.ctx.storage.put(`crm:contact:${id}`, contact);
-    await this.ctx.storage.put(`crm:phone:${phone}`, id);
+    await this.ctx.storage.put(`crm:contact:${contact.id}`, contact);
+    await this.ctx.storage.put(`crm:phone:${phone}`, contact.id);
+    return { id: contact.id, source: contact.source };
   }
 
   private async processAutoReplies(jobs: Array<{ id: string; to: string; message: string }>, env: WhatsAppEnv) {

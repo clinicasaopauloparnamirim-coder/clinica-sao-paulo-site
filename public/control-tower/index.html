@@ -69,7 +69,7 @@
       <form id="lead-form"><div class="form-grid">
       <div class="field"><label for="lead-name">Nome</label><input id="lead-name" name="name" maxlength="120" placeholder="Nome do contato"></div>
       <div class="field"><label for="lead-phone">WhatsApp / telefone</label><input id="lead-phone" name="phone" maxlength="40" placeholder="Ex.: +55 84 99999-9999"></div>
-      <div class="field"><label for="lead-source">Origem</label><select id="lead-source" name="source"><option value="google_ads">Google Ads</option><option value="organic">Busca orgânica</option><option value="instagram">Instagram</option><option value="whatsapp">WhatsApp</option><option value="referral">Indicação</option><option value="unknown">Desconhecida</option></select></div>
+      <div class="field"><label for="lead-source">Origem</label><select id="lead-source" name="source"><option value="google_ads">Google Ads</option><option value="meta_ads">Meta Ads / WhatsApp Ads</option><option value="organic">Busca orgânica</option><option value="instagram">Instagram</option><option value="whatsapp">WhatsApp</option><option value="referral">Indicação</option><option value="unknown">Desconhecida</option></select></div>
       <div class="field"><label for="lead-stage">Etapa inicial</label><select id="lead-stage" name="stage"><option value="new">Novo lead</option><option value="contacted">Contatado</option><option value="qualified">Qualificado</option><option value="scheduled">Agendado</option><option value="patient">Paciente</option><option value="lost">Perdido</option></select></div>
       <div class="field full"><label for="lead-notes">Nota comercial (sem dados clínicos)</label><textarea id="lead-notes" name="notes" maxlength="500" placeholder="Preferência de horário, retorno comercial ou próximo passo. Não registre diagnóstico ou informações clínicas."></textarea></div>
       </div><div class="form-actions"><button class="btn primary" type="submit">Salvar lead</button><button class="btn" type="button" id="cancel-lead">Cancelar</button><span class="tiny" id="lead-form-status"></span></div></form>
@@ -111,7 +111,7 @@ const STAGES = [
   ["new","Novo"],["contacted","Contatado"],["qualified","Qualificado"],
   ["scheduled","Agendado"],["patient","Paciente"],["lost","Perdido"]
 ];
-const SOURCES = {google_ads:"Google Ads",organic:"Orgânico",instagram:"Instagram",whatsapp:"WhatsApp",referral:"Indicação",unknown:"Desconhecida"};
+const SOURCES = {google_ads:"Google Ads",meta_ads:"Meta Ads / WhatsApp Ads",organic:"Orgânico",instagram:"Instagram",whatsapp:"WhatsApp",referral:"Indicação",unknown:"Desconhecida"};
 const state = {health:null,architecture:null,ads:null,ga4:null,gsc:null,attribution:null,whatsapp:null,crm:[],brain:null};
 const TITLES = {
   overview:["Visão geral","Estado real das conexões, agentes, aquisição e leads."],
