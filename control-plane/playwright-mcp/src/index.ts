@@ -11,7 +11,7 @@ import { pairingSnapshot } from "./agent-pairing";
 import { generateReply, sendWhatsAppReply, sendAlerts } from "./whatsapp-ai";
 import { handleTowerMcp } from "./mcp-tower";
 import { specialistSnapshot } from "./agent-registry";
-import { googleAdsAuthCheck, googleAdsAudit, googleAdsBatchMutate, googleAdsMutate, googleAdsSearch, googleAdsOAuthStart, googleAdsOAuthMobileStart, googleAdsOAuthCallback } from "./google-ads";
+import { googleAdsAuthCheck, googleAdsAudit, googleAdsBatchMutate, googleAdsMutate, googleAdsSearch, googleAdsOAuthStart, googleAdsOAuthMobileStart, googleAdsOAuthCallback, googleAdsSubmitConfirmedSale, googleAdsConfirmedSaleStatus } from "./google-ads";
 
 type CrmStage = "new" | "contacted" | "qualified" | "scheduled" | "patient" | "lost";
 type CrmSource = "google_ads" | "meta_ads" | "organic" | "instagram" | "whatsapp" | "referral" | "unknown";
@@ -850,6 +850,22 @@ ${authenticated ? `<p>Acesso autorizado</p>
       if (!authorized(request, env)) return unauthorized();
       try { return await googleAdsAudit(env); }
       catch (error) { return new Response(error instanceof Error ? error.message : "Google Ads audit failed", { status: 502 }); }
+    }
+
+    if (pathname === "/google/ads/confirmed-sale" && request.method === "POST") {
+      if (!authorized(request, env)) return unauthorized();
+      try { return await googleAdsSubmitConfirmedSale(env, request); }
+      catch {
+        return Response.json({ ok: false, error: "CONFIRMED_SALE_SUBMISSION_FAILED" }, { status: 502, headers: { "cache-control": "no-store" } });
+      }
+    }
+
+    if (pathname === "/google/ads/confirmed-sale-status" && request.method === "GET") {
+      if (!authorized(request, env)) return unauthorized();
+      try { return await googleAdsConfirmedSaleStatus(env, request); }
+      catch {
+        return Response.json({ ok: false, error: "CONFIRMED_SALE_STATUS_FAILED" }, { status: 502, headers: { "cache-control": "no-store" } });
+      }
     }
 
     if (pathname === "/google/ads/search" && request.method === "POST") {
