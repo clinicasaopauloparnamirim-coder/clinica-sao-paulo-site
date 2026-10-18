@@ -168,8 +168,15 @@ export class WhatsAppLedger extends DurableObject {
         retryable: status === "failed" && ((providerStatus >= 400 && providerStatus < 500) || providerStatus === 429),
       };
       await this.ctx.storage.put(`ads-sale:${transactionId}`, updated);
-      const { claim_token: _claimToken, ...safe } = updated;
-      return Response.json({ ok: true, sale: safe }, { headers: { "cache-control": "no-store" } });
+      return Response.json({ ok: true, sale: {
+        transaction_id: updated.transaction_id,
+        status: updated.status,
+        request_id: updated.request_id ?? null,
+        provider_status: updated.provider_status ?? null,
+        error_reason: updated.error_reason ?? null,
+        settled_at: updated.settled_at,
+        retryable: updated.retryable,
+      } }, { headers: { "cache-control": "no-store" } });
     }
     if (request.method === "POST" && route === "/crm/contacts") {
       let payload: any;
