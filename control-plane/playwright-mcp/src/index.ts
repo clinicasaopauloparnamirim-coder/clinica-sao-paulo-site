@@ -181,7 +181,7 @@ export class WhatsAppLedger extends DurableObject {
       };
       await this.ctx.storage.put(`ads-sale:${transactionId}`, updated);
       return Response.json({ ok: true, sale: {
-        transaction_id: updated.transaction_id,
+        transaction_id: transactionId,
         status: updated.status,
         request_id: updated.request_id ?? null,
         provider_status: updated.provider_status ?? null,
