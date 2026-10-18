@@ -11,7 +11,7 @@ import { pairingSnapshot } from "./agent-pairing";
 import { generateReply, sendWhatsAppReply, sendAlerts } from "./whatsapp-ai";
 import { handleTowerMcp } from "./mcp-tower";
 import { specialistSnapshot } from "./agent-registry";
-import { googleAdsAuthCheck, googleAdsAudit, googleAdsBatchMutate, googleAdsMutate, googleAdsSearch, googleAdsOAuthStart, googleAdsOAuthCallback } from "./google-ads";
+import { googleAdsAuthCheck, googleAdsAudit, googleAdsBatchMutate, googleAdsMutate, googleAdsSearch, googleAdsOAuthStart, googleAdsOAuthMobileStart, googleAdsOAuthCallback } from "./google-ads";
 
 type CrmStage = "new" | "contacted" | "qualified" | "scheduled" | "patient" | "lost";
 type CrmSource = "google_ads" | "meta_ads" | "organic" | "instagram" | "whatsapp" | "referral" | "unknown";
@@ -740,6 +740,12 @@ ${authenticated ? `<p>Acesso autorizado</p>
       return forwardControlAgent(request, env);
     }
 
+    // Browser/mobile initiation: a fresh CSRF state is stored server-side and the
+    // callback only persists tokens for the verified, expected clinic Google account.
+    if (pathname === "/google/ads/oauth/mobile-start") {
+      if (request.method !== "GET") return new Response("Method Not Allowed", { status: 405 });
+      return googleAdsOAuthMobileStart(request, env);
+    }
     if (pathname === "/google/ads/oauth/start") {
       if (!authorized(request, env)) return unauthorized();
       return googleAdsOAuthStart(request, env);
