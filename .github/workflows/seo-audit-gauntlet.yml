@@ -1,0 +1,95 @@
+name: SEO Gauntlet (read-only)
+
+on:
+  pull_request:
+    paths:
+      - "tools/seo-gauntlet/**"
+      - ".github/workflows/seo-audit-gauntlet.yml"
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "URL pública para auditar (somente leitura)"
+        required: true
+        default: "https://clinicasaopauloparnamirim.com.br/"
+        type: string
+      crawl:
+        description: "Rastrear links internos (limite máximo 30 páginas)"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run unit tests
+        run: python -m unittest discover -s tools/seo-gauntlet -p "test_*.py" -v
+
+  public-audit:
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      AUDIT_URL: ${{ inputs.url || 'https://clinicasaopauloparnamirim.com.br/' }}
+      AUDIT_CRAWL: ${{ github.event_name == 'pull_request' || inputs.crawl }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run public read-only audit
+        shell: bash
+        run: |
+          args=()
+          if [[ "$AUDIT_CRAWL" == "true" ]]; then args+=(--crawl); fi
+          python tools/seo-gauntlet/seo_audit.py "$AUDIT_URL" "${args[@]}" --json seo-audit-report.json --markdown seo-audit-report.md
+      - name: Run second-pass checks
+        run: python tools/seo-gauntlet/advanced_checks.py seo-audit-report.json seo-audit-advanced.json
+      - name: Run cross-page checks
+        run: python tools/seo-gauntlet/crosspage_checks.py seo-audit-report.json seo-audit-crosspage.json
+      - name: Optional Cloudflare read-only audit
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_ZONE_NAME: clinicasaopauloparnamirim.com.br
+          CF_EXPECTED_WORKER: clinica-sao-paulo-site
+        shell: bash
+        run: |
+          if [[ -n "$CF_API_TOKEN" ]]; then
+            if ! python tools/seo-gauntlet/cloudflare_audit.py --domain "$CF_ZONE_NAME" --expected-worker "$CF_EXPECTED_WORKER" --json cloudflare-audit-report.json --markdown cloudflare-audit-report.md; then
+              printf '{"status":"failed","read_only":true,"message":"Cloudflare audit did not complete; consult workflow logs. No writes were executed."}\n' > cloudflare-audit-report.json
+            fi
+          else
+            printf '{"status":"skipped_no_token","read_only":true,"message":"CF_API_TOKEN is not configured as a GitHub Actions secret."}\n' > cloudflare-audit-report.json
+          fi
+      - name: Optional PageSpeed Insights audit
+        env:
+          PSI_API_KEY: ${{ secrets.PSI_API_KEY }}
+        shell: bash
+        run: |
+          if [[ -n "$PSI_API_KEY" ]]; then
+            if ! python tools/seo-gauntlet/pagespeed_audit.py "$AUDIT_URL" --strategy mobile --json pagespeed-report.json; then
+              echo "PageSpeed report recorded an unavailable/quota-limited state; see pagespeed-report.json."
+            fi
+          else
+            printf '{"status":"skipped_no_api_key","url":"%s","strategy":"mobile","scores":{},"summary":{"score_count":0,"field_data_available":false,"status":"not_measured"},"message":"PSI_API_KEY is not configured as a GitHub Actions secret."}\n' "$AUDIT_URL" > pagespeed-report.json
+          fi
+      - name: Upload audit reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-gauntlet-report
+          path: |
+            seo-audit-report.json
+            seo-audit-report.md
+            seo-audit-advanced.json
+            seo-audit-crosspage.json
+            cloudflare-audit-report.json
+            cloudflare-audit-report.md
+            pagespeed-report.json
+          if-no-files-found: error
