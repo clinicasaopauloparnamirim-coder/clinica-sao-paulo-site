@@ -76,6 +76,27 @@
     </div>
     <div class="message hidden" id="crm-message"></div>
     <div class="crm-board" id="crm-board"></div>
+    <div class="grid" style="margin-top:16px">
+      <div class="card">
+        <div class="card-head">
+          <div><h2>Enviar venda confirmada ao Google Ads</h2><p class="tiny">Somente vendas reais, com contato do CRM marcado como Paciente, origem Google Ads, identificador de clique salvo e autorização do paciente registrada.</p></div>
+          <span class="pill warn">Ação real</span>
+        </div>
+        <form id="confirmed-sale-form">
+          <div class="form-grid">
+            <div class="field full"><label for="sale-contact-id">Contato elegível</label><select id="sale-contact-id" required><option value="">Carregando contatos elegíveis…</option></select><small class="tiny" id="sale-contact-help">Só são listados pacientes atribuídos a Google Ads com GCLID, GBRAID ou WBRAID salvo.</small></div>
+            <div class="field"><label for="sale-transaction-id">ID da venda / recibo</label><input id="sale-transaction-id" name="transaction_id" maxlength="80" pattern="[A-Za-z0-9_-]{6,80}" placeholder="Ex.: RECIBO_20261018_01" required><small class="tiny">Este ID impede envio duplicado.</small></div>
+            <div class="field"><label for="sale-value">Valor confirmado (R$)</label><input id="sale-value" type="number" min="0.01" max="1000000" step="0.01" inputmode="decimal" placeholder="Ex.: 650.00" required></div>
+            <div class="field"><label for="sale-timestamp">Data e hora da venda</label><input id="sale-timestamp" type="datetime-local" required></div>
+            <div class="field"><label for="sale-ad-personalization">Consentimento de personalização de anúncios</label><select id="sale-ad-personalization"><option value="CONSENT_DENIED" selected>Negado / não concedido</option><option value="CONSENT_GRANTED">Concedido e registrado</option></select></div>
+            <div class="field full"><label><input id="sale-consent-confirmed" type="checkbox" required> Confirmo que há consentimento/base legal documentada para usar o identificador de clique de anúncio nesta atribuição.</label></div>
+          </div>
+          <div class="form-actions"><button class="btn primary" id="sale-submit" type="submit">Enviar venda confirmada</button><button class="btn" id="sale-status-check" type="button">Consultar processamento do ID</button><span class="tiny" id="sale-form-status" aria-live="polite"></span></div>
+        </form>
+        <div class="data-block" style="margin-top:12px"><pre id="sale-status-result">Nenhuma venda enviada nesta sessão.</pre></div>
+        <p class="footer-note">O envio é real e assíncrono. Não use clique, conversa ou agendamento como venda. O backend bloqueia contatos sem identificador Google e IDs de transação já enviados.</p>
+      </div>
+    </div>
     <div class="footer-note">O quadro carrega contatos reais persistidos no ledger. A movimentação de etapa grava no backend autenticado. O número não é combinado com dados externos sem prova de identidade.</div>
   </section>
 
