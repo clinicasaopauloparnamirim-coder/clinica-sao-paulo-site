@@ -352,6 +352,59 @@ $("lead-form").addEventListener("submit",async e=>{
   await loadCRM();showCRMMessage(result.deduplicated?"Contato deduplicado por telefone.":"Lead cadastrado no CRM.");
  }catch(err){$("lead-form-status").textContent=err.message;showCRMMessage(err.message,true);if(err.auth)$("lock").classList.add("show");}
 });
+function localDateTimeValue(date){const d=new Date(date.getTime()-date.getTimezoneOffset()*60000);return d.toISOString().slice(0,16);}
+$("sale-timestamp").value=localDateTimeValue(new Date());
+$("confirmed-sale-form").addEventListener("submit",async e=>{
+ e.preventDefault();
+ const contactId=$("sale-contact-id").value;
+ const transactionId=$("sale-transaction-id").value.trim();
+ const amount=Number($("sale-value").value);
+ const datetime=$("sale-timestamp").value;
+ if(!contactId||!transactionId||!Number.isFinite(amount)||amount<=0||!datetime||!$("sale-consent-confirmed").checked){
+  $("sale-form-status").textContent="Preencha os campos e confirme que há consentimento/base legal registrada.";
+  return;
+ }
+ const contact=state.crm.find(x=>x.id===contactId);
+ if(!contact||contact.stage!=="patient"||contact.source!=="google_ads"||!hasGoogleClickIdentifier(contact)){
+  $("sale-form-status").textContent="Contato não elegível. Atualize o CRM e confirme a atribuição antes de enviar.";
+  return;
+ }
+ const message="CONFIRMAÇÃO FINAL\n\nEnviar uma conversão REAL ao Google Ads?\nContato: "+(contact.name||contact.id)+"\nID da venda: "+transactionId+"\nValor: "+brl(amount)+"\n\nConfirme somente se esta venda ocorreu, o valor é real e o consentimento/base legal está documentado. O envio é assíncrono.";
+ if(!window.confirm(message))return;
+ const button=$("sale-submit");button.disabled=true;$("sale-form-status").textContent="Enviando ao Data Manager…";
+ try{
+  const result=await postJson("/google/ads/confirmed-sale","POST",{
+   contact_id:contactId,
+   transaction_id:transactionId,
+   conversion_value:Math.round(amount*100)/100,
+   currency:"BRL",
+   event_timestamp:new Date(datetime).toISOString(),
+   consent:{ad_user_data:"CONSENT_GRANTED",ad_personalization:$("sale-ad-personalization").value}
+  });
+  $("sale-form-status").textContent="Solicitação recebida; processamento assíncrono. Guarde o ID da venda para consultar o estado.";
+  $("sale-status-result").textContent=safeJson(result);
+ }catch(err){
+  $("sale-form-status").textContent=err.message;
+  showCRMMessage(err.message,true);
+  if(err.auth)$("lock").classList.add("show");
+ }finally{button.disabled=false;}
+});
+$("sale-status-check").addEventListener("click",async()=>{
+ const transactionId=$("sale-transaction-id").value.trim();
+ if(!/^[A-Za-z0-9_-]{6,80}$/.test(transactionId)){
+  $("sale-form-status").textContent="Informe o mesmo ID da venda para consultar o processamento.";
+  return;
+ }
+ const button=$("sale-status-check");button.disabled=true;$("sale-form-status").textContent="Consultando processamento…";
+ try{
+  const result=await getJson("/google/ads/confirmed-sale-status?transaction_id="+encodeURIComponent(transactionId));
+  $("sale-form-status").textContent="Estado consultado.";
+  $("sale-status-result").textContent=safeJson(result);
+ }catch(err){
+  $("sale-form-status").textContent=err.message;
+  if(err.auth)$("lock").classList.add("show");
+ }finally{button.disabled=false;}
+});
 loadAll();
 })();
 </script>
