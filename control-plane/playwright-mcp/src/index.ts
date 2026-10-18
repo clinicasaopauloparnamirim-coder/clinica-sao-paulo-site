@@ -11,7 +11,7 @@ import { pairingSnapshot } from "./agent-pairing";
 import { generateReply, sendWhatsAppReply, sendAlerts } from "./whatsapp-ai";
 import { handleTowerMcp } from "./mcp-tower";
 import { specialistSnapshot } from "./agent-registry";
-import { googleAdsAuthCheck, googleAdsAudit, googleAdsBatchMutate, googleAdsMutate, googleAdsSearch, googleAdsOAuthStart, googleAdsOAuthMobileStart, googleAdsOAuthCallback } from "./google-ads";
+import { googleAdsAuthCheck, googleAdsAudit, googleAdsBatchMutate, googleAdsMutate, googleAdsSearch, googleAdsOAuthStart, googleAdsOAuthMobileStart, googleAdsOAuthCallback, googleAdsSubmitConfirmedSale, googleAdsConfirmedSaleStatus } from "./google-ads";
 
 type CrmStage = "new" | "contacted" | "qualified" | "scheduled" | "patient" | "lost";
 type CrmSource = "google_ads" | "meta_ads" | "organic" | "instagram" | "whatsapp" | "referral" | "unknown";
@@ -25,6 +25,7 @@ type CrmContact = {
   created_at: string;
   updated_at: string;
   last_contact_at: string | null;
+  attribution?: Record<string, unknown>;
 };
 
 const CRM_STAGES: CrmStage[] = ["new", "contacted", "qualified", "scheduled", "patient", "lost"];
@@ -81,6 +82,113 @@ export class WhatsAppLedger extends DurableObject {
       const contacts = Array.from(rows.values()) as CrmContact[];
       contacts.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
       return Response.json({ ok: true, count: contacts.length, contacts }, { headers: { "cache-control": "no-store" } });
+    }
+    if (request.method === "GET" && route.startsWith("/crm/contacts/")) {
+      const id = decodeURIComponent(route.slice("/crm/contacts/".length));
+      if (!/^[a-zA-Z0-9_-]{8,80}$/.test(id)) return new Response("Invalid contact id.", { status: 400 });
+      const contact = await this.ctx.storage.get(`crm:contact:${id}`) as CrmContact | undefined;
+      if (!contact) return new Response("Contact not found.", { status: 404 });
+      return Response.json({ ok: true, contact }, { headers: { "cache-control": "no-store" } });
+    }
+    if (request.method === "GET" && route === "/crm/ads-sales/status") {
+      const url = new URL(request.url);
+      const transactionId = url.searchParams.get("transaction_id") || "";
+      if (!/^[A-Za-z0-9_-]{6,80}$/.test(transactionId)) return new Response("Invalid transaction id.", { status: 400 });
+      const sale = await this.ctx.storage.get(`ads-sale:${transactionId}`) as Record<string, unknown> | undefined;
+      if (!sale) return new Response("Sale submission not found.", { status: 404 });
+      return Response.json({ ok: true, sale }, { headers: { "cache-control": "no-store" } });
+    }
+    if (request.method === "POST" && route === "/crm/ads-sales/claim") {
+      let payload: any;
+      try { payload = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
+      const transactionId = String(payload?.transaction_id || "");
+      const contactId = String(payload?.contact_id || "");
+      const saleValue = Number(payload?.conversion_value);
+      const saleTimestamp = String(payload?.event_timestamp || "");
+      if (!/^[A-Za-z0-9_-]{6,80}$/.test(transactionId)) return Response.json({ ok: false, error: "INVALID_TRANSACTION_ID" }, { status: 400 });
+      if (!/^[a-zA-Z0-9_-]{8,80}$/.test(contactId)) return Response.json({ ok: false, error: "INVALID_CONTACT_ID" }, { status: 400 });
+      if (!Number.isFinite(saleValue) || saleValue <= 0 || saleValue > 1_000_000 || payload?.currency !== "BRL") return Response.json({ ok: false, error: "INVALID_SALE_VALUE" }, { status: 400 });
+      if (!Number.isFinite(new Date(saleTimestamp).getTime())) return Response.json({ ok: false, error: "INVALID_SALE_TIMESTAMP" }, { status: 400 });
+      if (payload?.ad_user_data_consent !== "CONSENT_GRANTED" || payload?.legal_basis_confirmed !== true) return Response.json({ ok: false, error: "RECORDED_CONSENT_REQUIRED" }, { status: 403 });
+      if (!["CONSENT_GRANTED", "CONSENT_DENIED"].includes(String(payload?.ad_personalization_consent))) return Response.json({ ok: false, error: "INVALID_AD_PERSONALIZATION_CONSENT" }, { status: 400 });
+
+      // Claim and deduplication are atomic inside the Durable Object so concurrent
+      // operator clicks cannot submit the same transaction twice.
+      const result = await this.ctx.storage.transaction(async (txn: any) => {
+        const existingSale = await txn.get(`ads-sale:${transactionId}`) as Record<string, any> | undefined;
+        if (existingSale && !(existingSale.status === "failed" && existingSale.retryable === true)) {
+          return { ok: false, http_status: 409, error: "TRANSACTION_ALREADY_CLAIMED", sale: {
+            transaction_id: transactionId, status: existingSale.status, request_id: existingSale.request_id ?? null,
+          } };
+        }
+        const contact = await txn.get(`crm:contact:${contactId}`) as CrmContact | undefined;
+        if (!contact) return { ok: false, http_status: 404, error: "CONTACT_NOT_FOUND" };
+        if (contact.stage !== "patient") return { ok: false, http_status: 422, error: "CONTACT_NOT_MARKED_PATIENT" };
+        if (contact.source !== "google_ads") return { ok: false, http_status: 422, error: "CONTACT_NOT_FROM_GOOGLE_ADS" };
+        const attribution = contact.attribution && typeof contact.attribution === "object" ? contact.attribution as Record<string, unknown> : {};
+        const adIdentifiers = {
+          gclid: typeof attribution.gclid === "string" ? attribution.gclid.trim().slice(0, 250) : "",
+          gbraid: typeof attribution.gbraid === "string" ? attribution.gbraid.trim().slice(0, 250) : "",
+          wbraid: typeof attribution.wbraid === "string" ? attribution.wbraid.trim().slice(0, 250) : "",
+        };
+        if (!adIdentifiers.gclid && !adIdentifiers.gbraid && !adIdentifiers.wbraid) {
+          return { ok: false, http_status: 422, error: "NO_GOOGLE_CLICK_IDENTIFIER" };
+        }
+        const claimToken = crypto.randomUUID();
+        await txn.put(`ads-sale:${transactionId}`, {
+          status: "processing", transaction_id: transactionId, contact_id: contactId,
+          conversion_value: Math.round(saleValue * 100) / 100, currency: "BRL",
+          event_timestamp: new Date(saleTimestamp).toISOString(),
+          ad_user_data_consent: "CONSENT_GRANTED",
+          ad_personalization_consent: String(payload.ad_personalization_consent),
+          legal_basis_confirmed: true,
+          consent_confirmed_at: new Date().toISOString(),
+          claim_token: claimToken, claimed_at: new Date().toISOString(), retryable: false,
+        });
+        return { ok: true, claim_token: claimToken, contact: {
+          id: contact.id, source: contact.source, stage: contact.stage, ad_identifiers: adIdentifiers,
+        } };
+      });
+      if (!result.ok) {
+        const { http_status, ...safe } = result as any;
+        return Response.json(safe, { status: http_status || 409, headers: { "cache-control": "no-store" } });
+      }
+      return Response.json(result, { headers: { "cache-control": "no-store" } });
+    }
+    if (request.method === "POST" && route === "/crm/ads-sales/settle") {
+      let payload: any;
+      try { payload = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
+      const transactionId = String(payload?.transaction_id || "");
+      const claimToken = String(payload?.claim_token || "");
+      const status = String(payload?.status || "");
+      if (!/^[A-Za-z0-9_-]{6,80}$/.test(transactionId) || !/^[0-9a-f-]{36}$/i.test(claimToken)) {
+        return new Response("Invalid sale settlement.", { status: 400 });
+      }
+      if (!["submitted", "failed", "uncertain"].includes(status)) return new Response("Invalid sale status.", { status: 400 });
+      const sale = await this.ctx.storage.get(`ads-sale:${transactionId}`) as Record<string, any> | undefined;
+      if (!sale || sale.claim_token !== claimToken || sale.status !== "processing") {
+        return Response.json({ ok: false, error: "CLAIM_MISMATCH" }, { status: 409 });
+      }
+      const providerStatus = Number(payload?.provider_status) || 0;
+      const updated = {
+        ...sale,
+        status,
+        request_id: typeof payload?.request_id === "string" ? payload.request_id.slice(0, 180) : null,
+        provider_status: providerStatus || null,
+        error_reason: typeof payload?.error_reason === "string" ? payload.error_reason.slice(0, 120) : null,
+        settled_at: new Date().toISOString(),
+        retryable: status === "failed" && ((providerStatus >= 400 && providerStatus < 500) || providerStatus === 429),
+      };
+      await this.ctx.storage.put(`ads-sale:${transactionId}`, updated);
+      return Response.json({ ok: true, sale: {
+        transaction_id: transactionId,
+        status: updated.status,
+        request_id: updated.request_id ?? null,
+        provider_status: updated.provider_status ?? null,
+        error_reason: updated.error_reason ?? null,
+        settled_at: updated.settled_at,
+        retryable: updated.retryable,
+      } }, { headers: { "cache-control": "no-store" } });
     }
     if (request.method === "POST" && route === "/crm/contacts") {
       let payload: any;
@@ -341,6 +449,9 @@ export class WhatsAppLedger extends DurableObject {
       created_at: existing?.created_at ?? at,
       updated_at: at,
       last_contact_at: at,
+      attribution: attribution
+        ? { ...(existing?.attribution ?? {}), ...attribution }
+        : existing?.attribution,
     };
     await this.ctx.storage.put(`crm:contact:${contact.id}`, contact);
     await this.ctx.storage.put(`crm:phone:${phone}`, contact.id);
@@ -762,6 +873,22 @@ ${authenticated ? `<p>Acesso autorizado</p>
       if (!authorized(request, env)) return unauthorized();
       try { return await googleAdsAudit(env); }
       catch (error) { return new Response(error instanceof Error ? error.message : "Google Ads audit failed", { status: 502 }); }
+    }
+
+    if (pathname === "/google/ads/confirmed-sale" && request.method === "POST") {
+      if (!authorized(request, env)) return unauthorized();
+      try { return await googleAdsSubmitConfirmedSale(env, request); }
+      catch {
+        return Response.json({ ok: false, error: "CONFIRMED_SALE_SUBMISSION_FAILED" }, { status: 502, headers: { "cache-control": "no-store" } });
+      }
+    }
+
+    if (pathname === "/google/ads/confirmed-sale-status" && request.method === "GET") {
+      if (!authorized(request, env)) return unauthorized();
+      try { return await googleAdsConfirmedSaleStatus(env, request); }
+      catch {
+        return Response.json({ ok: false, error: "CONFIRMED_SALE_STATUS_FAILED" }, { status: 502, headers: { "cache-control": "no-store" } });
+      }
     }
 
     if (pathname === "/google/ads/search" && request.method === "POST") {
