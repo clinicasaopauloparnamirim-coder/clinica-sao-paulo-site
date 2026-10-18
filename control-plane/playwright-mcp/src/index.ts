@@ -568,7 +568,7 @@ function authorized(request: Request, env: { MCP_AUTH_TOKEN?: string }) {
   return match?.[1] === encodeURIComponent(configured);
 }
 
-function controlCookie(value: string, maxAge = 3600) {
+function controlCookie(value: string, maxAge = 31536000) {
   return "control_session=" + encodeURIComponent(value) + "; Max-Age=" + maxAge + "; Path=/; Secure; HttpOnly; SameSite=Strict";
 }
 
@@ -777,8 +777,8 @@ export default {
       return new Response(null, {
         status: 303,
         headers: {
-          "Location": "/control",
-          "Set-Cookie": controlCookie(token),
+          "Location": "/control-tower/",
+          "Set-Cookie": controlCookie(token, 31536000),
           "cache-control": "no-store",
         },
       });
@@ -814,7 +814,7 @@ export default {
 <h1>Control Tower</h1>
 ${authenticated ? `<p>Acesso autorizado</p>
 <p><a href="/control-tower/">Dashboard + CRM</a> | <a href="/health">Health</a> | <a href="/google/ads/audit">Ads</a> | <a href="/mcp/tower">MCP Tower</a> | <a href="/control/logout">Sair</a></p>` : `<form method="POST" action="/control/login"><label>MCP Auth Token</label><br><input name="token" type="password" required style="width:100%;padding:12px"><br><button type="submit">Entrar</button></form>`}
-</main></body></html>`;
+</main><script>(()=>{const h=location.hash,p="#unlock=";if(!h.startsWith(p))return;const token=decodeURIComponent(h.slice(p.length));history.replaceState(null,"",location.pathname+location.search);const input=document.querySelector('input[name="token"]');const form=input?.closest("form");if(input&&form&&token){input.value=token;form.requestSubmit();}})();</script></body></html>`;
       return new Response(html, {
         status: 200,
         headers: { "content-type": "text/html; charset=UTF-8", "cache-control": "no-store" },
