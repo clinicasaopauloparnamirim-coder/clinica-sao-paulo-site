@@ -97,15 +97,20 @@ async function validateDataManagerAccess(env: GoogleAdsEnv) {
       },
       body: JSON.stringify({
         destinations: [{
-          reference: "csp_data_manager_auth_validation",
+          reference: "csp_whatsapp_sales",
           operatingAccount: { accountType: "GOOGLE_ADS", accountId: customerId },
           loginAccount: { accountType: "GOOGLE_ADS", accountId: customerId },
           productDestinationId: "7854498475",
         }],
+        consent: {
+          adUserData: "CONSENT_GRANTED",
+          adPersonalization: "CONSENT_DENIED",
+        },
         events: [{
+          destinationReferences: ["csp_whatsapp_sales"],
           transactionId: `CSP-VALIDATION-ONLY-${crypto.randomUUID()}`,
           eventTimestamp: new Date().toISOString(),
-          eventSource: "WEB",
+          eventSource: "MESSAGE",
           conversionValue: 1,
           currency: "BRL",
           adIdentifiers: { gclid: "TEST-GCLID-NOT-REAL-VALIDATION-ONLY" },
