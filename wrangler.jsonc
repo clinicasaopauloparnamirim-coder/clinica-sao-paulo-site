@@ -6,6 +6,7 @@
   "keep_vars": true,
   "vars": {
     "WHATSAPP_PHONE_NUMBER_ID": "367795153087598",
+    "GA4_MEASUREMENT_ID": "G-EGTYJM0REP",
     "OPENEXECUTIVE_ENABLED": "true",
     "OPENEXECUTIVE_MCP_URL": "https://openexecutive-api-production-3d98.up.railway.app/mcp"
   },
