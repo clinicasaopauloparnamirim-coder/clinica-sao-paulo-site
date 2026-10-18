@@ -227,6 +227,8 @@ export async function googleAdsMutate(
   return adsRequest(env, `${resource}:mutate`, { operations, validateOnly });
 }
 
+const EXPECTED_GOOGLE_ADS_ACCOUNT = "clinicasaopauloparnamirim@gmail.com";
+
 async function exchangeAdsCode(env: GoogleAdsEnv, code: string, redirectUri: string) {
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -240,7 +242,29 @@ async function exchangeAdsCode(env: GoogleAdsEnv, code: string, redirectUri: str
     }),
   });
   if (!response.ok) throw new Error(`Google Ads token exchange failed: ${response.status}`);
-  return await response.json() as { refresh_token?: string };
+  return await response.json() as { refresh_token?: string; id_token?: string };
+}
+
+async function isExpectedGoogleAccount(idToken: string, clientId: string): Promise<boolean> {
+  // Ask Google's tokeninfo endpoint to validate the signed ID token; never decode
+  // an unverified JWT locally and never persist a token before checking its identity.
+  const response = await fetch(
+    `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`,
+    { headers: { accept: "application/json" } },
+  );
+  if (!response.ok) return false;
+  const claims = await response.json() as {
+    aud?: string;
+    email?: string;
+    email_verified?: string | boolean;
+    iss?: string;
+  };
+  const verifiedEmail = claims.email_verified === true || claims.email_verified === "true";
+  const issuerOk = claims.iss === "https://accounts.google.com" || claims.iss === "accounts.google.com";
+  return claims.aud === clientId
+    && claims.email?.toLowerCase() === EXPECTED_GOOGLE_ADS_ACCOUNT
+    && verifiedEmail
+    && issuerOk;
 }
 
 export async function googleAdsOAuthStart(request: Request, env: GoogleAdsEnv) {
@@ -258,11 +282,19 @@ export async function googleAdsOAuthStart(request: Request, env: GoogleAdsEnv) {
   auth.searchParams.set("client_id", env.GOOGLE_CLIENT_ID);
   auth.searchParams.set("redirect_uri", redirectUri);
   auth.searchParams.set("response_type", "code");
-  auth.searchParams.set("scope", "https://www.googleapis.com/auth/adwords https://www.googleapis.com/auth/datamanager");
+  auth.searchParams.set("scope", "openid email https://www.googleapis.com/auth/adwords https://www.googleapis.com/auth/datamanager");
   auth.searchParams.set("access_type", "offline");
   auth.searchParams.set("prompt", "consent");
   auth.searchParams.set("state", state);
   return Response.redirect(auth.toString(), 302);
+}
+
+// Mobile OAuth entry. The authorization start endpoint is public only for this
+// flow; the callback below verifies Google-signed identity and the expected clinic
+// account before persisting a refresh token. Every request still receives a fresh,
+// server-persisted one-time OAuth state.
+export async function googleAdsOAuthMobileStart(request: Request, env: GoogleAdsEnv) {
+  return googleAdsOAuthStart(request, env);
 }
 
 export async function googleAdsOAuthCallback(request: Request, env: GoogleAdsEnv) {
@@ -283,6 +315,13 @@ export async function googleAdsOAuthCallback(request: Request, env: GoogleAdsEnv
   const redirectUri = new URL("/google/ads/oauth/callback", request.url).toString();
   const tokens = await exchangeAdsCode(env, code, redirectUri);
   if (!tokens.refresh_token) return new Response("Google did not return a refresh token.", { status: 400 });
+  if (!tokens.id_token || !env.GOOGLE_CLIENT_ID
+      || !(await isExpectedGoogleAccount(tokens.id_token, env.GOOGLE_CLIENT_ID))) {
+    return new Response(
+      "Autorização não concluída: entre com a conta Google autorizada da Clínica São Paulo e tente novamente.",
+      { status: 403, headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" } },
+    );
+  }
 
   await oauthStore(env).fetch("https://store.internal/ads-token", {
     method: "POST",
