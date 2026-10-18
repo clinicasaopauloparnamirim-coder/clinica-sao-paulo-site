@@ -11,6 +11,7 @@ type GoogleAdsEnv = {
   GOOGLE_ADS_CUSTOMER_ID?: string;
   GOOGLE_ADS_LOGIN_CUSTOMER_ID?: string;
   GOOGLE_OAUTH_STORE: DurableObjectNamespace;
+  WHATSAPP_LEDGER: DurableObjectNamespace;
   TYPESAFE_API_KEY?: string;
   LAYA_HTTP_URL?: string;
   JUDGMENT_REQUIRED?: string;
@@ -150,6 +151,257 @@ export async function googleAdsAuthCheck(env: GoogleAdsEnv) {
     google_ads: { ok: true, result },
     data_manager: dataManager,
   });
+}
+
+function salesLedger(env: GoogleAdsEnv) {
+  return env.WHATSAPP_LEDGER.get(env.WHATSAPP_LEDGER.idFromName("whatsapp"));
+}
+
+async function settleSale(
+  env: GoogleAdsEnv,
+  input: { transaction_id: string; claim_token: string; status: "submitted" | "failed" | "uncertain"; request_id?: string; provider_status?: number; error_reason?: string },
+) {
+  return await salesLedger(env).fetch("https://ledger.internal/crm/ads-sales/settle", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+/**
+ * Submits a real, explicitly confirmed sale. The CRM contact must already be in
+ * stage "patient", be attributed to Google Ads, and contain a first-party click
+ * identifier. The transaction ID is idempotent, and consent must be confirmed.
+ * This is the only code path that sets validateOnly=false.
+ */
+export async function googleAdsSubmitConfirmedSale(env: GoogleAdsEnv, request: Request) {
+  let payload: any;
+  try { payload = await request.json(); }
+  catch { return Response.json({ ok: false, error: "INVALID_JSON" }, { status: 400 }); }
+
+  const contactId = String(payload?.contact_id ?? "");
+  const transactionId = String(payload?.transaction_id ?? "").trim();
+  const currency = String(payload?.currency ?? "BRL").toUpperCase();
+  const value = Number(payload?.conversion_value);
+  const timestamp = String(payload?.event_timestamp ?? "");
+  const adUserDataConsent = String(payload?.consent?.ad_user_data ?? "");
+  const adPersonalizationConsent = String(payload?.consent?.ad_personalization ?? "CONSENT_DENIED");
+
+  if (!/^[A-Za-z0-9_-]{8,80}$/.test(contactId)) {
+    return Response.json({ ok: false, error: "INVALID_CONTACT_ID" }, { status: 400 });
+  }
+  if (!/^[A-Za-z0-9_-]{6,80}$/.test(transactionId)) {
+    return Response.json({ ok: false, error: "INVALID_TRANSACTION_ID" }, { status: 400 });
+  }
+  if (!Number.isFinite(value) || value <= 0 || value > 1_000_000) {
+    return Response.json({ ok: false, error: "CONVERSION_VALUE_MUST_BE_POSITIVE_BRL" }, { status: 400 });
+  }
+  if (currency !== "BRL") {
+    return Response.json({ ok: false, error: "ONLY_BRL_IS_CONFIGURED" }, { status: 400 });
+  }
+  const saleTime = new Date(timestamp);
+  const now = Date.now();
+  if (!timestamp || !Number.isFinite(saleTime.getTime()) ||
+      saleTime.getTime() > now + 5 * 60_000 ||
+      saleTime.getTime() < now - 90 * 24 * 60 * 60_000) {
+    return Response.json({ ok: false, error: "SALE_TIMESTAMP_OUT_OF_RANGE" }, { status: 400 });
+  }
+  if (adUserDataConsent !== "CONSENT_GRANTED") {
+    return Response.json({ ok: false, error: "AD_USER_DATA_CONSENT_REQUIRED" }, { status: 403 });
+  }
+  if (adPersonalizationConsent !== "CONSENT_GRANTED" && adPersonalizationConsent !== "CONSENT_DENIED") {
+    return Response.json({ ok: false, error: "INVALID_AD_PERSONALIZATION_CONSENT" }, { status: 400 });
+  }
+
+  const claimResponse = await salesLedger(env).fetch("https://ledger.internal/crm/ads-sales/claim", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ contact_id: contactId, transaction_id: transactionId }),
+  });
+  const claim = await claimResponse.json().catch(() => null) as any;
+  if (!claimResponse.ok || !claim?.ok || !claim?.claim_token) {
+    return Response.json({
+      ok: false,
+      error: String(claim?.error ?? "SALE_CLAIM_FAILED"),
+      sale: claim?.sale ?? undefined,
+    }, { status: claimResponse.status || 502, headers: { "cache-control": "no-store" } });
+  }
+
+  const click = claim.contact?.ad_identifiers ?? {};
+  const adIdentifiers: Record<string, string> = {};
+  for (const key of ["gclid", "gbraid", "wbraid"] as const) {
+    const value = typeof click[key] === "string" ? click[key].trim().slice(0, 250) : "";
+    if (value) adIdentifiers[key] = value;
+  }
+  // The ledger independently enforces the source and identifier preconditions.
+  if (!Object.keys(adIdentifiers).length) {
+    await settleSale(env, { transaction_id: transactionId, claim_token: claim.claim_token, status: "failed", provider_status: 422, error_reason: "NO_CLICK_ID" });
+    return Response.json({ ok: false, error: "NO_GOOGLE_CLICK_IDENTIFIER" }, { status: 422 });
+  }
+
+  const customerId = (env.GOOGLE_ADS_CUSTOMER_ID || DEFAULT_CUSTOMER_ID).replace(/-/g, "");
+  const requestBody = {
+    destinations: [{
+      reference: "csp_whatsapp_sales",
+      operatingAccount: { accountType: "GOOGLE_ADS", accountId: customerId },
+      loginAccount: { accountType: "GOOGLE_ADS", accountId: customerId },
+      productDestinationId: "7854498475",
+    }],
+    consent: {
+      adUserData: "CONSENT_GRANTED",
+      adPersonalization: adPersonalizationConsent,
+    },
+    events: [{
+      destinationReferences: ["csp_whatsapp_sales"],
+      transactionId,
+      eventTimestamp: saleTime.toISOString(),
+      eventSource: "MESSAGE",
+      conversionValue: Math.round(value * 100) / 100,
+      currency: "BRL",
+      adIdentifiers,
+    }],
+    validateOnly: false,
+  };
+
+  try {
+    const accessToken = await refreshAccessToken(env);
+    const response = await fetch("https://datamanager.googleapis.com/v1/events:ingest", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+    });
+    const raw = await response.text();
+    let parsed: any = null;
+    try { parsed = raw ? JSON.parse(raw) : null; } catch { parsed = null; }
+    if (!response.ok) {
+      const details = Array.isArray(parsed?.error?.details) ? parsed.error.details : [];
+      const reason = details.find((item: any) => item?.reason)?.reason
+        ?? details.find((item: any) => item?.["@type"]?.includes("ErrorInfo"))?.reason
+        ?? "PROVIDER_REJECTED";
+      const settled = await settleSale(env, {
+        transaction_id: transactionId,
+        claim_token: claim.claim_token,
+        status: response.status >= 500 ? "uncertain" : "failed",
+        provider_status: response.status,
+        error_reason: String(reason).slice(0, 120),
+      });
+      if (!settled.ok) return Response.json({ ok: false, error: "SETTLEMENT_FAILED_AFTER_PROVIDER_RESPONSE" }, { status: 502 });
+      return Response.json({
+        ok: false,
+        status: response.status >= 500 ? "uncertain" : "failed",
+        provider_status: response.status,
+        error: String(reason).slice(0, 120),
+        message: String(parsed?.error?.message ?? "Data Manager rejected the sale event.").slice(0, 500),
+        conversion_uploaded: false,
+      }, { status: 502, headers: { "cache-control": "no-store" } });
+    }
+
+    const requestId = typeof parsed?.requestId === "string" ? parsed.requestId : "";
+    if (!requestId) {
+      await settleSale(env, {
+        transaction_id: transactionId,
+        claim_token: claim.claim_token,
+        status: "uncertain",
+        provider_status: response.status,
+        error_reason: "MISSING_REQUEST_ID",
+      });
+      return Response.json({
+        ok: false, status: "uncertain", provider_status: response.status,
+        error: "DATA_MANAGER_RETURNED_NO_REQUEST_ID",
+      }, { status: 502, headers: { "cache-control": "no-store" } });
+    }
+
+    const settled = await settleSale(env, {
+      transaction_id: transactionId,
+      claim_token: claim.claim_token,
+      status: "submitted",
+      request_id: requestId,
+      provider_status: response.status,
+    });
+    if (!settled.ok) {
+      // Provider accepted the request. Do not retry automatically if local settlement fails.
+      return Response.json({
+        ok: true, status: "submitted_but_local_status_unconfirmed",
+        request_id: requestId, transaction_id: transactionId,
+        warning: "Do not resend this transaction ID; verify provider status first.",
+      }, { status: 202, headers: { "cache-control": "no-store" } });
+    }
+    return Response.json({
+      ok: true,
+      status: "submitted",
+      request_id: requestId,
+      transaction_id: transactionId,
+      conversion_uploaded: true,
+      note: "Accepted asynchronously by Data Manager; processing status is not yet final.",
+    }, { status: 202, headers: { "cache-control": "no-store" } });
+  } catch {
+    // A network exception may occur after the provider received the request, so
+    // mark it uncertain and block automatic resubmission to prevent duplicates.
+    await settleSale(env, {
+      transaction_id: transactionId,
+      claim_token: claim.claim_token,
+      status: "uncertain",
+      provider_status: 0,
+      error_reason: "NETWORK_OUTCOME_UNCERTAIN",
+    }).catch(() => undefined);
+    return Response.json({
+      ok: false, status: "uncertain",
+      error: "NETWORK_OUTCOME_UNCERTAIN",
+      note: "Do not resubmit automatically; check request status before attempting again.",
+    }, { status: 502, headers: { "cache-control": "no-store" } });
+  }
+}
+
+export async function googleAdsConfirmedSaleStatus(env: GoogleAdsEnv, request: Request) {
+  const url = new URL(request.url);
+  const transactionId = url.searchParams.get("transaction_id") || "";
+  if (!/^[A-Za-z0-9_-]{6,80}$/.test(transactionId)) {
+    return Response.json({ ok: false, error: "INVALID_TRANSACTION_ID" }, { status: 400 });
+  }
+  const storedResponse = await salesLedger(env).fetch(
+    "https://ledger.internal/crm/ads-sales/status?transaction_id=" + encodeURIComponent(transactionId),
+  );
+  const stored = await storedResponse.json().catch(() => null) as any;
+  if (!storedResponse.ok || !stored?.sale) {
+    return Response.json({ ok: false, error: "SALE_SUBMISSION_NOT_FOUND" }, { status: storedResponse.status || 404 });
+  }
+  const sale = stored.sale;
+  const requestId = typeof sale.request_id === "string" ? sale.request_id : "";
+  if (!requestId || !["submitted", "uncertain"].includes(String(sale.status))) {
+    const { claim_token: _claimToken, ...safeSale } = sale;
+    return Response.json({ ok: true, sale: safeSale }, { headers: { "cache-control": "no-store" } });
+  }
+  try {
+    const accessToken = await refreshAccessToken(env);
+    const response = await fetch(
+      "https://datamanager.googleapis.com/v1/requestStatus:retrieve?requestId=" + encodeURIComponent(requestId),
+      { method: "GET", headers: { authorization: `Bearer ${accessToken}`, accept: "application/json" } },
+    );
+    const body = await response.json().catch(() => null) as any;
+    if (!response.ok) return Response.json({
+      ok: false, sale_status: sale.status, provider_status: response.status,
+      error: "DATA_MANAGER_STATUS_LOOKUP_FAILED",
+    }, { status: 502, headers: { "cache-control": "no-store" } });
+    const destinations = Array.isArray(body?.requestStatusPerDestination)
+      ? body.requestStatusPerDestination.map((item: any) => ({
+          status: item?.requestStatus ?? item?.request_status ?? "REQUEST_STATUS_UNKNOWN",
+          error_info: item?.errorInfo ?? item?.error_info ?? null,
+          warning_info: item?.warningInfo ?? item?.warning_info ?? null,
+        }))
+      : [];
+    return Response.json({
+      ok: true,
+      transaction_id: transactionId,
+      request_id: requestId,
+      local_status: sale.status,
+      request_status_per_destination: destinations,
+    }, { headers: { "cache-control": "no-store" } });
+  } catch {
+    return Response.json({ ok: false, error: "DATA_MANAGER_STATUS_LOOKUP_FAILED" }, { status: 502 });
+  }
 }
 
 export async function googleAdsAudit(env: GoogleAdsEnv) {
