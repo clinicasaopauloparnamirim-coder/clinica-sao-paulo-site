@@ -230,13 +230,10 @@ export class WhatsAppLedger extends DurableObject {
               : click ? "prefill_code" : "ctwa_referral",
           }
         : null;
+      const sourceOverride: CrmSource | undefined =
+        !click && hasReferral ? (isPaidMetaReferral ? "meta_ads" : "referral") : undefined;
       const contact = associated
-        ? await this.upsertAttributedContact(
-            message,
-            attribution,
-            receivedAt,
-            !click && hasReferral ? (isPaidMetaReferral ? "meta_ads" : "referral") : undefined,
-          )
+        ? await this.upsertAttributedContact(message, attribution, receivedAt, sourceOverride)
         : null;
       const leadId = ref ?? contact?.id ??
         (typeof message?.id === "string" ? `WA-${message.id.slice(-100)}` : null);
