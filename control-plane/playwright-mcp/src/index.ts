@@ -105,39 +105,43 @@ export class WhatsAppLedger extends DurableObject {
       const contactId = String(payload?.contact_id || "");
       if (!/^[A-Za-z0-9_-]{6,80}$/.test(transactionId)) return Response.json({ ok: false, error: "INVALID_TRANSACTION_ID" }, { status: 400 });
       if (!/^[a-zA-Z0-9_-]{8,80}$/.test(contactId)) return Response.json({ ok: false, error: "INVALID_CONTACT_ID" }, { status: 400 });
-      const existingSale = await this.ctx.storage.get(`ads-sale:${transactionId}`) as Record<string, any> | undefined;
-      if (existingSale && !(existingSale.status === "failed" && existingSale.retryable === true)) {
-        return Response.json({ ok: false, error: "TRANSACTION_ALREADY_CLAIMED", sale: {
-          transaction_id: transactionId, status: existingSale.status, request_id: existingSale.request_id ?? null,
-        } }, { status: 409, headers: { "cache-control": "no-store" } });
+
+      // Claim and deduplication are atomic inside the Durable Object so concurrent
+      // operator clicks cannot submit the same transaction twice.
+      const result = await this.ctx.storage.transaction(async (txn: any) => {
+        const existingSale = await txn.get(`ads-sale:${transactionId}`) as Record<string, any> | undefined;
+        if (existingSale && !(existingSale.status === "failed" && existingSale.retryable === true)) {
+          return { ok: false, http_status: 409, error: "TRANSACTION_ALREADY_CLAIMED", sale: {
+            transaction_id: transactionId, status: existingSale.status, request_id: existingSale.request_id ?? null,
+          } };
+        }
+        const contact = await txn.get(`crm:contact:${contactId}`) as CrmContact | undefined;
+        if (!contact) return { ok: false, http_status: 404, error: "CONTACT_NOT_FOUND" };
+        if (contact.stage !== "patient") return { ok: false, http_status: 422, error: "CONTACT_NOT_MARKED_PATIENT" };
+        if (contact.source !== "google_ads") return { ok: false, http_status: 422, error: "CONTACT_NOT_FROM_GOOGLE_ADS" };
+        const attribution = contact.attribution && typeof contact.attribution === "object" ? contact.attribution as Record<string, unknown> : {};
+        const adIdentifiers = {
+          gclid: typeof attribution.gclid === "string" ? attribution.gclid.trim().slice(0, 250) : "",
+          gbraid: typeof attribution.gbraid === "string" ? attribution.gbraid.trim().slice(0, 250) : "",
+          wbraid: typeof attribution.wbraid === "string" ? attribution.wbraid.trim().slice(0, 250) : "",
+        };
+        if (!adIdentifiers.gclid && !adIdentifiers.gbraid && !adIdentifiers.wbraid) {
+          return { ok: false, http_status: 422, error: "NO_GOOGLE_CLICK_IDENTIFIER" };
+        }
+        const claimToken = crypto.randomUUID();
+        await txn.put(`ads-sale:${transactionId}`, {
+          status: "processing", transaction_id: transactionId, contact_id: contactId,
+          claim_token: claimToken, claimed_at: new Date().toISOString(), retryable: false,
+        });
+        return { ok: true, claim_token: claimToken, contact: {
+          id: contact.id, source: contact.source, stage: contact.stage, ad_identifiers: adIdentifiers,
+        } };
+      });
+      if (!result.ok) {
+        const { http_status, ...safe } = result as any;
+        return Response.json(safe, { status: http_status || 409, headers: { "cache-control": "no-store" } });
       }
-      const contact = await this.ctx.storage.get(`crm:contact:${contactId}`) as CrmContact | undefined;
-      if (!contact) return Response.json({ ok: false, error: "CONTACT_NOT_FOUND" }, { status: 404 });
-      if (contact.stage !== "patient") return Response.json({ ok: false, error: "CONTACT_NOT_MARKED_PATIENT" }, { status: 422 });
-      if (contact.source !== "google_ads") return Response.json({ ok: false, error: "CONTACT_NOT_FROM_GOOGLE_ADS" }, { status: 422 });
-      const attribution = contact.attribution && typeof contact.attribution === "object" ? contact.attribution as Record<string, unknown> : {};
-      const adIdentifiers = {
-        gclid: typeof attribution.gclid === "string" ? attribution.gclid.trim().slice(0, 250) : "",
-        gbraid: typeof attribution.gbraid === "string" ? attribution.gbraid.trim().slice(0, 250) : "",
-        wbraid: typeof attribution.wbraid === "string" ? attribution.wbraid.trim().slice(0, 250) : "",
-      };
-      if (!adIdentifiers.gclid && !adIdentifiers.gbraid && !adIdentifiers.wbraid) {
-        return Response.json({ ok: false, error: "NO_GOOGLE_CLICK_IDENTIFIER" }, { status: 422 });
-      }
-      const claimToken = crypto.randomUUID();
-      const sale = {
-        status: "processing",
-        transaction_id: transactionId,
-        contact_id: contactId,
-        claim_token: claimToken,
-        claimed_at: new Date().toISOString(),
-        retryable: false,
-      };
-      await this.ctx.storage.put(`ads-sale:${transactionId}`, sale);
-      return Response.json({
-        ok: true, claim_token: claimToken,
-        contact: { id: contact.id, source: contact.source, stage: contact.stage, ad_identifiers: adIdentifiers },
-      }, { headers: { "cache-control": "no-store" } });
+      return Response.json(result, { headers: { "cache-control": "no-store" } });
     }
     if (request.method === "POST" && route === "/crm/ads-sales/settle") {
       let payload: any;
@@ -161,7 +165,7 @@ export class WhatsAppLedger extends DurableObject {
         provider_status: providerStatus || null,
         error_reason: typeof payload?.error_reason === "string" ? payload.error_reason.slice(0, 120) : null,
         settled_at: new Date().toISOString(),
-        retryable: status === "failed" && providerStatus >= 400 && providerStatus < 500 && providerStatus !== 429,
+        retryable: status === "failed" && ((providerStatus >= 400 && providerStatus < 500) || providerStatus === 429),
       };
       await this.ctx.storage.put(`ads-sale:${transactionId}`, updated);
       const { claim_token: _claimToken, ...safe } = updated;
