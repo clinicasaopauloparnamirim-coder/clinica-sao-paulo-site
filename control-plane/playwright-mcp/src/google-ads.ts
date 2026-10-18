@@ -11,7 +11,7 @@ type GoogleAdsEnv = {
   GOOGLE_ADS_CUSTOMER_ID?: string;
   GOOGLE_ADS_LOGIN_CUSTOMER_ID?: string;
   GOOGLE_OAUTH_STORE: DurableObjectNamespace;
-  WHATSAPP_LEDGER: DurableObjectNamespace;
+  WHATSAPP_LEDGER?: DurableObjectNamespace;
   TYPESAFE_API_KEY?: string;
   LAYA_HTTP_URL?: string;
   JUDGMENT_REQUIRED?: string;
@@ -154,6 +154,7 @@ export async function googleAdsAuthCheck(env: GoogleAdsEnv) {
 }
 
 function salesLedger(env: GoogleAdsEnv) {
+  if (!env.WHATSAPP_LEDGER) throw new Error("Confirmed-sale ledger is not configured.");
   return env.WHATSAPP_LEDGER.get(env.WHATSAPP_LEDGER.idFromName("whatsapp"));
 }
 
