@@ -14,9 +14,20 @@ export class GoogleOAuthStore extends DurableObject {
   async fetch(request: Request) {
     const url = new URL(request.url);
     if (request.method === "POST" && url.pathname === "/state") {
-      const body = await request.json() as { state?: string; setup?: boolean };
+      const body = await request.json() as { state?: string; setup?: boolean; ttl_ms?: number };
       if (!body.state) return new Response("Bad Request", { status: 400 });
-      await this.ctx.storage.put(`oauth_state:${body.state}`, { value: body.state, setup: body.setup === true, expires: Date.now() + 10 * 60_000 });
+      // OAuth users may need extra time to switch Google accounts on mobile.
+      // Keep the default at 10 minutes; permit explicitly requested lifetimes up
+      // to 30 minutes, clamped to a safe 1–30 minute range.
+      const requestedTtl = Number(body.ttl_ms);
+      const ttlMs = Number.isFinite(requestedTtl)
+        ? Math.max(60_000, Math.min(requestedTtl, 30 * 60_000))
+        : 10 * 60_000;
+      await this.ctx.storage.put(`oauth_state:${body.state}`, {
+        value: body.state,
+        setup: body.setup === true,
+        expires: Date.now() + ttlMs,
+      });
       return new Response("OK");
     }
     if (request.method === "POST" && url.pathname === "/setup-complete") {

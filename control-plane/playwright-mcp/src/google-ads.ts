@@ -275,7 +275,7 @@ export async function googleAdsOAuthStart(request: Request, env: GoogleAdsEnv) {
   await oauthStore(env).fetch("https://store.internal/state", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ state }),
+    body: JSON.stringify({ state, ttl_ms: 30 * 60_000 }),
   });
   const redirectUri = new URL("/google/ads/oauth/callback", request.url).toString();
   const auth = new URL("https://accounts.google.com/o/oauth2/v2/auth");
