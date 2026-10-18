@@ -192,6 +192,7 @@ export async function googleAdsSubmitConfirmedSale(env: GoogleAdsEnv, request: R
   const timestamp = String(payload?.event_timestamp ?? "");
   const adUserDataConsent = String(payload?.consent?.ad_user_data ?? "");
   const adPersonalizationConsent = String(payload?.consent?.ad_personalization ?? "CONSENT_DENIED");
+  const legalBasisConfirmed = payload?.legal_basis_confirmed === true;
 
   if (!/^[A-Za-z0-9_-]{8,80}$/.test(contactId)) {
     return Response.json({ ok: false, error: "INVALID_CONTACT_ID" }, { status: 400 });
@@ -212,8 +213,8 @@ export async function googleAdsSubmitConfirmedSale(env: GoogleAdsEnv, request: R
       saleTime.getTime() < now - 90 * 24 * 60 * 60_000) {
     return Response.json({ ok: false, error: "SALE_TIMESTAMP_OUT_OF_RANGE" }, { status: 400 });
   }
-  if (adUserDataConsent !== "CONSENT_GRANTED") {
-    return Response.json({ ok: false, error: "AD_USER_DATA_CONSENT_REQUIRED" }, { status: 403 });
+  if (adUserDataConsent !== "CONSENT_GRANTED" || !legalBasisConfirmed) {
+    return Response.json({ ok: false, error: "RECORDED_CONSENT_AND_LEGAL_BASIS_REQUIRED" }, { status: 403 });
   }
   if (adPersonalizationConsent !== "CONSENT_GRANTED" && adPersonalizationConsent !== "CONSENT_DENIED") {
     return Response.json({ ok: false, error: "INVALID_AD_PERSONALIZATION_CONSENT" }, { status: 400 });
@@ -222,7 +223,16 @@ export async function googleAdsSubmitConfirmedSale(env: GoogleAdsEnv, request: R
   const claimResponse = await salesLedger(env).fetch("https://ledger.internal/crm/ads-sales/claim", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ contact_id: contactId, transaction_id: transactionId }),
+    body: JSON.stringify({
+      contact_id: contactId,
+      transaction_id: transactionId,
+      conversion_value: Math.round(value * 100) / 100,
+      currency: "BRL",
+      event_timestamp: saleTime.toISOString(),
+      ad_user_data_consent: adUserDataConsent,
+      ad_personalization_consent: adPersonalizationConsent,
+      legal_basis_confirmed: true,
+    }),
   });
   const claim = await claimResponse.json().catch(() => null) as any;
   if (!claimResponse.ok || !claim?.ok || !claim?.claim_token) {
