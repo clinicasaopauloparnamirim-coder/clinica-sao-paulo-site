@@ -84,13 +84,71 @@ async function adsRequest(env: GoogleAdsEnv, path: string, body: unknown) {
   return data;
 }
 
+async function validateDataManagerAccess(env: GoogleAdsEnv) {
+  const customerId = (env.GOOGLE_ADS_CUSTOMER_ID || DEFAULT_CUSTOMER_ID).replace(/-/g, "");
+  try {
+    const accessToken = await refreshAccessToken(env);
+    const response = await fetch("https://datamanager.googleapis.com/v1/events:ingest", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        destinations: [{
+          reference: "csp_data_manager_auth_validation",
+          operatingAccount: { accountType: "GOOGLE_ADS", accountId: customerId },
+          loginAccount: { accountType: "GOOGLE_ADS", accountId: customerId },
+          productDestinationId: "7854498475",
+        }],
+        events: [{
+          transactionId: `CSP-VALIDATION-ONLY-${crypto.randomUUID()}`,
+          eventTimestamp: new Date().toISOString(),
+          eventSource: "WEB",
+          conversionValue: 1,
+          currency: "BRL",
+          adIdentifiers: { gclid: "TEST-GCLID-NOT-REAL-VALIDATION-ONLY" },
+        }],
+        validateOnly: true,
+      }),
+    });
+    const raw = await response.text();
+    let parsed: any = null;
+    try { parsed = raw ? JSON.parse(raw) : null; } catch { parsed = null; }
+    const details = Array.isArray(parsed?.error?.details) ? parsed.error.details : [];
+    const reason = details.find((item: any) => item?.reason)?.reason
+      ?? details.find((item: any) => item?.["@type"]?.includes("ErrorInfo"))?.reason
+      ?? null;
+    return {
+      ok: response.ok,
+      status: response.status,
+      validate_only: true,
+      conversion_uploaded: false,
+      reason,
+      message: String(parsed?.error?.message ?? (response.ok ? "Data Manager accepted the validation-only request." : "Data Manager rejected the validation-only request.")).slice(0, 700),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 0,
+      validate_only: true,
+      conversion_uploaded: false,
+      reason: "TOKEN_OR_NETWORK_ERROR",
+      message: String(error instanceof Error ? error.message : "Data Manager validation failed.").slice(0, 500),
+    };
+  }
+}
+
 export async function googleAdsAuthCheck(env: GoogleAdsEnv) {
+  const result = await adsRequest(env, "googleAds:search", {
+    query: "SELECT customer.id, customer.descriptive_name FROM customer LIMIT 1",
+  });
+  const dataManager = await validateDataManagerAccess(env);
   return Response.json({
     ok: true,
     customer_id: (env.GOOGLE_ADS_CUSTOMER_ID || DEFAULT_CUSTOMER_ID).replace(/-/g, ""),
-    result: await adsRequest(env, "googleAds:search", {
-      query: "SELECT customer.id, customer.descriptive_name FROM customer LIMIT 1",
-    }),
+    google_ads: { ok: true, result },
+    data_manager: dataManager,
   });
 }
 
