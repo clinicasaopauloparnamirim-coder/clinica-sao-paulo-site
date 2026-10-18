@@ -33,6 +33,7 @@ const CRM_SOURCES: CrmSource[] = ["google_ads", "meta_ads", "organic", "instagra
 
 interface WhatsAppEnv {
   MCP_AUTH_TOKEN?: string;
+  CONTROL_SESSION_TOKEN?: string;
   WHATSAPP_VERIFY_TOKEN?: string;
   WHATSAPP_APP_SECRET?: string;
   WHATSAPP_AUTOREPLY_ENABLED?: string;
@@ -558,17 +559,21 @@ function unauthorized() {
 }
 
 
-function authorized(request: Request, env: { MCP_AUTH_TOKEN?: string }) {
+function authorized(request: Request, env: { MCP_AUTH_TOKEN?: string; CONTROL_SESSION_TOKEN?: string }) {
   const configured = env.MCP_AUTH_TOKEN;
   if (!configured) return false;
   const header = request.headers.get("Authorization") || "";
   if (header === "Bearer " + configured) return true;
   const cookie = request.headers.get("Cookie") || "";
   const match = cookie.match(/(?:^|;\s*)control_session=([^;]+)/);
-  return match?.[1] === encodeURIComponent(configured);
+  const cookieToken = match?.[1];
+  return Boolean(cookieToken && (
+    cookieToken === encodeURIComponent(configured) ||
+    (env.CONTROL_SESSION_TOKEN && cookieToken === encodeURIComponent(env.CONTROL_SESSION_TOKEN))
+  ));
 }
 
-function controlCookie(value: string, maxAge = 3600) {
+function controlCookie(value: string, maxAge = 31536000) {
   return "control_session=" + encodeURIComponent(value) + "; Max-Age=" + maxAge + "; Path=/; Secure; HttpOnly; SameSite=Strict";
 }
 
@@ -768,7 +773,10 @@ export default {
     if (pathname === "/control/login" && request.method === "POST") {
       const form = await request.formData();
       const token = String(form.get("token") || "");
-      if (!env.MCP_AUTH_TOKEN || token !== env.MCP_AUTH_TOKEN) {
+      const tokenAccepted = Boolean(token && (
+        token === env.MCP_AUTH_TOKEN || token === env.CONTROL_SESSION_TOKEN
+      ));
+      if (!tokenAccepted) {
         return new Response("Acesso negado: MCP Auth Token invalido.", {
           status: 401,
           headers: { "content-type": "text/plain; charset=UTF-8", "cache-control": "no-store" },
@@ -777,8 +785,8 @@ export default {
       return new Response(null, {
         status: 303,
         headers: {
-          "Location": "/control",
-          "Set-Cookie": controlCookie(token),
+          "Location": "/control-tower/",
+          "Set-Cookie": controlCookie(env.CONTROL_SESSION_TOKEN || token, 31536000),
           "cache-control": "no-store",
         },
       });
@@ -814,7 +822,7 @@ export default {
 <h1>Control Tower</h1>
 ${authenticated ? `<p>Acesso autorizado</p>
 <p><a href="/control-tower/">Dashboard + CRM</a> | <a href="/health">Health</a> | <a href="/google/ads/audit">Ads</a> | <a href="/mcp/tower">MCP Tower</a> | <a href="/control/logout">Sair</a></p>` : `<form method="POST" action="/control/login"><label>MCP Auth Token</label><br><input name="token" type="password" required style="width:100%;padding:12px"><br><button type="submit">Entrar</button></form>`}
-</main></body></html>`;
+</main><script>(()=>{const h=location.hash,p="#unlock=";if(!h.startsWith(p))return;const token=decodeURIComponent(h.slice(p.length));history.replaceState(null,"",location.pathname+location.search);const input=document.querySelector('input[name="token"]');const form=input?.closest("form");if(input&&form&&token){input.value=token;form.requestSubmit();}})();</script></body></html>`;
       return new Response(html, {
         status: 200,
         headers: { "content-type": "text/html; charset=UTF-8", "cache-control": "no-store" },
