@@ -25,6 +25,7 @@ type CrmContact = {
   created_at: string;
   updated_at: string;
   last_contact_at: string | null;
+  attribution?: Record<string, unknown>;
 };
 
 const CRM_STAGES: CrmStage[] = ["new", "contacted", "qualified", "scheduled", "patient", "lost"];
@@ -81,6 +82,90 @@ export class WhatsAppLedger extends DurableObject {
       const contacts = Array.from(rows.values()) as CrmContact[];
       contacts.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
       return Response.json({ ok: true, count: contacts.length, contacts }, { headers: { "cache-control": "no-store" } });
+    }
+    if (request.method === "GET" && route.startsWith("/crm/contacts/")) {
+      const id = decodeURIComponent(route.slice("/crm/contacts/".length));
+      if (!/^[a-zA-Z0-9_-]{8,80}$/.test(id)) return new Response("Invalid contact id.", { status: 400 });
+      const contact = await this.ctx.storage.get(`crm:contact:${id}`) as CrmContact | undefined;
+      if (!contact) return new Response("Contact not found.", { status: 404 });
+      return Response.json({ ok: true, contact }, { headers: { "cache-control": "no-store" } });
+    }
+    if (request.method === "GET" && route === "/crm/ads-sales/status") {
+      const url = new URL(request.url);
+      const transactionId = url.searchParams.get("transaction_id") || "";
+      if (!/^[A-Za-z0-9_-]{6,80}$/.test(transactionId)) return new Response("Invalid transaction id.", { status: 400 });
+      const sale = await this.ctx.storage.get(`ads-sale:${transactionId}`) as Record<string, unknown> | undefined;
+      if (!sale) return new Response("Sale submission not found.", { status: 404 });
+      return Response.json({ ok: true, sale }, { headers: { "cache-control": "no-store" } });
+    }
+    if (request.method === "POST" && route === "/crm/ads-sales/claim") {
+      let payload: any;
+      try { payload = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
+      const transactionId = String(payload?.transaction_id || "");
+      const contactId = String(payload?.contact_id || "");
+      if (!/^[A-Za-z0-9_-]{6,80}$/.test(transactionId)) return Response.json({ ok: false, error: "INVALID_TRANSACTION_ID" }, { status: 400 });
+      if (!/^[a-zA-Z0-9_-]{8,80}$/.test(contactId)) return Response.json({ ok: false, error: "INVALID_CONTACT_ID" }, { status: 400 });
+      const existingSale = await this.ctx.storage.get(`ads-sale:${transactionId}`) as Record<string, any> | undefined;
+      if (existingSale && !(existingSale.status === "failed" && existingSale.retryable === true)) {
+        return Response.json({ ok: false, error: "TRANSACTION_ALREADY_CLAIMED", sale: {
+          transaction_id: transactionId, status: existingSale.status, request_id: existingSale.request_id ?? null,
+        } }, { status: 409, headers: { "cache-control": "no-store" } });
+      }
+      const contact = await this.ctx.storage.get(`crm:contact:${contactId}`) as CrmContact | undefined;
+      if (!contact) return Response.json({ ok: false, error: "CONTACT_NOT_FOUND" }, { status: 404 });
+      if (contact.stage !== "patient") return Response.json({ ok: false, error: "CONTACT_NOT_MARKED_PATIENT" }, { status: 422 });
+      if (contact.source !== "google_ads") return Response.json({ ok: false, error: "CONTACT_NOT_FROM_GOOGLE_ADS" }, { status: 422 });
+      const attribution = contact.attribution && typeof contact.attribution === "object" ? contact.attribution as Record<string, unknown> : {};
+      const adIdentifiers = {
+        gclid: typeof attribution.gclid === "string" ? attribution.gclid.trim().slice(0, 250) : "",
+        gbraid: typeof attribution.gbraid === "string" ? attribution.gbraid.trim().slice(0, 250) : "",
+        wbraid: typeof attribution.wbraid === "string" ? attribution.wbraid.trim().slice(0, 250) : "",
+      };
+      if (!adIdentifiers.gclid && !adIdentifiers.gbraid && !adIdentifiers.wbraid) {
+        return Response.json({ ok: false, error: "NO_GOOGLE_CLICK_IDENTIFIER" }, { status: 422 });
+      }
+      const claimToken = crypto.randomUUID();
+      const sale = {
+        status: "processing",
+        transaction_id: transactionId,
+        contact_id: contactId,
+        claim_token: claimToken,
+        claimed_at: new Date().toISOString(),
+        retryable: false,
+      };
+      await this.ctx.storage.put(`ads-sale:${transactionId}`, sale);
+      return Response.json({
+        ok: true, claim_token: claimToken,
+        contact: { id: contact.id, source: contact.source, stage: contact.stage, ad_identifiers: adIdentifiers },
+      }, { headers: { "cache-control": "no-store" } });
+    }
+    if (request.method === "POST" && route === "/crm/ads-sales/settle") {
+      let payload: any;
+      try { payload = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
+      const transactionId = String(payload?.transaction_id || "");
+      const claimToken = String(payload?.claim_token || "");
+      const status = String(payload?.status || "");
+      if (!/^[A-Za-z0-9_-]{6,80}$/.test(transactionId) || !/^[0-9a-f-]{36}$/i.test(claimToken)) {
+        return new Response("Invalid sale settlement.", { status: 400 });
+      }
+      if (!["submitted", "failed", "uncertain"].includes(status)) return new Response("Invalid sale status.", { status: 400 });
+      const sale = await this.ctx.storage.get(`ads-sale:${transactionId}`) as Record<string, any> | undefined;
+      if (!sale || sale.claim_token !== claimToken || sale.status !== "processing") {
+        return Response.json({ ok: false, error: "CLAIM_MISMATCH" }, { status: 409 });
+      }
+      const providerStatus = Number(payload?.provider_status) || 0;
+      const updated = {
+        ...sale,
+        status,
+        request_id: typeof payload?.request_id === "string" ? payload.request_id.slice(0, 180) : null,
+        provider_status: providerStatus || null,
+        error_reason: typeof payload?.error_reason === "string" ? payload.error_reason.slice(0, 120) : null,
+        settled_at: new Date().toISOString(),
+        retryable: status === "failed" && providerStatus >= 400 && providerStatus < 500 && providerStatus !== 429,
+      };
+      await this.ctx.storage.put(`ads-sale:${transactionId}`, updated);
+      const { claim_token: _claimToken, ...safe } = updated;
+      return Response.json({ ok: true, sale: safe }, { headers: { "cache-control": "no-store" } });
     }
     if (request.method === "POST" && route === "/crm/contacts") {
       let payload: any;
@@ -341,6 +426,9 @@ export class WhatsAppLedger extends DurableObject {
       created_at: existing?.created_at ?? at,
       updated_at: at,
       last_contact_at: at,
+      attribution: attribution
+        ? { ...(existing?.attribution ?? {}), ...attribution }
+        : existing?.attribution,
     };
     await this.ctx.storage.put(`crm:contact:${contact.id}`, contact);
     await this.ctx.storage.put(`crm:phone:${phone}`, contact.id);
