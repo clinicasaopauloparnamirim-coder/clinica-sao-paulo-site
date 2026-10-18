@@ -379,7 +379,8 @@ $("confirmed-sale-form").addEventListener("submit",async e=>{
    conversion_value:Math.round(amount*100)/100,
    currency:"BRL",
    event_timestamp:new Date(datetime).toISOString(),
-   consent:{ad_user_data:"CONSENT_GRANTED",ad_personalization:$("sale-ad-personalization").value}
+   consent:{ad_user_data:"CONSENT_GRANTED",ad_personalization:$("sale-ad-personalization").value},
+   legal_basis_confirmed:true
   });
   $("sale-form-status").textContent="Solicitação recebida; processamento assíncrono. Guarde o ID da venda para consultar o estado.";
   $("sale-status-result").textContent=safeJson(result);
