@@ -13,7 +13,14 @@ export interface AttributionEvent {
   term?: string;
   content?: string;
   gclid?: string;
+  gbraid?: string;
+  wbraid?: string;
   fbclid?: string;
+  fbc?: string;
+  fbp?: string;
+  campaign_id?: string;
+  adset_id?: string;
+  ad_id?: string;
   user_agent?: string;
   ga_client_id?: string;
   link_location?: string;
@@ -58,7 +65,14 @@ function normalizeEvent(input: any): AttributionEvent {
     term: clean(input?.term, 300),
     content: clean(input?.content, 300),
     gclid: clean(input?.gclid, 250),
+    gbraid: clean(input?.gbraid, 250),
+    wbraid: clean(input?.wbraid, 250),
     fbclid: clean(input?.fbclid, 250),
+    fbc: clean(input?.fbc, 250),
+    fbp: clean(input?.fbp, 250),
+    campaign_id: clean(input?.campaign_id, 120),
+    adset_id: clean(input?.adset_id, 120),
+    ad_id: clean(input?.ad_id, 120),
     user_agent: clean(input?.user_agent, 500),
     ga_client_id: clean(input?.ga_client_id, 120),
     link_location: clean(input?.link_location, 120),
