@@ -2,6 +2,39 @@ name = "clinica-sao-paulo-site"
 main = "src/index.ts"
 compatibility_date = "2026-09-25"
 compatibility_flags = ["nodejs_compat"]
+keep_vars = true
+
+[vars]
+GA4_MEASUREMENT_ID = ""
+
+[previews]
+[previews.vars]
+WHATSAPP_PHONE_NUMBER_ID = ""
+GA4_MEASUREMENT_ID = ""
+OPENEXECUTIVE_ENABLED = "false"
+OPENEXECUTIVE_MCP_URL = "https://example.invalid/mcp"
+
+[previews.ai]
+binding = "AI"
+
+[previews.browser]
+binding = "BROWSER"
+
+[[previews.durable_objects.bindings]]
+name = "WHATSAPP_LEDGER"
+class_name = "WhatsAppLedger"
+
+[[previews.durable_objects.bindings]]
+name = "MCP_OBJECT"
+class_name = "PlaywrightMCP"
+
+[[previews.durable_objects.bindings]]
+name = "CONTROL_AGENT"
+class_name = "ControlAgent"
+
+[[previews.durable_objects.bindings]]
+name = "GOOGLE_OAUTH_STORE"
+class_name = "GoogleOAuthStore"
 
 [ai]
 binding = "AI"
