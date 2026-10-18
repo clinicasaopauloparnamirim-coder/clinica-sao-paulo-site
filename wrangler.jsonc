@@ -9,6 +9,24 @@
     "OPENEXECUTIVE_ENABLED": "true",
     "OPENEXECUTIVE_MCP_URL": "https://openexecutive-api-production-3d98.up.railway.app/mcp"
   },
+  "previews": {
+    "vars": {
+      "WHATSAPP_PHONE_NUMBER_ID": "",
+      "GA4_MEASUREMENT_ID": "",
+      "OPENEXECUTIVE_ENABLED": "false",
+      "OPENEXECUTIVE_MCP_URL": "https://example.invalid/mcp"
+    },
+    "ai": { "binding": "AI" },
+    "browser": { "binding": "BROWSER" },
+    "durable_objects": {
+      "bindings": [
+        { "name": "WHATSAPP_LEDGER", "class_name": "WhatsAppLedger" },
+        { "name": "MCP_OBJECT", "class_name": "PlaywrightMCP" },
+        { "name": "CONTROL_AGENT", "class_name": "ControlAgent" },
+        { "name": "GOOGLE_OAUTH_STORE", "class_name": "GoogleOAuthStore" }
+      ]
+    }
+  },
   "ai": {
     "binding": "AI"
   },
