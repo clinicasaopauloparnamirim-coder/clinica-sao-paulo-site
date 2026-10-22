@@ -447,13 +447,34 @@ async function geminiComposioAdsCommand(env: TowerEnv, args: Record<string, unkn
   }
 
   const gaql = safePlan.gaql;
+  const fromMatch = gaql.match(/\bFROM\s+(campaign|ad_group|ad_group_criterion|keyword_view|search_term_view|campaign_criterion)\b/i);
+  const fromTable = fromMatch?.[1]?.toLowerCase() || "";
+  const approvedCampaignId = "24289443969";
+  const approvedCustomerId = "4603647788";
+  const campaignIdFilter = new RegExp("\\bcampaign\\.id\\s*=\\s*" + approvedCampaignId + "\\b", "i").test(gaql);
+  const adGroupCampaignFilter = new RegExp(
+    "\\bad_group\\.campaign\\s*=\\s*['\\\"]customers/" + approvedCustomerId + "/campaigns/" + approvedCampaignId + "['\\\"]",
+    "i",
+  ).test(gaql);
+  const scopeMatchesTable = fromTable === "ad_group" || fromTable === "ad_group_criterion"
+    ? adGroupCampaignFilter
+    : Boolean(fromTable) && campaignIdFilter;
   const safeReadQuery = /^\s*SELECT\b/i.test(gaql)
     && !/[;]|--|\/\*|\*\//.test(gaql)
-    && /\bFROM\s+(customer|campaign|ad_group|ad_group_criterion|keyword_view|search_term_view|campaign_criterion)\b/i.test(gaql)
+    && !/\b(search-2)\b/i.test(gaql)
+    && !/\b(OR|IN)\s*(?:\(|\b)/i.test(gaql)
+    && scopeMatchesTable
     && /\bLIMIT\s+(?:[1-9]|[1-4][0-9]|50)\b/i.test(gaql)
     && !/\b(UPDATE|INSERT|DELETE|MUTATE|CREATE|DROP|ALTER)\b/i.test(gaql);
   if (!safeReadQuery) {
-    return { ok: false, provider: "gemini", executed: false, error: "GAQL_QUERY_REJECTED", plan: safePlan };
+    return {
+      ok: false,
+      provider: "gemini",
+      executed: false,
+      error: "GAQL_QUERY_REJECTED",
+      policy: "READ_ONLY_APPROVED_CAMPAIGN_ONLY",
+      plan: safePlan,
+    };
   }
   if (!env.COMPOSIO_API_KEY || !env.COMPOSIO_CONNECTED_ACCOUNT_ID) {
     return {
