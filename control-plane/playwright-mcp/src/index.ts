@@ -578,7 +578,7 @@ function controlCookie(value: string, maxAge = 31536000) {
 }
 
 async function validMetaSignature(body: string, signature: string, secret: string) {
-  if (!signature.startsWith("sha256=")) return false;
+  if (!secret || !/^sha256=[0-9a-f]{64}$/.test(signature)) return false;
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(secret),
@@ -587,12 +587,13 @@ async function validMetaSignature(body: string, signature: string, secret: strin
     ["sign"],
   );
   const digest = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body));
-  const expected = "sha256=" + [...new Uint8Array(digest)]
+  const expected = new TextEncoder().encode("sha256=" + [...new Uint8Array(digest)]
     .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  if (signature.length !== expected.length) return false;
+    .join(""));
+  const received = new TextEncoder().encode(signature);
+  if (received.length !== expected.length) return false;
   let diff = 0;
-  for (let i = 0; i < expected.length; i++) diff |= signature.charCodeAt(i) ^ expected.charCodeAt(i);
+  for (let i = 0; i < expected.length; i++) diff |= received[i] ^ expected[i];
   return diff === 0;
 }
 
