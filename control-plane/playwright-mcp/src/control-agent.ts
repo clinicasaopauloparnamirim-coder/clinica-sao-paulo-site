@@ -1,6 +1,6 @@
 import { Agent } from "agents";
 import { generateText, stepCountIs } from "ai";
-import { createWorkersAI } from "workers-ai-provider";
+import { createAI } from "agents/models/ai-sdk";
 import { specialistSnapshot } from "./agent-registry";
 import { autonomousFunctionSnapshot } from "./autonomous-functions";
 import { pairingSnapshot, runAgentPair } from "./agent-pairing";
@@ -382,7 +382,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
 
         if (!verification) {
           try {
-            const verifierAI = createWorkersAI({ binding: this.env.AI });
+            const verifierAI = createAI({ binding: this.env.AI });
             const verifierResult = await generateText({
               model: verifierAI("@cf/zai-org/glm-4.7-flash"),
               system: verifierSystem,
@@ -420,7 +420,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
         });
       }
 
-      const workersai = createWorkersAI({ binding: this.env.AI });
+      const workersai = createAI({ binding: this.env.AI });
       const result = await generateText({
         model: workersai("@cf/zai-org/glm-4.7-flash"),
         system: orchestrationSystem,
@@ -589,7 +589,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       }
 
       try {
-        const workersai = createWorkersAI({ binding: this.env.AI });
+        const workersai = createAI({ binding: this.env.AI });
         const generated = await generateText({
           model: workersai("@cf/zai-org/glm-4.7-flash"),
           system: marketingSystem,
@@ -776,7 +776,7 @@ export class ControlAgent extends Agent<ControlEnv, ControlAgentState> {
       }
 
       try {
-        const workersai = createWorkersAI({ binding: this.env.AI });
+        const workersai = createAI({ binding: this.env.AI });
         const allTools = this.mcp.getAITools();
         const readOnlyTools = getReadOnlyTools(allTools);
 
