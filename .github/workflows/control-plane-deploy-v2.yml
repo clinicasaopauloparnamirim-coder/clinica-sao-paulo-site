@@ -219,6 +219,9 @@ jobs:
           root_code="$(curl -sS -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 2 --connect-timeout 10 --max-time 30 "$base/")"
           echo "GET / -> HTTP $root_code"
           test "$root_code" = "200"
+          analytics_config="$(curl -sS --retry 3 --retry-delay 1 --connect-timeout 10 --max-time 30 "$base/analytics-config")"
+          printf '%s' "$analytics_config" | jq -e '.measurement_id == "G-EGTYJM0REP"' >/dev/null
+          echo "PASS /analytics-config returns the configured GA4 measurement ID"
           nvidia_code="$(curl -sS -o /dev/null -w '%{http_code}' --retry 3 --retry-delay 1 --connect-timeout 10 --max-time 30 "$base/__nvidia-check")"
           echo "GET /__nvidia-check -> HTTP $nvidia_code"
           test "$nvidia_code" = "404"
