@@ -10,9 +10,9 @@
   },
   "dependencies": {
     "@cloudflare/playwright-mcp": "0.0.5",
+    "@ai-sdk/provider": "4.0.18",
     "agents": "0.24.0",
-    "ai": "7.0.114",
-    "workers-ai-provider": "4.0.0"
+    "ai": "7.0.114"
   },
   "devDependencies": {
     "@types/node": "22.14.1",
