@@ -1,0 +1,41 @@
+name: Continuity Contract
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "AGENTS.md"
+      - ".agents/skills/clinica-control-tower/SKILL.md"
+      - ".cursor/skills/clinica-control-tower/SKILL.md"
+      - "control-plane/docs/INTEGRACAO-CLAUDE-CHATGPT.md"
+      - "control-plane/registry/tool-readiness.yaml"
+      - "control-plane/registry/INVENTARIO-MOLECULAR-MEMORIA-2026-10-06.md"
+      - "control-plane/tests/BRAIN-RUNTIME-ACCEPTANCE-2026-10-09.md"
+      - "scripts/check-continuity-contract.mjs"
+      - ".github/workflows/continuity-contract.yml"
+  pull_request:
+    paths:
+      - "AGENTS.md"
+      - ".agents/skills/clinica-control-tower/SKILL.md"
+      - ".cursor/skills/clinica-control-tower/SKILL.md"
+      - "control-plane/docs/INTEGRACAO-CLAUDE-CHATGPT.md"
+      - "control-plane/registry/tool-readiness.yaml"
+      - "control-plane/registry/INVENTARIO-MOLECULAR-MEMORIA-2026-10-06.md"
+      - "control-plane/tests/BRAIN-RUNTIME-ACCEPTANCE-2026-10-09.md"
+      - "scripts/check-continuity-contract.mjs"
+      - ".github/workflows/continuity-contract.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check continuity contract
+        run: node scripts/check-continuity-contract.mjs
