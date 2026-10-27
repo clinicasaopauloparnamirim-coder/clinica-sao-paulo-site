@@ -65,6 +65,7 @@ A repository skill, tool result, configured binding, available adapter, successf
 - Do not modify Google Ads campaign **Search-2** unless the user explicitly authorizes that exact campaign mutation.
 - **Do not use Google CLI** where the user has prohibited it. Prefer authorized platform connectors/APIs, native app flows, GitHub workflows, or alternate runtimes.
 - Do not reintroduce tools/services that the user explicitly removed. Honor the most recent task priority and restrictions from the existing conversation/project context.
+- **HYPD is retired by explicit user decision. Never invoke it, route through it, cite its missing account selection as a blocker, or ask the user to re-enable it. Its absence is expected. Use the connected direct Google Ads API and the other authorized first-party/connected sources.
 - Never expose, commit, echo, paste into prompts, or place credentials, OAuth refresh tokens, API keys, Cloudflare tokens, session cookies, or other secrets in files, logs, commits, skills, or reports.
 - Prefer existing project workflows and documented interfaces over inventing new infrastructure, but documentation is a means of implementation—not the deliverable.
 - When a task depends on live external data, retrieve current data before making substantive claims.
@@ -151,3 +152,19 @@ Do not ask the user to manually confirm facts the connected tools can establish.
 ## Standard for completion
 
 Persist until the acceptance criteria pass or a specific external/human dependency is proven unavoidable. A failed route requires investigation and a materially different authorized route—not resignation. The goal is **verified outcomes, with an auditable trail, and the least possible workload handed back to the user**.
+
+## Mandatory continuity and daily marketing workflow
+
+At the start of every Clinic marketing/data run, recover and apply this repository's current state before selecting tools: root `AGENTS.md`, this skill, and the latest continuity/status addendum in `control-plane/registry/`. Treat the registry as state to recover, not as a reason to assume a tool still works; verify access with a real read.
+
+For a daily cross-channel report, run read-only unless the user separately authorized changes:
+1. Fix the exact reporting date in the clinic's local timezone (`America/Fortaleza`) and state it in the result.
+2. Query direct Google Ads first. Read campaign totals and, where available, keyword and search-term details. Cross-check campaign totals through an independent GAQL/report route when available. Never modify `Search-2` without explicit authorization.
+3. Read GA4 for the same date: source/medium or campaign attribution, sessions, landing pages, and configured key events/conversions.
+4. Read Search Console query and page data for the same date. Respect its normal data lag; mark recent data as incomplete when appropriate. An empty query result alone does not prove zero traffic or non-indexing.
+5. Read the existing OpenSEO project, saved keywords, and latest rank-tracker snapshot. Cross-reference the observed Ads terms, organic queries, and landing pages. Do not trigger credit-charging research unless authorized.
+6. If a batch/combined execution is blocked, classify the error and try a materially different, permitted route (for example, independent read-only calls). Do not repeat the same blocked call without a new hypothesis. A failure in one source does not cancel the rest of the audit; report that source as blocked/inconclusive and continue where safe.
+7. Separate raw source metrics, calculations, interpretation, and unknowns. Label each source as verified, incomplete, blocked, or not checked. Do not invent a comparison baseline when it is unavailable.
+8. Do not ask the user for screenshots, copied output, or reconnection when an authorized tool can perform the read. Ask for human action only after available routes have been tested and one specific external dependency is proven unavoidable.
+
+Files and skills in this repository are not automatically loaded by every arbitrary ChatGPT chat. Never claim that editing a repository file, saving a memory, or seeing an ACTIVE connector guarantees future-chat behavior. When a new execution environment is used, explicitly recover these artifacts before acting; if this environment cannot retrieve them, say that continuity was not recovered instead of improvising.
