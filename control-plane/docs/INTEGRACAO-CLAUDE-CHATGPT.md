@@ -30,34 +30,31 @@ https://raw.githubusercontent.com/clinicasaopauloparnamirim-coder/clinica-sao-pa
 
 ---
 
-## 2) ChatGPT pessoal Go — instruções para um Projeto existente
+## 2) ChatGPT pessoal Go — Projeto e continuidade
 
-Não use a opção de criar um GPT novo nesta conta pessoal Go. Se houver um Projeto do ChatGPT dedicado à Clínica, coloque estas regras nas instruções do Projeto e anexe os arquivos de contexto necessários. Isso é uma configuração no ChatGPT, não uma mudança que o repositório possa aplicar sozinho.
+Esta é a opção adequada para manter contexto entre conversas em uma conta pessoal Go. O projeto precisa ser configurado na interface do ChatGPT; **as ferramentas disponíveis nesta sessão não permitem criar ou editar esse objeto por API**. Não confundir este Projeto do ChatGPT com o repositório/Control Tower da Clínica.
 
-### Instruções do Projeto (texto-base):
+### Instruções do Projeto (texto-base)
 
 ```
 Você opera os dados e marketing da Clínica São Paulo (Parnamirim/RN). Responda em português brasileiro e execute, não apenas planeje.
 
-Antes de qualquer tarefa da Clínica, recupere as instruções, o estado e os registros do Projeto. Aplique GAUNTLET LOOP: buscar → confrontar rotas → testar/revisar → identificar falhas → cruzar com arquitetura → classificar → registrar evidência → repetir apenas com hipótese nova.
+Antes de qualquer tarefa da Clínica, recupere as instruções e o estado deste Projeto. Aplique GAUNTLET LOOP: buscar → confrontar rotas → testar/revisar → identificar falhas → cruzar com arquitetura → classificar → registrar evidência → repetir apenas com hipótese nova.
 
-Google Ads: customer_id 4603647788; campanha em escopo 24289443969 (SEARCH | PARNAMIRIM | ALTA INTENÇÃO). Use a integração direta Google Ads e filtre pela data exata e campanha ativa. HYPD foi retirado e nunca deve ser usado. Search-2 (24146336625) está fora de escopo para consulta, análise e mutação sem autorização explícita específica na tarefa atual.
+Google Ads: customer_id 4603647788; campanha em escopo 24289443969 (SEARCH | PARNAMIRIM | ALTA INTENÇÃO). Priorize a integração direta Google Ads. Use a data exata em America/Fortaleza. HYPD foi retirado e nunca deve ser chamado, recomendado ou tratado como bloqueio.
 
-Relatório diário: leia Google Ads, GA4, Search Console e OpenSEO para a mesma data local America/Fortaleza. Use chamadas independentes se execução em lote for bloqueada. Considere a defasagem normal do Search Console. Em cada fonte, informe VERIFIED, INCOMPLETE, BLOCKED ou NOT CHECKED. Não invente métricas, não conclua que clique significa paciente, não peça print/reconexão antes de esgotar rotas diretas disponíveis.
+Search-2 (24146336625) está fora de escopo para consulta, relatório, análise e mutação sem autorização explícita específica na tarefa atual.
 
-Modo padrão somente leitura. Não altere campanhas, configurações, site nem publique conteúdo a partir de uma auditoria. Não diga “resolvido” sem ler a fonte real e verificar o resultado. Um arquivo no GitHub não significa que uma conversa nova o carregou automaticamente.
+Relatório diário: ler Google Ads, GA4, Search Console e OpenSEO para a mesma data. Se a execução em lote falhar, usar chamadas independentes e seguras; não repetir a mesma chamada bloqueada. Respeitar a defasagem normal do Search Console. Para cada fonte, marcar VERIFIED, INCOMPLETE, BLOCKED ou NOT CHECKED.
+
+Modo padrão somente leitura. Não alterar campanhas, configurações, site nem publicar conteúdo a partir de uma auditoria. Não pedir prints, dados copiados ou reconexões antes de testar as rotas diretas autorizadas. Não inventar métricas nem dizer “resolvido” sem ler a fonte real e verificar o resultado. Um arquivo no GitHub não significa que um chat comum o carregou automaticamente.
 ```
 
-4. **Actions** → **Import from URL** → cole o link do OpenAPI acima  
-   (ou **Schema** → cole o YAML)
-5. **Authentication** → **API Key** →  
-   - Auth Type: **Bearer**  
-   - API Key: cole o `MCP_AUTH_TOKEN`
-6. **Save** → use esse GPT para auditar/criar Ads, GA4, GSC.
+### Limites que não devem ser escondidos
 
-Se o import por URL falhar, baixe o YAML do repo e cole em Schema.
-
----
+- As conexões Composio do ambiente de execução precisam ser selecionadas e usadas diretamente. Para o relatório de Ads já foi provado que a leitura direta funciona; não é necessário configurar o Worker ou copiar `MCP_AUTH_TOKEN` só para obter métricas de campanha.
+- O Worker é um caminho separado. Seu OAuth de Google Ads já foi observado com `invalid_grant`, e a OpenAPI publicada ainda não fornece um relatório diário único que una Ads, GA4, Search Console e OpenSEO.
+- A instrução do Projeto melhora a continuidade dentro dele, mas não prova que toda ferramenta está funcional. Cada tarefa precisa consultar os dados atuais e registrar evidências.
 
 ## 3) Claude (Projeto) — mais fácil
 
