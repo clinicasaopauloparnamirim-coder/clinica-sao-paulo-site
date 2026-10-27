@@ -78,3 +78,25 @@ Campanha aprovada de Ads: `24289443969` (ALTA INTENÇÃO). Campanha `Search-2` p
 7. Após refresh do esquema OpenAPI no Composio, executar `marketingSocialSnapshotWrite` com o perfil oficial e dados sanitizados; conferir contagens; executar `marketingSocialSnapshotRead` e validar perfil/captura.
 8. Repetir `marketingSocialSnapshotWrite` com username fora do escopo e exigir HTTP 403; testar payload acima de 24.000 caracteres e exigir HTTP 413. Verificar também que chamadas sem bearer são rejeitadas.
 9. Executar `marketingBrief` com tema não sensível; confirmar `instagram_context.available=true`, frescor correto e `published=false`. Não publicar nada durante a aceitação.
+
+
+## P0 — Continuidade entre conversas e relatório de marketing (2026-10-27)
+
+### Critérios obrigatórios do teste
+1. A conversa/ambiente de execução nova recupera o estado operacional da Clínica antes de selecionar ferramentas; não depende de o usuário repetir a história.
+2. O relatório de ontem resolve a data em `America/Fortaleza` e consulta diretamente a conta Google Ads `4603647788`, campanha em escopo `24289443969`, sem HYPD e sem consultar `Search-2`.
+3. GA4, Search Console e OpenSEO são consultados independentemente para a mesma janela. Um bloqueio numa execução em lote exige chamadas individuais seguras, não repetição da mesma chamada bloqueada.
+4. O resultado lista cada fonte e seu estado `VERIFIED / INCOMPLETE / BLOCKED / NOT CHECKED`; inclui evidências e separa dados medidos de interpretação.
+5. O teste falha se o agente pedir print, pedir reconexão antes de tentar a rota direta, inventar números, declarar conclusão sem read-back, ou afirmar que as instruções do GitHub são automaticamente carregadas por todo chat.
+6. A leitura real confirma que HYPD não foi chamado e que o relatório não incluiu a campanha excluída `Search-2`.
+
+### Estado observado nesta auditoria
+- Direct Google Ads in a single conversation: **PASS (read-only)** for 2026-10-26; two independent routes agreed on the active campaign totals.
+- Repository policy entry points: **PARTIAL** before correction. The root `AGENTS.md` scope was mostly repository-changing tasks, and the canonical/mirrored skill copies diverged after an earlier edit.
+- ChatGPT Go Custom GPT path: **REJECTED for new personal GPT creation** per current OpenAI Help Center eligibility; the guide has been corrected to stop recommending it.
+- ChatGPT Project as cross-conversation context: **NOT CONFIGURED / NOT VERIFIED** by the available tools.
+- End-to-end same-date report across Google Ads + GA4 + Search Console + OpenSEO: **INCONCLUSIVE / NOT VALIDATED**.
+- Automatic loading of repository instructions into arbitrary new ChatGPT chats: **NOT AVAILABLE THROUGH THESE REPOSITORY TOOLS**; repository changes cannot establish this.
+- Control Tower Worker daily cross-channel route: **NOT VALIDATED**; the published OpenAPI does not expose one date-scoped four-source report and the Ads OAuth path was previously observed failing `invalid_grant`.
+
+A green repository contract test only proves that the repository's duplicate instructions and status claims remain aligned. It does not prove that ChatGPT loaded the files, selected the right tools, or completed a live marketing report.
