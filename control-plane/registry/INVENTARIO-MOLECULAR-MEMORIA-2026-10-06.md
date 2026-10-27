@@ -214,3 +214,27 @@ Conectado na UI, instalado ou citado = insuficiente.
 - Se o chat atual não tiver acesso ou não conseguir recuperar esses registros, isso é uma falha de continuidade: declarar o limite e não alegar que o contexto foi recuperado. O fato de este registro estar no GitHub não significa que todo chat novo o leia automaticamente.
 - Não solicitar prints ou reconexões sem testar primeiro as rotas autorizadas disponíveis; não repetir chamadas bloqueadas sem alterar a hipótese ou o método.
 - Esta atualização registra estado e regras; não prova persistência automática entre conversas nem valida a auditoria integrada GA4/Search Console/OpenSEO.
+
+
+## 13. AUDITORIA DA CONTINUIDADE ENTRE CONVERSAS — 2026-10-27
+
+### Falhas estruturais confirmadas
+1. O `AGENTS.md` dizia usar a skill principalmente em trabalho que muda o repositório; isso não cobria claramente uma pergunta de leitura como “resultado do Google Ads de ontem”.
+2. A skill foi atualizada em `.agents/skills/clinica-control-tower/SKILL.md`, enquanto a cópia em `.cursor/skills/clinica-control-tower/SKILL.md` ficou desatualizada. A duplicação não tinha um teste automático de igualdade.
+3. `control-plane/docs/INTEGRACAO-CLAUDE-CHATGPT.md` recomendava criar um Custom GPT. A documentação oficial consultada em 2026-10-27 informa que contas pessoais ChatGPT Go não podem criar novos GPTs; essa rota não é válida para este plano.
+4. O repo não injeta instruções no prompt de todos os chats comuns do ChatGPT. Ter regras no GitHub não significa que um chat novo as carregue.
+5. O OpenAPI do Worker não oferece um relatório diário único e date-scoped para Ads + GA4 + GSC + OpenSEO: Ads audit usa 30 dias; GA4 audit lista eventos-chave; GSC audit usa aproximadamente 28 dias. A rota Ads do Worker já foi observada com `invalid_grant`.
+6. A chamada Composio em lote foi bloqueada nesta conversa. Isso não prova que todas as fontes estejam indisponíveis; rotas individuais devem ser tentadas separadamente. Não repetir o lote sem nova hipótese.
+7. O relatório RMF amplo retornou também uma linha de `Search-2`, apesar de o inventário anterior excluí-la da análise. A rotina deve usar GAQL delimitado à campanha ativa `24289443969` para não consultar essa campanha fora do escopo.
+
+### Correções persistidas nesta rodada
+- Expandir o escopo de `AGENTS.md` para todas as tarefas operacionais, inclusive leituras de marketing.
+- Sincronizar as duas cópias da skill e adicionar a regra de exclusão de HYPD e Search-2.
+- Corrigir o guia de integração para refletir os limites reais do plano Go e a diferença entre Projeto, Custom GPT e chat comum.
+- Atualizar o registro de prontidão com status reais de continuidade e do relatório diário.
+- Adicionar um teste de contrato do repositório para detectar regressões e divergência entre cópias.
+
+### Limites que permanecem
+- Não há ferramenta autorizada nesta sessão para criar/alterar a configuração de Projeto no aplicativo ChatGPT nem para forçar o carregamento automático de arquivos em todo chat.
+- Não foi validado um relatório completo de mesma data em GA4 + Search Console + OpenSEO nesta auditoria.
+- O teste automatizado do repositório, quando passar, comprovará consistência documental; não comprovará sozinho continuidade no ChatGPT nem execução de dados ao vivo.
