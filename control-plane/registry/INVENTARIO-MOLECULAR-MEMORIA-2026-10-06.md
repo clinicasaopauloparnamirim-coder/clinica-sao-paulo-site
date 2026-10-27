@@ -190,3 +190,27 @@ Apenas ferramentas e agentes devem ser encaixados nesses três; não criar um qu
 
 Só marcar “FUNCIONANDO” com: identidade correta; conexão ou instalação real; execução; resultado; verificação independente.
 Conectado na UI, instalado ou citado = insuficiente.
+
+
+## 12. ADENDO DE CONTINUIDADE OPERACIONAL — 2026-10-27
+
+### Decisão de arquitetura: HYPD retirado
+- O usuário desativou/retirou o HYPD por decisão explícita durante a integração da operação.
+- Não selecionar, invocar, sugerir reativação nem apresentar seleção de conta HYPD como pré-requisito. A ausência desse plugin é intencional, não é incidente a corrigir.
+- Priorizar a conexão direta do Google Ads via Composio e verificar o resultado real.
+
+### Estado observado do Google Ads
+- Conexão Composio `clinic-google-ads`: ACTIVE no momento da consulta.
+- Customer ID consultado: `4603647788`.
+- Consulta direta de 2026-10-26 executada por duas rotas de leitura independentes: `GOOGLEADS_GET_RMF_REPORT` e `GOOGLEADS_SEARCH_STREAM_GAQL`; os totais da campanha ativa coincidiram.
+- Campanha ativa observada: `SEARCH | PARNAMIRIM | ALTA INTENÇÃO`, ID `24289443969`, status ENABLED.
+- Resultado observado em 2026-10-26: 146 impressões, 12 cliques, CTR 8,219%, custo R$ 23,87, CPC médio R$ 1,9892, 1 conversão e custo por conversão R$ 23,87. A conversão é a métrica reportada pela API; não equivale, por si só, à confirmação de um paciente agendado.
+- `Search-2`, ID `24146336625`, está REMOVED e teve métricas zero nesse relatório. Não alterar sem autorização explícita.
+- A rota `CUSTOM_CONTROL_TOWER_ADS_SEARCH` foi anteriormente observada falhando com OAuth `invalid_grant`; não repetir a mesma rota sem hipótese nova. A falha do Control Tower não deve bloquear a rota direta que já retornou dados.
+
+### Regra operacional para qualquer conversa ou execução nova
+- Antes de responder a tarefa da Clínica, recuperar os arquivos canônicos do repositório e os estados mais recentes; não reconstruir decisões a partir de suposições nem substituir contexto conhecido por uma nova ferramenta.
+- Para relatório diário, cruzar Google Ads + GA4 + Search Console + OpenSEO conforme a skill `clinica-control-tower`. Marcar explicitamente cada fonte como verificada, incompleta, bloqueada ou não consultada.
+- Se o chat atual não tiver acesso ou não conseguir recuperar esses registros, isso é uma falha de continuidade: declarar o limite e não alegar que o contexto foi recuperado. O fato de este registro estar no GitHub não significa que todo chat novo o leia automaticamente.
+- Não solicitar prints ou reconexões sem testar primeiro as rotas autorizadas disponíveis; não repetir chamadas bloqueadas sem alterar a hipótese ou o método.
+- Esta atualização registra estado e regras; não prova persistência automática entre conversas nem valida a auditoria integrada GA4/Search Console/OpenSEO.
