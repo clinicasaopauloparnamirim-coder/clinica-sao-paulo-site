@@ -62,7 +62,7 @@ A repository skill, tool result, configured binding, available adapter, successf
 
 - The repository is the source of truth for the site and Control Tower implementation.
 - Preserve existing deployment architecture and live data unless the task explicitly calls for a change.
-- Do not modify Google Ads campaign **Search-2** unless the user explicitly authorizes that exact campaign mutation.
+- **Campaign `Search-2` (ID `24146336625`) is excluded from queries, reports, analysis, and mutations unless the user explicitly authorizes that exact campaign in the current task.**
 - **Do not use Google CLI** where the user has prohibited it. Prefer authorized platform connectors/APIs, native app flows, GitHub workflows, or alternate runtimes.
 - Do not reintroduce tools/services that the user explicitly removed. Honor the most recent task priority and restrictions from the existing conversation/project context.
 - **HYPD is retired by explicit user decision. Never invoke it, route through it, cite its missing account selection as a blocker, or ask the user to re-enable it. Its absence is expected. Use the connected direct Google Ads API and the other authorized first-party/connected sources.
@@ -159,7 +159,7 @@ At the start of every Clinic marketing/data run, recover and apply this reposito
 
 For a daily cross-channel report, run read-only unless the user separately authorized changes:
 1. Fix the exact reporting date in the clinic's local timezone (`America/Fortaleza`) and state it in the result.
-2. Query direct Google Ads first. Read campaign totals and, where available, keyword and search-term details. Cross-check campaign totals through an independent GAQL/report route when available. Never modify `Search-2` without explicit authorization.
+2. Query direct Google Ads first using the active campaign ID `24289443969` and customer `4603647788`, with a date filter in GAQL. Read campaign totals and, where available, keyword and search-term details for that active campaign. Cross-check totals through an independent GAQL/report route when available. Do not run broad campaign reports that return excluded `Search-2` rows. Use the direct Google Ads Composio route; do not use HYPD. If a batch executor is blocked, issue independent single-source read calls rather than repeating the blocked batch.
 3. Read GA4 for the same date: source/medium or campaign attribution, sessions, landing pages, and configured key events/conversions.
 4. Read Search Console query and page data for the same date. Respect its normal data lag; mark recent data as incomplete when appropriate. An empty query result alone does not prove zero traffic or non-indexing.
 5. Read the existing OpenSEO project, saved keywords, and latest rank-tracker snapshot. Cross-reference the observed Ads terms, organic queries, and landing pages. Do not trigger credit-charging research unless authorized.
@@ -168,3 +168,8 @@ For a daily cross-channel report, run read-only unless the user separately autho
 8. Do not ask the user for screenshots, copied output, or reconnection when an authorized tool can perform the read. Ask for human action only after available routes have been tested and one specific external dependency is proven unavoidable.
 
 Files and skills in this repository are not automatically loaded by every arbitrary ChatGPT chat. Never claim that editing a repository file, saving a memory, or seeing an ACTIVE connector guarantees future-chat behavior. When a new execution environment is used, explicitly recover these artifacts before acting; if this environment cannot retrieve them, say that continuity was not recovered instead of improvising.
+
+
+## Chat entry-point boundary
+
+These files are durable project rules, not a global ChatGPT system prompt. A regular chat does not automatically read this repository merely because it exists. In every supported agent/project environment, explicitly load this `AGENTS.md`, this canonical skill, and the latest status registry before choosing a tool. If that bootstrap did not happen, continuity is NOT RECOVERED; do not improvise, ask the user to repeat the history, or claim that prior rules were applied. The default ChatGPT account-level UI configuration cannot be changed through GitHub repository edits.
