@@ -1,7 +1,7 @@
 version: 1
-updated_at: "2026-10-09"
+updated_at: "2026-10-27"
 repository: "clinicasaopauloparnamirim-coder/clinica-sao-paulo-site"
-branch: "audit/tool-readiness-inventory-2026-10-09"
+branch: "main"
 policy:
   evidence_required_for_runtime_ready: true
   require_positive_and_negative_tests: true
@@ -11,8 +11,12 @@ policy:
   retired_campaign_search_2_allowed: false
   secrets_in_logs_allowed: false
   paid_crawls_without_necessity: false
+  assume_repo_context_loaded_in_chat: false
+  exclude_hypd: true
+  require_source_status_per_daily_report: true
   excluded:
     - OpenGSC
+    - HYPD
     - Canva
     - Zernio
     - FreeLLMAPI
@@ -55,13 +59,18 @@ nvidia_brain_09:
     - {repo: "NVlabs/UniversalDeepResearch", priority: "P2", state: "deferred"}
     - {repo: "NVlabs/kda", priority: "P2", state: "deferred"}
 connectors:
-  control_tower: "ready-read-health"
-  google_ads_composio: "ready-read"
+  control_tower: "health-only; Google Ads OAuth previously failed invalid_grant; no validated daily cross-channel endpoint"
+  google_ads_composio: "read-validated-2026-10-27-direct-GAQL-and-independent-campaign-report-agreed-for-active-campaign-24289443969"
   google_search_console_composio: "ready-read"
   ga4_composio: "ready-read"
   control_tower_gsc: "read-tested-2026-10-09"
   control_tower_ga4: "read-tested-2026-10-09"
-  openseo: "ready-read"
+  openseo: "connected; project-level GA4/GSC binding still needs readback"
+  default_chat_repo_bootstrap: "not-automatic; no evidence that ordinary new ChatGPT chats load this repository"
+  chatgpt_project_continuity: "supported ChatGPT-side route for personal Go; project not configured or verified by this connector"
+  chatgpt_custom_gpt_actions: "not-available-for-creating-new-personal-Go-GPT; existing Action runtime not verified"
+  daily_cross_channel_report: "partial; Google Ads direct verified 2026-10-27; same-date GA4+GSC+OpenSEO combined read not validated"
+  hypd: "excluded-by-explicit-user-decision"
   github: "ready-read"
   semrush: "connected-read-capability-verify-per-tool"
   ahrefs: "partial-limited-tools"
