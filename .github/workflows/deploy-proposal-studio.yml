@@ -32,6 +32,9 @@ jobs:
             if curl -fsS --max-time 15 "$url" -o /tmp/proposal.html; then break; fi
             sleep 5
           done
-          grep -q "ESTÚDIO DE PLANOS DE TRATAMENTO" /tmp/proposal.html
+          grep -qi "APRESENTAÇÃO COMERCIAL PERSONALIZADA" /tmp/proposal.html
+grep -qi "INVESTIMENTO SEM SURPRESAS" /tmp/proposal.html
+grep -qi "O QUE ESTÁ INCLUÍDO" /tmp/proposal.html
+grep -qi "DÚVIDAS FREQUENTES\|DÚVIDAS COMUNS" /tmp/proposal.html
           grep -q "Imprimir / salvar PDF" /tmp/proposal.html
           echo "PASS: isolated proposal studio is serving the expected UI"
