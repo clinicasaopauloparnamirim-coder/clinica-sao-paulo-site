@@ -1,0 +1,37 @@
+name: Deploy Proposal Studio (isolated Worker)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Deploy isolated proposal studio
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx --yes wrangler@4.151.1 deploy --config wrangler-proposals.jsonc
+      - name: Verify isolated app
+        run: |
+          set -euo pipefail
+          url="https://clinic-proposal-studio.clinicasaopauloparnamirim.workers.dev/"
+          for attempt in $(seq 1 12); do
+            if curl -fsS --max-time 15 "$url" -o /tmp/proposal.html; then break; fi
+            sleep 5
+          done
+          grep -q "ESTÚDIO DE PLANOS DE TRATAMENTO" /tmp/proposal.html
+          grep -q "Imprimir / salvar PDF" /tmp/proposal.html
+          echo "PASS: isolated proposal studio is serving the expected UI"
