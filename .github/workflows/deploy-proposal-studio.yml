@@ -33,8 +33,8 @@ jobs:
             sleep 5
           done
           grep -qi "APRESENTAÇÃO COMERCIAL PERSONALIZADA" /tmp/proposal.html
-grep -qi "INVESTIMENTO SEM SURPRESAS" /tmp/proposal.html
-grep -qi "O QUE ESTÁ INCLUÍDO" /tmp/proposal.html
-grep -qi "DÚVIDAS FREQUENTES\|DÚVIDAS COMUNS" /tmp/proposal.html
+          grep -qi "INVESTIMENTO SEM SURPRESAS" /tmp/proposal.html
+          grep -qi "O QUE ESTÁ INCLUÍDO" /tmp/proposal.html
+          grep -qi "DÚVIDAS COMUNS" /tmp/proposal.html
           grep -q "Imprimir / salvar PDF" /tmp/proposal.html
           echo "PASS: isolated proposal studio is serving the expected UI"
