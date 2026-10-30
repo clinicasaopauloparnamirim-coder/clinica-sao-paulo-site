@@ -225,5 +225,5 @@ jobs:
           settings="$(curl -sS --fail-with-body --connect-timeout 10 --max-time 30 \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/clinica-sao-paulo-site/settings")"
-          printf '%s' "$settings" | jq -e '.success == true and (.result.bindings | length) == 21 and any(.result.bindings[]; .name == "WHATSAPP_AUTOREPLY_ENABLED" and .type == "secret_text")' >/dev/null
+          printf '%s' "$settings" | jq -e '.success == true and (.result.bindings | length) == 23 and any(.result.bindings[]; .name == "WHATSAPP_AUTOREPLY_ENABLED" and .type == "secret_text")' >/dev/null
           echo "Worker settings verified: 21 bindings; WHATSAPP_AUTOREPLY_ENABLED binding preserved."
