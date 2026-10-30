@@ -1,0 +1,15 @@
+{
+  "name": "clinic-proposal-studio",
+  "main": "./proposal-studio/worker.js",
+  "compatibility_date": "2026-10-30",
+  "assets": {
+    "directory": "./proposal-studio/public",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0,
+    "logs": { "enabled": false, "invocation_logs": false }
+  }
+}
