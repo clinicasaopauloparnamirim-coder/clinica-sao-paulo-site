@@ -102,7 +102,7 @@ $('outDate').textContent=d;
 const validity=Math.max(1,Number($('validity').value)||15);
 $('outValidity').textContent='Proposta válida por '+validity+' dias';
 $('outIntro').textContent=$('introText').value;
-const total=rows.reduce((s,r)=>s+(Number(r.price)||0),0);
+const total=rows.reduce((s,r)=>s+Math.max(0,Number(r.price)||0),0);
 const discount=Math.max(0,Number($('discount').value)||0);
 const final=Math.max(0,total-discount);
 $('outItems').innerHTML=rows.length?rows.map(r=>'<div class="treatment"><div><strong>'+esc(r.name||'Procedimento')+'</strong><small>Conforme planejamento aprovado pelo profissional</small></div><div class="price">'+money(r.price)+'</div></div>').join(''):'<div class="empty">Os procedimentos adicionados aparecerão aqui.</div>';
@@ -120,7 +120,7 @@ document.querySelectorAll('input,textarea').forEach(el=>el.addEventListener('inp
 function toast(t){$('toast').textContent=t;$('toast').classList.remove('hidden');setTimeout(()=>$('toast').classList.add('hidden'),2400)}
 $('print').onclick=()=>{update();window.print()};
 $('whatsapp').onclick=()=>{const t=update();const patient=$('patient').value.trim();const lines=['Olá'+(patient?' '+patient:'')+'! Aqui está o resumo do plano preparado pela Clínica São Paulo.','',...rows.map(r=>'• '+(r.name||'Procedimento')+': '+money(r.price)),'','Investimento total estimado: '+money(t.total),'Pagamento: '+($('installments').value||'A combinar'),$('recurring').value?'Recorrência: '+$('recurring').value:'','A proposta completa pode ser enviada em PDF. Se tiver dúvidas, estamos à disposição.','Clínica São Paulo · Parnamirim/RN'].filter(Boolean);window.open('https://wa.me/?text='+encodeURIComponent(lines.join('\n')),'_blank','noopener,noreferrer')};
-$('date').value=new Date().toISOString().slice(0,10);
+const now=new Date();$('date').value=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);
 addRow('Aparelho ortodôntico convencional','0');
 update();
 </script>
