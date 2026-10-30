@@ -144,9 +144,34 @@ const wa=$('whatsapp').value.trim();$('outFooterContact').textContent=wa?'WhatsA
 return {patient,total,discount,subtotal,expiry,label,recValue};
 }
 document.querySelectorAll('.editor input,.editor textarea,.editor select').forEach(el=>el.addEventListener('input',update));
-$('print').onclick=()=>{update();window.print()};
-$('share').onclick=()=>{const x=update();const list=rows.map(r=>'• '+(r.name||'Procedimento')+': '+money(amt(r.price))).join('\n');const wa=$('whatsapp').value.replace(/\D/g,'');const message=['Olá'+(x.patient!=='Você'?' '+x.patient:'')+'! Preparamos sua proposta personalizada na Clínica São Paulo.','',list,'','Investimento dos itens descritos: '+money(x.total),x.label&&x.recValue!==''?'Manutenção/recorrência à parte: '+money(amt(x.recValue)):'','Validade: '+x.expiry,'','Qualquer item adicional será informado e autorizado previamente. Estamos à disposição para esclarecer suas dúvidas.','Clínica São Paulo · '+$('location').value].filter(Boolean).join('\n');window.open('https://wa.me/'+wa+'?text='+encodeURIComponent(message),'_blank','noopener,noreferrer')};
+function validateProposal(){
+ update();
+ const missing=[];
+ if(!$('patient').value.trim()) missing.push('Informe o nome do paciente.');
+ if(!$('professional').value.trim()) missing.push('Informe o profissional responsável.');
+ if(!$('cro').value.trim()) missing.push('Informe o CRO/UF do profissional.');
+ if(!rows.length) missing.push('Adicione pelo menos um procedimento.');
+ rows.forEach((r,i)=>{
+  if(!String(r.name||'').trim()) missing.push('Preencha o nome do procedimento '+(i+1)+'.');
+  if(String(r.price??'').trim()==='' || !Number.isFinite(Number(r.price)) || Number(r.price)<0) missing.push('Informe um valor válido para o procedimento '+(i+1)+'.');
+ });
+ if(!$('included').value.trim()) missing.push('Descreva o que está incluído ou escreva “Não se aplica”.');
+ if(!$('excluded').value.trim()) missing.push('Descreva o que não está incluído ou escreva “Não se aplica”.');
+ if(!$('conditions').value.trim()) missing.push('Preencha as condições comerciais.');
+ if(!$('payment').value.trim()) missing.push('Informe a condição de pagamento ou “A combinar”.');
+ if($('installments').value.trim()){
+  const n=Number($('installments').value);
+  if(!Number.isInteger(n)||n<1||n>48) missing.push('O número de parcelas deve ser um inteiro entre 1 e 48.');
+ }
+ const subtotal=rows.reduce((s,r)=>s+amt(r.price),0);
+ const net=Math.max(0,subtotal-Math.min(subtotal,amt($('discount').value)));
+ if(amt($('entry').value)>net) missing.push('A entrada não pode ser maior que o total após o desconto.');
+ if(missing.length){alert('Antes de gerar ou compartilhar, complete a conferência:\\n\\n• '+missing.join('\\n• '));return false;}
+ return true;
+}
+$('print').onclick=()=>{if(!validateProposal())return;window.print()};
+$('share').onclick=()=>{if(!validateProposal())return;const x=update();const list=rows.map(r=>'• '+(r.name||'Procedimento')+': '+money(amt(r.price))).join('\n');const wa=$('whatsapp').value.replace(/\D/g,'');const message=['Olá'+(x.patient!=='Você'?' '+x.patient:'')+'! Preparamos sua proposta personalizada na Clínica São Paulo.','',list,'','Investimento dos itens descritos: '+money(x.total),x.label&&x.recValue!==''?'Manutenção/recorrência à parte: '+money(amt(x.recValue)):'','Validade: '+x.expiry,'','Qualquer item adicional será informado e autorizado previamente. Estamos à disposição para esclarecer suas dúvidas.','Clínica São Paulo · '+$('location').value].filter(Boolean).join('\n');window.open('https://wa.me/'+wa+'?text='+encodeURIComponent(message),'_blank','noopener,noreferrer')};
 $('reset').onclick=()=>{if(!confirm('Limpar os dados desta proposta e começar outra?'))return;document.querySelectorAll('.editor input,.editor textarea').forEach(el=>{if(el.id==='issued')return;if(el.type==='date')el.value='';else if(el.type==='number')el.value=el.id==='validity'?'15':el.id==='discount'||el.id==='entry'?'0':'';else el.value=''});rows=[];renderRows();update()};
 const now=new Date();$('issued').value=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);
-addRow({name:'Aparelho ortodôntico convencional',detail:'Exemplo editável · substitua pelo plano aprovado',price:0});update();
+renderRows();update();
 </script></body></html>
