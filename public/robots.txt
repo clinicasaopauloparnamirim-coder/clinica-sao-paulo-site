@@ -1,6 +1,43 @@
+# OpenAI Search
 User-agent: OAI-SearchBot
 Allow: /
 
+# Anthropic Claude Search and user-requested retrieval
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+# Perplexity Search
+User-agent: PerplexityBot
+Allow: /
+
+# Google Search, including AI Overviews and AI Mode
+User-agent: Googlebot
+Allow: /
+
+# Microsoft Bing Search and Copilot grounding
+User-agent: Bingbot
+Allow: /
+
+# Apple Search, Siri and Spotlight
+User-agent: Applebot
+Allow: /
+
+# Meta AI Search
+User-agent: meta-webindexer
+Allow: /
+
+# Mistral Search / Vibe
+User-agent: MistralAI-Index
+Allow: /
+
+# Mistral user-requested retrieval
+User-agent: MistralAI-User
+Allow: /
+
+# Default policy: public site is crawlable
 User-agent: *
 Allow: /
 
