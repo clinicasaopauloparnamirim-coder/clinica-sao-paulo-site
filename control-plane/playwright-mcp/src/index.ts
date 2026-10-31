@@ -683,7 +683,12 @@ async function deriveOpenExecutiveMcpSigningKey(secret: string, extractable: boo
 export default {
   async fetch(request: Request, env: WhatsAppEnv, ctx: ExecutionContext) {
     const requestUrl = new URL(request.url);
-    if (requestUrl.hostname === "www.clinicasaopauloparnamirim.com.br") {
+    // Serve the origin robots.txt on www so Cloudflare can merge its managed crawler policy.
+    // All other www requests continue redirecting to the canonical apex hostname.
+    if (
+      requestUrl.hostname === "www.clinicasaopauloparnamirim.com.br" &&
+      requestUrl.pathname !== "/robots.txt"
+    ) {
       requestUrl.hostname = "clinicasaopauloparnamirim.com.br";
       return new Response(null, {
         status: 301,
