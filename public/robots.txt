@@ -13,6 +13,10 @@ Allow: /
 User-agent: PerplexityBot
 Allow: /
 
+# Perplexity user-requested retrieval
+User-agent: Perplexity-User
+Allow: /
+
 # Google Search, including AI Overviews and AI Mode
 User-agent: Googlebot
 Allow: /
